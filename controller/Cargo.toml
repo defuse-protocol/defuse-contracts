@@ -1,0 +1,10 @@
+[package]
+name = "defuse-controller-contract"
+version = "0.1.0"
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true

@@ -1,0 +1,115 @@
+[config]
+default_to_workspace = false
+skip_core_tasks = true
+
+[env]
+RUSTFLAGS = "-C link-arg=-s"
+TARGET = "wasm32-unknown-unknown"
+TARGET_DIR = "${PWD}/res"
+ACCOUNT_WASM_FILE = "defuse-account-contract.wasm"
+CONTROLLER_WASM_FILE = "defuse-controller-contract.wasm"
+INTENT_WASM_FILE = "defuse-intent-contract.wasm"
+
+[tasks.build]
+dependencies = [
+    "build-account",
+    "build-intent",
+    "cp-contracts",
+    "build-controller",
+    "cp-controller",
+    "contract-stats",
+]
+
+[tasks.clippy]
+command = "cargo"
+dependencies = [
+    "build-account",
+    "build-intent",
+    "cp-contracts",
+]
+args = [
+    "clippy",
+    "--workspace",
+    "--all-targets"
+]
+
+[tasks.test]
+alias = "tests"
+
+[tasks.tests]
+dependencies = [
+    "build"
+]
+command = "cargo"
+args = [
+    "test",
+    "--all-targets"
+]
+
+[tasks.build-account]
+command = "cargo"
+args = [
+    "build",
+    "--target",
+    "${TARGET}",
+    "--release",
+    "--package",
+    "defuse-account-contract"
+]
+
+[tasks.build-intent]
+command = "cargo"
+args = [
+    "build",
+    "--target",
+    "${TARGET}",
+    "--release",
+    "--package",
+    "defuse-intent-contract",
+]
+
+[tasks.build-controller]
+command = "cargo"
+args = [
+    "build",
+    "--target",
+    "${TARGET}",
+    "--release",
+    "-p",
+    "defuse-controller-contract"
+]
+
+[tasks.cp-contracts]
+script = """
+cp target/${TARGET}/release/defuse_account_contract.wasm ${TARGET_DIR}/${ACCOUNT_WASM_FILE}
+cp target/${TARGET}/release/defuse_intent_contract.wasm ${TARGET_DIR}/${INTENT_WASM_FILE}
+"""
+
+[tasks.cp-controller]
+script = """
+cp target/${TARGET}/release/defuse_controller_contract.wasm ${TARGET_DIR}/${CONTROLLER_WASM_FILE}
+"""
+
+[tasks.clean]
+dependencies = ["rm-contracts"]
+command = "cargo"
+args = ["clean"]
+
+[tasks.rm-contracts]
+script = "rm -rf ${TARGET_DIR}/defuse*.wasm ${TARGET_DIR}/binaryen"
+
+[tasks.contract-stats]
+category = "Tools"
+script = '''
+echo "Environment:"
+echo "    CARGO_MAKE_PROFILE:       ${CARGO_MAKE_PROFILE}"
+echo "    ACCOUNT_CONTRACT_FILE:    ${ACCOUNT_WASM_FILE}"
+echo "    ACCOUNT_CONTRACT_SIZE:    $(wc -c ${TARGET_DIR}/${ACCOUNT_WASM_FILE} | awk '{print $1}')"
+echo "    INTENT_CONTRACT_FILE:     ${INTENT_WASM_FILE}"
+echo "    INTENT_CONTRACT_SIZE:     $(wc -c ${TARGET_DIR}/${INTENT_WASM_FILE} | awk '{print $1}')"
+echo "    CONTROLLER_CONTRACT_FILE: ${CONTROLLER_WASM_FILE}"
+echo "    CONTROLLER_CONTRACT_SIZE: $(wc -c ${TARGET_DIR}/${CONTROLLER_WASM_FILE} | awk '{print $1}')"
+echo "    CONTRACTS_DIR:            ${TARGET_DIR}"
+echo "    RUSTFLAGS:                ${RUSTFLAGS}"
+echo "    Extra build args:         ${RELEASE} ${@}"
+'''
