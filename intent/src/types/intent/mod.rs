@@ -1,40 +1,84 @@
-use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
+use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::AccountId;
-use nep141::Nep141;
+use near_sdk::{
+    base64::{engine::general_purpose::STANDARD, Engine},
+    borsh::{BorshDeserialize, BorshSerialize},
+    env, AccountId,
+};
 
-pub mod nep141;
+use crate::error::ContractError;
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
 #[borsh(crate = "near_sdk::borsh")]
+#[serde(crate = "near_sdk::serde")]
 pub struct Intent {
-    pub owner: AccountId,
-    pub intent_type: IntentType,
-    pub status: Status,
+    pub initiator: AccountId,
+    pub send: TokenAmount,
+    pub receive: TokenAmount,
+    pub expiration: Expiration,
 }
 
 impl Intent {
-    pub fn new(owner: AccountId, intent_type: IntentType) -> Self {
-        Self {
-            owner,
-            intent_type,
-            status: Status::CreatedByUser,
+    #[must_use]
+    pub fn is_expired(&self) -> bool {
+        match self.expiration {
+            Expiration::None => false,
+            Expiration::Time(time) => time * 1000 >= env::block_timestamp_ms(),
+            Expiration::Block(block) => block >= env::block_height(),
         }
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
+#[derive(BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "near_sdk::borsh")]
-#[serde(untagged, crate = "near_sdk::serde")]
-pub enum IntentType {
-    Nep141(Nep141),
+pub enum Action {
+    CreateIntent((String, Intent)),
+    ExecuteIntent(String),
 }
 
-#[derive(Default, BorshDeserialize, BorshSerialize)]
+impl Action {
+    /// Decode provided msg into `Action`.
+    ///
+    /// # Errors
+    ///
+    /// `Base64DecodeError`
+    /// `BorshDeserializeError`
+    pub fn decode(msg: &str) -> Result<Self, ContractError> {
+        let bytes = STANDARD
+            .decode(msg)
+            .map_err(|_| ContractError::Base64DecodeError)?;
+
+        Self::try_from_slice(&bytes).map_err(|_| ContractError::BorshDeserializeError)
+    }
+
+    /// Encode the action into a string.
+    ///
+    /// # Errors
+    ///
+    /// `BorshSerializeError`
+    pub fn encode(&self) -> Result<String, ContractError> {
+        near_sdk::borsh::to_vec(&self)
+            .map(|bytes| STANDARD.encode(bytes))
+            .map_err(|_| ContractError::BorshSerializeError)
+    }
+}
+
+#[derive(Default, Debug, BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
 #[borsh(crate = "near_sdk::borsh")]
-pub enum Status {
+#[serde(crate = "near_sdk::serde")]
+pub enum Expiration {
     #[default]
-    CreatedByUser,
-    ApprovedBySolver,
-    Expired,
+    None,
+    /// Expiration time in seconds.
+    Time(u64),
+    /// Expiration block.
+    Block(u64),
+}
+
+#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
+#[borsh(crate = "near_sdk::borsh")]
+#[serde(crate = "near_sdk::serde")]
+pub struct TokenAmount {
+    pub token_id: AccountId,
+    pub amount: U128,
 }

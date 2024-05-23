@@ -11,7 +11,9 @@ pub struct ControllerContract {
 #[near_bindgen]
 impl ControllerContract {
     #[init]
-    pub fn new(owner_id: AccountId) -> Self {
+    #[must_use]
+    #[allow(clippy::use_self)]
+    pub const fn new(owner_id: AccountId) -> Self {
         Self { owner_id }
     }
 }

@@ -3,6 +3,7 @@ use near_workspaces::{Account, AccountId, Contract, Worker};
 use serde_json::json;
 
 const ACCOUNT_WASM: &[u8] = include_bytes!("../../../res/defuse-account-contract.wasm");
+const CONTROLLER_WASM: &[u8] = include_bytes!("../../../res/defuse-controller-contract.wasm");
 const INTENT_WASM: &[u8] = include_bytes!("../../../res/defuse-intent-contract.wasm");
 const TOKEN_WASM: &[u8] = include_bytes!("../../../res/fungible-token.wasm");
 
@@ -38,6 +39,12 @@ impl Sandbox {
             .map_err(Into::into)
     }
 
+    pub async fn create_account(&self, name: &str) -> Account {
+        self.create_subaccount(name, NearToken::from_near(10))
+            .await
+            .unwrap()
+    }
+
     pub async fn balance(&self, account_id: &AccountId) -> u128 {
         self.worker
             .view_account(account_id)
@@ -48,7 +55,36 @@ impl Sandbox {
     }
 
     pub async fn deploy_account_contract(&self) -> Contract {
-        self.deploy_contract("account", ACCOUNT_WASM).await
+        let contract = self.deploy_contract("account", ACCOUNT_WASM).await;
+        let result = contract
+            .call("new")
+            .args_json(json!({
+                "owner_id": "controller.test.near",
+                "mpc_contract_id": "mpc.test.net"
+            }))
+            .max_gas()
+            .transact()
+            .await
+            .unwrap();
+        assert!(result.is_success(), "{result:#?}");
+
+        contract
+    }
+
+    pub async fn deploy_controller_contract(&self) -> Contract {
+        let contract = self.deploy_contract("controller", CONTROLLER_WASM).await;
+        let result = contract
+            .call("new")
+            .args_json(json!({
+                "owner_id": "dao.test.near"
+            }))
+            .max_gas()
+            .transact()
+            .await
+            .unwrap();
+        assert!(result.is_success(), "{result:#?}");
+
+        contract
     }
 
     pub async fn deploy_intent_contract(&self) -> Contract {
@@ -62,7 +98,7 @@ impl Sandbox {
             .transact()
             .await
             .unwrap();
-        assert!(result.is_success(), "{result:?}");
+        assert!(result.is_success(), "{result:#?}");
 
         contract
     }
@@ -85,7 +121,7 @@ impl Sandbox {
             .transact()
             .await
             .unwrap();
-        assert!(result.is_success(), "{result:?}");
+        assert!(result.is_success(), "{result:#?}");
 
         contract
     }

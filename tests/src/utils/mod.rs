@@ -1,6 +1,6 @@
 pub use sandbox::Sandbox;
 
-mod accounts;
+mod account;
 pub mod intent;
 mod sandbox;
 pub mod token;

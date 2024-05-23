@@ -1,7 +1,7 @@
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
+use near_sdk::collections::HashMap;
 use near_sdk::store::LookupMap;
 use near_sdk::{AccountId, IntoStorageKey};
-use std::collections::HashMap;
 
 use crate::error::Error;
 use crate::types::Account;
@@ -40,13 +40,13 @@ impl AccountDb {
 
     pub fn change_owner(
         &mut self,
-        from: AccountId,
+        from: &AccountId,
         to: AccountId,
         derivation_path: String,
     ) -> Result<(), Error> {
         let account = self
             .0
-            .get_mut(&from)
+            .get_mut(from)
             .ok_or(Error::EmptyAccounts)
             .and_then(|accounts| accounts.remove(&derivation_path).ok_or(Error::NoAccount))?;
 
@@ -54,14 +54,14 @@ impl AccountDb {
     }
 
     pub fn get_accounts(&self, account_id: &AccountId) -> Result<Vec<(String, Account)>, Error> {
-        if let Some(accounts) = self.0.get(account_id) {
-            Ok(accounts
-                .iter()
-                .map(|(d, a)| (d.clone(), a.clone()))
-                .collect())
-        } else {
-            Err(Error::EmptyAccounts)
-        }
+        self.0
+            .get(account_id)
+            .map_or(Err(Error::EmptyAccounts), |accounts| {
+                Ok(accounts
+                    .iter()
+                    .map(|(d, a)| (d.clone(), a.clone()))
+                    .collect())
+            })
     }
 
     #[allow(dead_code)]
@@ -105,7 +105,7 @@ fn test_account_db_change_owner() {
     let new_owner: AccountId = "owner.near".parse().unwrap();
 
     assert!(db
-        .change_owner(account_id.clone(), new_owner.clone(), path.clone())
+        .change_owner(&account_id, new_owner.clone(), path.clone())
         .is_ok());
 
     assert!(matches!(

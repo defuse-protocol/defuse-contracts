@@ -34,6 +34,8 @@ pub struct AccountContract {
 #[near_bindgen]
 impl AccountContract {
     #[init]
+    #[must_use]
+    #[allow(clippy::use_self)]
     pub fn new(owner_id: AccountId, mpc_contract_id: AccountId) -> Self {
         Self {
             owner_id,
@@ -55,15 +57,15 @@ impl AccountContract {
     }
 
     /// Change an owner of the account.
-    pub fn change_owner(&mut self, from: AccountId, to: AccountId, derivation_path: String) {
+    pub fn change_owner(&mut self, from: &AccountId, to: AccountId, derivation_path: String) {
         self.accounts
             .change_owner(from, to, derivation_path)
             .log_error();
     }
 
     /// Return a user's accounts.
-    pub fn get_accounts(&self, account_id: AccountId) -> Vec<(String, Account)> {
-        self.accounts.get_accounts(&account_id).log_error()
+    pub fn get_accounts(&self, account_id: &AccountId) -> Vec<(String, Account)> {
+        self.accounts.get_accounts(account_id).log_error()
     }
 
     #[private]
@@ -71,7 +73,7 @@ impl AccountContract {
         self.mpc_contract_id = contract_id;
     }
 
-    pub fn get_mpc_contract(&self) -> &AccountId {
+    pub const fn get_mpc_contract(&self) -> &AccountId {
         &self.mpc_contract_id
     }
 

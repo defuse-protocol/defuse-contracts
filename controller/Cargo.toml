@@ -6,5 +6,10 @@ edition.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[lints.clippy]
+all = "deny"
+nursery = "deny"
+pedantic = "deny"
+
 [dependencies]
 near-sdk.workspace = true

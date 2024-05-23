@@ -1,3 +1,3 @@
-pub use intent::{Intent, IntentType, Status};
+pub use intent::Intent;
 
 pub mod intent;

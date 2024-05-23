@@ -17,6 +17,7 @@ impl AsRef<str> for Error {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub trait LogError<T> {
     fn log_error(self) -> T;
 }
