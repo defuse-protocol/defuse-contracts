@@ -23,8 +23,8 @@ impl Intent {
     pub fn is_expired(&self) -> bool {
         match self.expiration {
             Expiration::None => false,
-            Expiration::Time(time) => time * 1000 >= env::block_timestamp_ms(),
-            Expiration::Block(block) => block >= env::block_height(),
+            Expiration::Time(time) => time * 1000 <= env::block_timestamp_ms(),
+            Expiration::Block(block) => block <= env::block_height(),
         }
     }
 }
