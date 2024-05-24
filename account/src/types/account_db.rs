@@ -1,7 +1,7 @@
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
-use near_sdk::collections::HashMap;
 use near_sdk::store::LookupMap;
 use near_sdk::{AccountId, IntoStorageKey};
+use std::collections::HashMap;
 
 use crate::error::Error;
 use crate::types::Account;

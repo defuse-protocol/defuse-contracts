@@ -23,9 +23,7 @@ dependencies = [
 [tasks.clippy]
 command = "cargo"
 dependencies = [
-    "build-account",
-    "build-intent",
-    "cp-contracts",
+    "build",
 ]
 args = [
     "clippy",
