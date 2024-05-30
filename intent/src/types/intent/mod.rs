@@ -91,7 +91,7 @@ fn test_create_action_serialize() {
                 token_id: "token_b.near".parse().unwrap(),
                 amount: 2000.into(),
             },
-            expiration: Expiration::Block(123456),
+            expiration: Expiration::Block(123_456),
         },
     ));
 
