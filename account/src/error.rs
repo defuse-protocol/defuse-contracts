@@ -1,5 +1,3 @@
-// use near_sdk::env;
-
 #[derive(Debug)]
 pub enum Error {
     AccountExist,

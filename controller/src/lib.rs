@@ -1,14 +1,12 @@
-use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
-use near_sdk::{near_bindgen, AccountId, PanicOnDefault};
+use near_sdk::{near, AccountId, PanicOnDefault};
 
-#[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault)]
-#[borsh(crate = "near_sdk::borsh")]
+#[near(contract_state)]
+#[derive(PanicOnDefault)]
 pub struct ControllerContract {
     owner_id: AccountId,
 }
 
-#[near_bindgen]
+#[near]
 impl ControllerContract {
     #[init]
     #[must_use]
