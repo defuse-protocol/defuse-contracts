@@ -1,7 +1,27 @@
 # Set of contracts for the Defuse project
 
-### Accounts contract
+### Building and running
 
-The purpose of the contract is to store user's owners of different tokens.
+Build the smart contracts:
 
-### Intent contract
+```shell
+cargo make build
+```
+
+Run integration tests:
+
+```shell
+cargo make test
+```
+
+Run clippy linter:
+
+```shell
+cargo make clippy
+```
+
+### Contracts
+
+- [Account contract](account/README.md)
+- [Controller contract](controller/README.md)
+- [Intent contract](intent/README.md)

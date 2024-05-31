@@ -1,10 +1,9 @@
-use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::env::panic_str;
 use near_sdk::json_types::U128;
 use near_sdk::store::{LookupMap, LookupSet};
 use near_sdk::{
-    env, ext_contract, log, near_bindgen, AccountId, BorshStorageKey, NearToken, PanicOnDefault,
-    Promise, PromiseOrValue,
+    env, ext_contract, log, near, AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise,
+    PromiseOrValue,
 };
 
 use crate::{types::intent::Action, types::Intent};
@@ -12,17 +11,16 @@ use crate::{types::intent::Action, types::Intent};
 pub mod error;
 pub mod types;
 
-#[derive(BorshSerialize, BorshDeserialize, BorshStorageKey)]
-#[borsh(crate = "near_sdk::borsh")]
+#[derive(BorshStorageKey)]
+#[near(serializers=[borsh])]
 enum Prefix {
     SupportedTokens,
     AllowedSolvers,
     Intents,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-#[borsh(crate = "near_sdk::borsh")]
+#[near(contract_state)]
+#[derive(PanicOnDefault)]
 pub struct IntentContract {
     owner_id: AccountId,
     supported_tokens: LookupSet<String>,
@@ -30,7 +28,7 @@ pub struct IntentContract {
     intents: LookupMap<String, Intent>,
 }
 
-#[near_bindgen]
+#[near]
 impl IntentContract {
     /// Contract constructor.
     #[init]
@@ -108,7 +106,7 @@ impl IntentContract {
         }
     }
 
-    /// Callback which remove executed intent.
+    /// Callback which removes an intent after successful execution.
     #[private]
     pub fn cleanup_intent(&mut self, intent_id: &String) {
         self.intents.remove(intent_id);
@@ -131,7 +129,7 @@ impl IntentContract {
             predecessor_id == intent.initiator
                 || predecessor_id == self.owner_id
                 || predecessor_id == env::current_account_id(),
-            "Only initiator, self or owner can roll back intent"
+            "Only initiator, self or owner can roll back the intent"
         );
 
         ext_ft::ext(intent.send.token_id.clone())
@@ -140,9 +138,25 @@ impl IntentContract {
             .then(Self::ext(env::current_account_id()).cleanup_intent(id))
     }
 
+    /// Set a new owner of the contract.
+    pub fn set_owner(&mut self, owner_id: AccountId) {
+        self.assert_owner();
+        self.owner_id = owner_id;
+    }
+
+    /// Return owner of the contract.
+    pub const fn get_owner(&self) -> &AccountId {
+        &self.owner_id
+    }
+
     /// Return pending intent by id.
     pub fn get_intent(&self, id: &String) -> Option<&Intent> {
         self.intents.get(id)
+    }
+
+    /// Check if the provided solver is allowed.
+    pub fn is_allowed_solver(&self, solver_id: &AccountId) -> bool {
+        self.allowed_solvers.contains(solver_id)
     }
 
     fn assert_owner(&self) {

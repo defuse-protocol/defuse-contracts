@@ -17,6 +17,11 @@ members = [
     "tests"
 ]
 
+[workspace.lints.clippy]
+all = "deny"
+nursery = "deny"
+pedantic = "deny"
+
 [profile.release]
 codegen-units = 1
 opt-level = "z"

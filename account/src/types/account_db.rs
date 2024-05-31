@@ -1,6 +1,5 @@
-use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::store::LookupMap;
-use near_sdk::{AccountId, IntoStorageKey};
+use near_sdk::{near, AccountId, IntoStorageKey};
 use std::collections::HashMap;
 
 use crate::error::Error;
@@ -9,8 +8,7 @@ use crate::types::Account;
 // Accounts that belong user. Key here is derivation path.
 type UserAccounts = HashMap<String, Account>;
 
-#[derive(BorshSerialize, BorshDeserialize)]
-#[borsh(crate = "near_sdk::borsh")]
+#[near(serializers=[borsh])]
 pub struct AccountDb(LookupMap<AccountId, UserAccounts>);
 
 impl AccountDb {
