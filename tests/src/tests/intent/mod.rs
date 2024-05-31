@@ -39,6 +39,7 @@ async fn test_generic_successful_flow() {
                     amount: 2000.into(),
                 },
                 expiration: Expiration::default(),
+                referral: None,
             },
         )
         .await;
@@ -96,6 +97,7 @@ async fn test_successful_flow_partly() {
                     amount: 1000.into(),
                 },
                 expiration: Expiration::default(),
+                referral: None,
             },
         )
         .await;
@@ -173,6 +175,7 @@ async fn test_rollback_intent() {
                     amount: 2000.into(),
                 },
                 expiration: Expiration::default(),
+                referral: None,
             },
         )
         .await;
@@ -244,6 +247,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
                     amount: 2000.into(),
                 },
                 expiration: past,
+                referral: None,
             },
         )
         .await;
@@ -287,6 +291,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
                     amount: 2000.into(),
                 },
                 expiration: future,
+                referral: None,
             },
         )
         .await;

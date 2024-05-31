@@ -7,12 +7,19 @@ use near_sdk::{
 
 use crate::error::ContractError;
 
+/// Intent for swapping NEP-141 tokens
 #[near(serializers=[borsh, json])]
 pub struct Intent {
+    /// Initiator of the intent
     pub initiator: AccountId,
+    /// Tokens the initiator wants to exchange
     pub send: TokenAmount,
+    /// Tokens the initiator wants to get instead
     pub receive: TokenAmount,
+    /// Intent expiration
     pub expiration: Expiration,
+    /// Referral for getting a fee
+    pub referral: Option<AccountId>,
 }
 
 impl Intent {
@@ -59,9 +66,11 @@ impl Action {
     }
 }
 
+/// Intent expiration
 #[derive(Default, Debug)]
 #[near(serializers=[borsh, json])]
 pub enum Expiration {
+    /// No expiration
     #[default]
     None,
     /// Expiration time in seconds.
@@ -92,18 +101,19 @@ fn test_create_action_serialize() {
                 amount: 2000.into(),
             },
             expiration: Expiration::Block(123_456),
+            referral: Some("referral.near".parse().unwrap()),
         },
     ));
 
     assert_eq!(
         action.encode().unwrap(),
-        "AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAA="
+        "AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAABDQAAAHJlZmVycmFsLm5lYXI="
     );
 }
 
 #[test]
 fn test_create_action_deserialize() {
-    let action = Action::decode("AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAA=").unwrap();
+    let action = Action::decode("AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAABDQAAAHJlZmVycmFsLm5lYXI=").unwrap();
     assert!(matches!(action, Action::CreateIntent((id, _)) if id == "1"));
 }
 
