@@ -6,7 +6,7 @@ anyhow = "1"
 near-sdk = "5.1"
 near-workspaces = "0.10"
 serde_json = "1"
-tokio = { version = "1.37", default-features = false }
+tokio = { version = "1.38", default-features = false }
 
 [workspace]
 resolver = "2"
