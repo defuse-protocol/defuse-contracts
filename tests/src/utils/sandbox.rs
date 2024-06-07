@@ -2,6 +2,7 @@ use near_workspaces::types::NearToken;
 use near_workspaces::{Account, AccountId, Contract, Worker};
 use serde_json::json;
 
+// TODO: use near_workspaces::compile_project("./some/path").await?;
 const ACCOUNT_WASM: &[u8] = include_bytes!("../../../res/defuse-account-contract.wasm");
 const CONTROLLER_WASM: &[u8] = include_bytes!("../../../res/defuse-controller-contract.wasm");
 const INTENT_WASM: &[u8] = include_bytes!("../../../res/defuse-intent-contract.wasm");
@@ -71,12 +72,18 @@ impl Sandbox {
         contract
     }
 
-    pub async fn deploy_controller_contract(&self) -> Contract {
+    pub async fn deploy_controller_contract(
+        &self,
+        owner_id: &AccountId,
+        mpc_contract_id: &AccountId,
+    ) -> Contract {
+        // TODO: maybe deploy from an Env::owner, not TLA?
         let contract = self.deploy_contract("controller", CONTROLLER_WASM).await;
         let result = contract
             .call("new")
             .args_json(json!({
-                "owner_id": "dao.test.near"
+                "owner_id": owner_id,
+                "mpc_contract_id": mpc_contract_id,
             }))
             .max_gas()
             .transact()

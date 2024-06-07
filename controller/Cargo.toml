@@ -12,4 +12,7 @@ nursery = "deny"
 pedantic = "deny"
 
 [dependencies]
+# defuse-account-contract.workspace = true
+
 near-sdk.workspace = true
+near-plugins.workspace = true

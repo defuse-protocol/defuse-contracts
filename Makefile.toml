@@ -22,27 +22,18 @@ dependencies = [
 
 [tasks.clippy]
 command = "cargo"
-dependencies = [
-    "build",
-]
-args = [
-    "clippy",
-    "--workspace",
-    "--all-targets"
-]
+dependencies = ["build"]
+args = ["clippy", "--workspace", "--all-targets"]
 
 [tasks.test]
 alias = "tests"
 
 [tasks.tests]
-dependencies = [
-    "build"
-]
+# TODO: this dependency might go away when we start using
+# near_workspaces::compile_project(...)
+dependencies = ["build"]
 command = "cargo"
-args = [
-    "test",
-    "--all-targets"
-]
+args = ["test", "--all-targets"]
 
 [tasks.build-account]
 command = "cargo"
@@ -52,7 +43,7 @@ args = [
     "${TARGET}",
     "--release",
     "--package",
-    "defuse-account-contract"
+    "defuse-account-contract",
 ]
 
 [tasks.build-intent]
@@ -67,6 +58,7 @@ args = [
 ]
 
 [tasks.build-controller]
+dependencies = ["build-account"]
 command = "cargo"
 args = [
     "build",
@@ -74,7 +66,7 @@ args = [
     "${TARGET}",
     "--release",
     "-p",
-    "defuse-controller-contract"
+    "defuse-controller-contract",
 ]
 
 [tasks.cp-contracts]

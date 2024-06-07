@@ -10,6 +10,7 @@ pedantic = "deny"
 
 [dependencies]
 defuse-intent-contract = { path = "../intent" }
+defuse-controller-contract = { path = "../controller" }
 
 anyhow.workspace = true
 near-sdk = { workspace = true, features = ["unit-testing"] }
