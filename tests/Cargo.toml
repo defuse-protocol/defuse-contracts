@@ -3,10 +3,8 @@ name = "defuse-contract-tests"
 version = "0.1.0"
 edition.workspace = true
 
-[lints.clippy]
-all = "deny"
-nursery = "deny"
-pedantic = "deny"
+[lints]
+workspace = true
 
 [dependencies]
 defuse-intent-contract = { path = "../intent" }

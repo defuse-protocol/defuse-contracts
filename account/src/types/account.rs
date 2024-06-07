@@ -1,10 +1,8 @@
-use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
-use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::near;
 
-#[derive(Default, Clone, BorshSerialize, BorshDeserialize, Deserialize, Serialize)]
+#[derive(Default, Clone)]
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-#[borsh(crate = "near_sdk::borsh")]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[borsh, json])]
 pub struct Account {
     is_locked: bool,
 }

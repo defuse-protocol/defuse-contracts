@@ -1,21 +1,25 @@
 use near_sdk::json_types::U128;
-use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
     base64::{engine::general_purpose::STANDARD, Engine},
-    borsh::{BorshDeserialize, BorshSerialize},
-    env, AccountId,
+    borsh::BorshDeserialize,
+    env, near, AccountId,
 };
 
 use crate::error::ContractError;
 
-#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
-#[borsh(crate = "near_sdk::borsh")]
-#[serde(crate = "near_sdk::serde")]
+/// Intent for swapping NEP-141 tokens
+#[near(serializers=[borsh, json])]
 pub struct Intent {
+    /// Initiator of the intent
     pub initiator: AccountId,
+    /// Tokens the initiator wants to exchange
     pub send: TokenAmount,
+    /// Tokens the initiator wants to get instead
     pub receive: TokenAmount,
+    /// Intent expiration
     pub expiration: Expiration,
+    /// Referral for getting a fee
+    pub referral: Option<AccountId>,
 }
 
 impl Intent {
@@ -29,8 +33,7 @@ impl Intent {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize)]
-#[borsh(crate = "near_sdk::borsh")]
+#[near(serializers=[borsh])]
 pub enum Action {
     CreateIntent((String, Intent)),
     ExecuteIntent(String),
@@ -63,10 +66,11 @@ impl Action {
     }
 }
 
-#[derive(Default, Debug, BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
-#[borsh(crate = "near_sdk::borsh")]
-#[serde(crate = "near_sdk::serde")]
+/// Intent expiration
+#[derive(Default, Debug)]
+#[near(serializers=[borsh, json])]
 pub enum Expiration {
+    /// No expiration
     #[default]
     None,
     /// Expiration time in seconds.
@@ -75,10 +79,52 @@ pub enum Expiration {
     Block(u64),
 }
 
-#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
-#[borsh(crate = "near_sdk::borsh")]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug, Clone)]
+#[near(serializers=[borsh, json])]
 pub struct TokenAmount {
     pub token_id: AccountId,
     pub amount: U128,
+}
+
+#[test]
+fn test_create_action_serialize() {
+    let action = Action::CreateIntent((
+        "1".to_string(),
+        Intent {
+            initiator: "user.near".parse().unwrap(),
+            send: TokenAmount {
+                token_id: "token_a.near".parse().unwrap(),
+                amount: 1000.into(),
+            },
+            receive: TokenAmount {
+                token_id: "token_b.near".parse().unwrap(),
+                amount: 2000.into(),
+            },
+            expiration: Expiration::Block(123_456),
+            referral: Some("referral.near".parse().unwrap()),
+        },
+    ));
+
+    assert_eq!(
+        action.encode().unwrap(),
+        "AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAABDQAAAHJlZmVycmFsLm5lYXI="
+    );
+}
+
+#[test]
+fn test_create_action_deserialize() {
+    let action = Action::decode("AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAABDQAAAHJlZmVycmFsLm5lYXI=").unwrap();
+    assert!(matches!(action, Action::CreateIntent((id, _)) if id == "1"));
+}
+
+#[test]
+fn test_execute_action_serialize() {
+    let action = Action::ExecuteIntent("1".to_string());
+    assert_eq!(action.encode().unwrap(), "AQEAAAAx");
+}
+
+#[test]
+fn test_execute_action_deserialize() {
+    let action = Action::decode("AQEAAAAx").unwrap();
+    assert!(matches!(action, Action::ExecuteIntent(id) if id == "1"));
 }

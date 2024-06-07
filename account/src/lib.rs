@@ -1,7 +1,6 @@
-use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::store::LookupSet;
 use near_sdk::{
-    env, ext_contract, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, PromiseOrValue,
+    env, ext_contract, near, AccountId, BorshStorageKey, PanicOnDefault, PromiseOrValue,
 };
 
 use crate::error::LogError;
@@ -10,16 +9,15 @@ use crate::types::{Account, AccountDb};
 mod error;
 mod types;
 
-#[derive(BorshSerialize, BorshDeserialize, BorshStorageKey)]
-#[borsh(crate = "near_sdk::borsh")]
+#[derive(BorshStorageKey)]
+#[near(serializers=[borsh])]
 enum Prefix {
     Accounts,
     Indexers,
 }
 
-#[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault)]
-#[borsh(crate = "near_sdk::borsh")]
+#[near(contract_state)]
+#[derive(PanicOnDefault)]
 pub struct AccountContract {
     owner_id: AccountId,
     /// MPC contract id.
@@ -31,7 +29,7 @@ pub struct AccountContract {
     accounts: AccountDb,
 }
 
-#[near_bindgen]
+#[near]
 impl AccountContract {
     #[init]
     #[must_use]
