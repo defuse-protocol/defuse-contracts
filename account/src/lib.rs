@@ -1,3 +1,4 @@
+use near_plugins::Ownable;
 use near_sdk::store::LookupSet;
 use near_sdk::{
     env, ext_contract, near, AccountId, BorshStorageKey, PanicOnDefault, PromiseOrValue,
@@ -17,9 +18,8 @@ enum Prefix {
 }
 
 #[near(contract_state)]
-#[derive(PanicOnDefault)]
+#[derive(PanicOnDefault, Ownable)]
 pub struct AccountContract {
-    owner_id: AccountId,
     /// MPC contract id.
     mpc_contract_id: AccountId,
     /// List of indexers. Accounts which allow to add a new account.
@@ -35,12 +35,20 @@ impl AccountContract {
     #[must_use]
     #[allow(clippy::use_self)]
     pub fn new(owner_id: AccountId, mpc_contract_id: AccountId) -> Self {
-        Self {
-            owner_id,
+        let s = Self {
             mpc_contract_id,
             indexers: LookupSet::new(Prefix::Indexers),
             accounts: AccountDb::new(Prefix::Accounts),
-        }
+        };
+
+        // Ownable::owner_set() requires following if owner is not set:
+        // env::current_account_id() == ::near_sdk::env::predecessor_account_id()
+        assert!(!env::storage_write(
+            &s.owner_storage_key(),
+            owner_id.as_bytes()
+        ));
+
+        s
     }
 
     /// Add a new ownership of a new tokens.

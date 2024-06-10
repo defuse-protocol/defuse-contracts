@@ -50,6 +50,7 @@ impl Controller {
 
         Promise::new(account_shard_id.clone())
             .create_account()
+            // .add_full_access_key(public_key)
             .transfer(attached)
             .deploy_contract(ACCOUNT_WASM.to_vec())
             .function_call(

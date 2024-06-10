@@ -916,6 +916,7 @@ dependencies = [
 name = "defuse-account-contract"
 version = "0.1.0"
 dependencies = [
+ "near-plugins",
  "near-sdk",
 ]
 

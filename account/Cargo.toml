@@ -11,6 +11,7 @@ workspace = true
 
 [dependencies]
 near-sdk.workspace = true
+near-plugins.workspace = true
 
 [dev-dependencies]
 near-sdk = { workspace = true, features = ["unit-testing"] }
