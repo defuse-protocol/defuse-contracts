@@ -1,11 +1,12 @@
-use near_sdk::AccountId;
+use near_sdk::{AccountId, NearToken};
 use near_workspaces::{Account, Contract};
+use serde_json::json;
 
-use crate::utils::{controller::Controller, Sandbox};
+use crate::utils::Sandbox;
 
 pub struct Env {
     pub sandbox: Sandbox,
-    pub owner: Account,
+    pub dao: Account,
     pub mpc_contract: Account,
 
     pub user: Account,
@@ -17,17 +18,16 @@ pub struct Env {
 impl Env {
     pub async fn create() -> Self {
         let sandbox = Sandbox::new().await.unwrap();
-        let owner = sandbox.create_account("owner").await;
+        let dao = sandbox.create_account("dao").await;
         let mpc_contract = sandbox.create_account("mpc").await;
-
         let user = sandbox.create_account("user").await;
 
         let controller = sandbox
-            .deploy_controller_contract(owner.id(), mpc_contract.id())
+            .deploy_controller_contract(dao.id(), mpc_contract.id())
             .await;
         Self {
             sandbox,
-            owner,
+            dao,
             mpc_contract,
             user,
             controller,
@@ -35,10 +35,22 @@ impl Env {
         }
     }
 
-    pub async fn create_and_deploy_account_shard(&self, name: impl AsRef<str>) -> AccountId {
-        self.controller
-            .create_and_deploy_account_shard(name.as_ref())
+    pub async fn deploy_account_shard(&self, name: impl AsRef<str>) -> AccountId {
+        let result = self
+            .dao
+            .call(&self.controller.id(), "deploy_account_shard")
+            .args_json(json!({
+                "name": name.as_ref(),
+            }))
+            // TODO: calculate an exact amount needed
+            .deposit(NearToken::from_near(5))
+            // TODO: calculate an exact amount of Gas needed
+            .max_gas()
+            .transact()
             .await
-            .unwrap()
+            .unwrap();
+        assert!(result.is_success(), "deploy_account_shard: {result:#?}");
+
+        result.json().unwrap()
     }
 }

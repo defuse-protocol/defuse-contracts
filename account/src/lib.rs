@@ -1,7 +1,8 @@
-use near_plugins::Ownable;
-use near_sdk::store::LookupSet;
+use near_plugins::{only, Ownable};
+use near_sdk::Promise;
 use near_sdk::{
-    env, ext_contract, near, AccountId, BorshStorageKey, PanicOnDefault, PromiseOrValue,
+    env, ext_contract, near, store::LookupSet, AccountId, BorshStorageKey, PanicOnDefault,
+    PromiseOrValue,
 };
 
 use crate::error::LogError;
@@ -35,20 +36,25 @@ impl AccountContract {
     #[must_use]
     #[allow(clippy::use_self)]
     pub fn new(owner_id: AccountId, mpc_contract_id: AccountId) -> Self {
-        let s = Self {
+        let contract = Self {
             mpc_contract_id,
             indexers: LookupSet::new(Prefix::Indexers),
             accounts: AccountDb::new(Prefix::Accounts),
         };
 
-        // Ownable::owner_set() requires following if owner is not set:
+        // HACK: Ownable::owner_set() requires following if owner is not set:
         // env::current_account_id() == ::near_sdk::env::predecessor_account_id()
         assert!(!env::storage_write(
-            &s.owner_storage_key(),
+            &contract.owner_storage_key(),
             owner_id.as_bytes()
         ));
 
-        s
+        contract
+    }
+
+    #[only(self, owner)]
+    pub fn upgrade(&mut self, code: Vec<u8>) -> Promise {
+        Promise::new(env::current_account_id()).deploy_contract(code)
     }
 
     /// Add a new ownership of a new tokens.

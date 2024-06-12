@@ -41,7 +41,7 @@ impl Sandbox {
     }
 
     pub async fn create_account(&self, name: &str) -> Account {
-        self.create_subaccount(name, NearToken::from_near(10))
+        self.create_subaccount(name, NearToken::from_near(100))
             .await
             .unwrap()
     }
@@ -74,15 +74,15 @@ impl Sandbox {
 
     pub async fn deploy_controller_contract(
         &self,
-        owner_id: &AccountId,
+        dao: &AccountId,
         mpc_contract_id: &AccountId,
     ) -> Contract {
-        // TODO: maybe deploy from an Env::owner, not TLA?
         let contract = self.deploy_contract("controller", CONTROLLER_WASM).await;
         let result = contract
             .call("new")
             .args_json(json!({
-                "owner_id": owner_id,
+                // TODO: add support for DAO in Sandbox, not TLA
+                "dao": dao,
                 "mpc_contract_id": mpc_contract_id,
             }))
             .max_gas()
