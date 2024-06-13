@@ -10,7 +10,7 @@ fn read_wasm(name: impl AsRef<Path>) -> Vec<u8> {
         .join("../res/")
         .join(name)
         .with_extension("wasm");
-    fs::read(&filename).expect(&format!("{}", filename.display()))
+    fs::read(filename).unwrap()
 }
 lazy_static! {
     static ref ACCOUNT_WASM: Vec<u8> = read_wasm("defuse-account-contract");
