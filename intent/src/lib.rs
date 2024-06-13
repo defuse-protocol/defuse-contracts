@@ -243,17 +243,15 @@ impl IntentContract {
 
         detailed_intent.set_status(Status::Processing);
 
+        let intent = detailed_intent.get_intent();
         let current_id = env::current_account_id();
-        let promise = if detailed_intent.get_intent().is_expired() {
-            let intent = detailed_intent.get_intent();
 
+        let promise = if detailed_intent.get_intent().is_expired() {
             ext_ft::ext(intent.send.token_id.clone())
                 .with_attached_deposit(NearToken::from_yoctonear(1))
                 .ft_transfer(intent.initiator.clone(), intent.send.amount)
                 .then(Self::ext(current_id).change_intent_status(id, Status::Expired))
         } else {
-            let intent = detailed_intent.get_intent();
-
             if amount != intent.receive.amount {
                 return Err(ContractError::IncorrectAmount);
             }

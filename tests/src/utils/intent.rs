@@ -85,7 +85,6 @@ impl Intent for Account {
             .transact()
             .await
             .unwrap();
-        dbg!(&result);
         assert!(result.is_success(), "execution intent error: {result:#?}");
     }
 
