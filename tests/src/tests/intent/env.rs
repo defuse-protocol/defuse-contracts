@@ -1,4 +1,4 @@
-use crate::utils::intent::Intent;
+use crate::utils::intent::Intending;
 use crate::utils::token::Token;
 use crate::utils::Sandbox;
 use near_sdk::AccountId;

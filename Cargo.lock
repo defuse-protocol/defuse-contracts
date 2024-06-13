@@ -885,6 +885,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "defuse-account-contract-impl"
+version = "0.1.0"
+dependencies = [
+ "defuse-account-contract",
+ "near-sdk",
+]
+
+[[package]]
 name = "defuse-contract-tests"
 version = "0.1.0"
 dependencies = [
@@ -897,6 +905,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "defuse-contracts"
+version = "0.1.0"
+dependencies = [
+ "defuse-account-contract",
+ "defuse-controller-contract",
+ "defuse-intent-contract",
+]
+
+[[package]]
 name = "defuse-controller-contract"
 version = "0.1.0"
 dependencies = [
@@ -904,9 +921,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "defuse-controller-contract-impl"
+version = "0.1.0"
+dependencies = [
+ "defuse-account-contract",
+ "defuse-controller-contract",
+ "near-sdk",
+]
+
+[[package]]
 name = "defuse-intent-contract"
 version = "0.1.0"
 dependencies = [
+ "near-contract-standards",
+ "near-sdk",
+ "strum 0.26.2",
+]
+
+[[package]]
+name = "defuse-intent-contract-impl"
+version = "0.1.0"
+dependencies = [
+ "defuse-intent-contract",
+ "near-contract-standards",
  "near-sdk",
 ]
 
@@ -1901,6 +1938,15 @@ dependencies = [
  "json_comments",
  "thiserror",
  "tracing",
+]
+
+[[package]]
+name = "near-contract-standards"
+version = "5.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0e78fe14d389ae76f792735a2108a6b8332a2bed61197310bf5ad718fb1e424"
+dependencies = [
+ "near-sdk",
 ]
 
 [[package]]
@@ -3480,6 +3526,9 @@ name = "strum"
 version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d8cec3501a5194c432b2b7976db6b7d10ec95c253208b45f83f7136aa985e29"
+dependencies = [
+ "strum_macros 0.26.2",
+]
 
 [[package]]
 name = "strum_macros"

@@ -1,0 +1,15 @@
+[package]
+name = "defuse-intent-contract-impl"
+version = "0.1.0"
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+defuse-intent-contract.workspace = true
+near-sdk.workspace = true
+near-contract-standards.workspace = true

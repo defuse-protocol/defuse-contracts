@@ -1,8 +1,8 @@
-use defuse_intent_contract::{types, types::intent::Expiration, types::intent::TokenAmount};
+use defuse_intent_contract::{Expiration, Intent, TokenAmount};
 
 use crate::{
     tests::intent::env::Env,
-    utils::{intent::Intent, token::Token},
+    utils::{intent::Intending, token::Token},
 };
 
 mod env;
@@ -28,7 +28,7 @@ async fn test_generic_successful_flow() {
             env.token_a.id(),
             env.intent.id(),
             "1",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),
@@ -86,7 +86,7 @@ async fn test_successful_flow_partly() {
             env.token_a.id(),
             env.intent.id(),
             "1",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),
@@ -164,7 +164,7 @@ async fn test_rollback_intent() {
             env.token_a.id(),
             env.intent.id(),
             "1",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),
@@ -236,7 +236,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
             env.token_a.id(),
             env.intent.id(),
             "1",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),
@@ -280,7 +280,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
             env.token_a.id(),
             env.intent.id(),
             "2",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),

@@ -1,19 +1,20 @@
+use near_sdk::base64;
+use strum::IntoStaticStr;
+
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug)]
+#[derive(Debug, IntoStaticStr)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum ContractError {
-    BorshSerializeError,
-    BorshDeserializeError,
-    Base64EncodeError,
-    Base64DecodeError,
+    #[strum(serialize = "BORSH_SERIALIZE_ERROR")]
+    BorshSerialize,
+    #[strum(serialize = "BORSH_DESERIALIZE_ERROR")]
+    BorshDeserialize,
+    #[strum(serialize = "BASE64_DECODE_ERROR")]
+    Base64Decode,
 }
 
-impl AsRef<str> for ContractError {
-    fn as_ref(&self) -> &str {
-        match self {
-            Self::BorshSerializeError => "BORSH_SERIALIZE_ERROR",
-            Self::BorshDeserializeError => "BORSH_DESERIALIZE_ERROR",
-            Self::Base64EncodeError => "BASE64_ENCODE_ERROR",
-            Self::Base64DecodeError => "BASE64_DECODE_ERROR",
-        }
+impl From<base64::DecodeError> for ContractError {
+    fn from(_: base64::DecodeError) -> Self {
+        Self::Base64Decode
     }
 }

@@ -22,27 +22,16 @@ dependencies = [
 
 [tasks.clippy]
 command = "cargo"
-dependencies = [
-    "build",
-]
-args = [
-    "clippy",
-    "--workspace",
-    "--all-targets"
-]
+dependencies = ["build"]
+args = ["clippy", "--workspace", "--all-targets"]
 
 [tasks.test]
 alias = "tests"
 
 [tasks.tests]
-dependencies = [
-    "build"
-]
+dependencies = ["build"]
 command = "cargo"
-args = [
-    "test",
-    "--all-targets"
-]
+args = ["test", "--all-targets"]
 
 [tasks.build-account]
 command = "cargo"
@@ -52,7 +41,7 @@ args = [
     "${TARGET}",
     "--release",
     "--package",
-    "defuse-account-contract"
+    "defuse-account-contract-impl",
 ]
 
 [tasks.build-intent]
@@ -63,7 +52,7 @@ args = [
     "${TARGET}",
     "--release",
     "--package",
-    "defuse-intent-contract",
+    "defuse-intent-contract-impl",
 ]
 
 [tasks.build-controller]
@@ -74,18 +63,18 @@ args = [
     "${TARGET}",
     "--release",
     "-p",
-    "defuse-controller-contract"
+    "defuse-controller-contract-impl",
 ]
 
 [tasks.cp-contracts]
 script = """
-cp target/${TARGET}/release/defuse_account_contract.wasm ${TARGET_DIR}/${ACCOUNT_WASM_FILE}
-cp target/${TARGET}/release/defuse_intent_contract.wasm ${TARGET_DIR}/${INTENT_WASM_FILE}
+cp target/${TARGET}/release/defuse_account_contract_impl.wasm ${TARGET_DIR}/${ACCOUNT_WASM_FILE}
+cp target/${TARGET}/release/defuse_intent_contract_impl.wasm ${TARGET_DIR}/${INTENT_WASM_FILE}
 """
 
 [tasks.cp-controller]
 script = """
-cp target/${TARGET}/release/defuse_controller_contract.wasm ${TARGET_DIR}/${CONTROLLER_WASM_FILE}
+cp target/${TARGET}/release/defuse_controller_contract_impl.wasm ${TARGET_DIR}/${CONTROLLER_WASM_FILE}
 """
 
 [tasks.clean]

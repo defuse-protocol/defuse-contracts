@@ -1,16 +1,16 @@
-use defuse_intent_contract::types;
+use defuse_intent_contract::{Action, Intent};
 use near_sdk::json_types::U128;
 use near_workspaces::types::NearToken;
 use near_workspaces::{Account, AccountId};
 use serde_json::json;
 
-pub trait Intent {
+pub trait Intending {
     async fn create_intent(
         &self,
         contract_id: &AccountId,
         intent_account_id: &AccountId,
         id: &str,
-        intent: types::Intent,
+        intent: Intent,
     );
     async fn execute_intent(
         &self,
@@ -23,20 +23,20 @@ pub trait Intent {
     async fn add_solver(&self, contract_id: &AccountId, solver_id: &AccountId);
 
     // View transactions
-    async fn get_intent(&self, intent_contract_id: &AccountId, id: &str) -> Option<types::Intent>;
+    async fn get_intent(&self, intent_contract_id: &AccountId, id: &str) -> Option<Intent>;
 }
 
-impl Intent for Account {
+impl Intending for Account {
     async fn create_intent(
         &self,
         contract_id: &AccountId,
         intent_account_id: &AccountId,
         id: &str,
-        intent: types::Intent,
+        intent: Intent,
     ) {
         let amount = intent.send.amount;
-        let intent = types::intent::Action::CreateIntent((id.to_string(), intent));
-        let msg = intent.encode().unwrap();
+        let intent = Action::CreateIntent(id.to_string(), intent);
+        let msg = intent.encode_base64().unwrap();
         let args = json!({
             "receiver_id": intent_account_id,
             "amount": amount,
@@ -63,8 +63,8 @@ impl Intent for Account {
         id: &str,
         amount: U128,
     ) {
-        let intent = types::intent::Action::ExecuteIntent(id.to_string());
-        let msg = intent.encode().unwrap();
+        let intent = Action::ExecuteIntent(id.to_string());
+        let msg = intent.encode_base64().unwrap();
         let args = json!({
             "receiver_id": intent_account_id,
             "amount": amount,
@@ -110,7 +110,7 @@ impl Intent for Account {
     }
 
     // View transactions
-    async fn get_intent(&self, intent_contract_id: &AccountId, id: &str) -> Option<types::Intent> {
+    async fn get_intent(&self, intent_contract_id: &AccountId, id: &str) -> Option<Intent> {
         let result = self
             .call(intent_contract_id, "get_intent")
             .args_json(json!({

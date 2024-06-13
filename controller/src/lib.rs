@@ -1,17 +1,4 @@
-use near_sdk::{near, AccountId, PanicOnDefault};
+use near_sdk::ext_contract;
 
-#[near(contract_state)]
-#[derive(PanicOnDefault)]
-pub struct ControllerContract {
-    owner_id: AccountId,
-}
-
-#[near]
-impl ControllerContract {
-    #[init]
-    #[must_use]
-    #[allow(clippy::use_self)]
-    pub const fn new(owner_id: AccountId) -> Self {
-        Self { owner_id }
-    }
-}
+#[ext_contract(ext_controller_contract)]
+pub trait ControllerContract {}
