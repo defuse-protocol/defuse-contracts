@@ -898,6 +898,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "defuse-intent-contract",
+ "lazy_static",
  "near-sdk",
  "near-workspaces",
  "serde_json",
