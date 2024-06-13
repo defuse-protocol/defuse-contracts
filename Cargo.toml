@@ -21,6 +21,7 @@ members = [
 all = "deny"
 nursery = "deny"
 pedantic = "deny"
+module_name_repetitions = "allow"
 
 [profile.release]
 codegen-units = 1
