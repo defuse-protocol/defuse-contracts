@@ -30,7 +30,7 @@ alias = "tests"
 [tasks.tests]
 dependencies = ["build"]
 command = "cargo"
-args = ["test", "--all-targets"]
+args = ["test", "--workspace", "--all-targets"]
 
 [tasks.build-account]
 command = "cargo"

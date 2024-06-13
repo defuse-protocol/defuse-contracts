@@ -16,6 +16,6 @@ pub trait AccountContract {
     /// Return all [`Account`]s owned by given `owner`
     fn get_accounts(&self, owner: &AccountId) -> Vec<(String, Account)>;
 
-    /// Return MPC contract for this 
+    /// Return MPC contract for this
     fn mpc_contract(&self) -> &AccountId;
 }

@@ -1,11 +1,10 @@
-use defuse_intent_contract::{Expiration, Intent, TokenAmount};
-
-use crate::{
-    tests::intent::env::Env,
-    utils::{intent::Intending, token::Token},
-};
-
 mod env;
+
+use defuse_contracts::intent::{Expiration, Intent, TokenAmount};
+
+use crate::utils::{intent::Intending, token::Token};
+
+use self::env::Env;
 
 #[tokio::test]
 async fn test_generic_successful_flow() {

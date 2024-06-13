@@ -890,6 +890,7 @@ version = "0.1.0"
 dependencies = [
  "defuse-account-contract",
  "near-sdk",
+ "strum 0.26.2",
 ]
 
 [[package]]
@@ -897,7 +898,7 @@ name = "defuse-contract-tests"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "defuse-intent-contract",
+ "defuse-contracts",
  "lazy_static",
  "near-sdk",
  "near-workspaces",

@@ -1,6 +1,8 @@
-use defuse_account_contract::Account;
-use near_sdk::{near, store::LookupMap, AccountId, IntoStorageKey};
 use std::collections::HashMap;
+
+use defuse_account_contract::Account;
+
+use near_sdk::{near, store::LookupMap, AccountId, IntoStorageKey};
 
 use crate::error::Error;
 

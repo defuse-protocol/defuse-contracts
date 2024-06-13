@@ -1,14 +1,14 @@
+mod account_db;
+mod error;
+
 use defuse_account_contract::{Account, AccountContract};
-use near_sdk::store::LookupSet;
+
 use near_sdk::{
-    env, ext_contract, near, AccountId, BorshStorageKey, PanicOnDefault, PromiseOrValue,
+    env, ext_contract, near, store::LookupSet, AccountId, BorshStorageKey, PanicOnDefault,
+    PromiseOrValue,
 };
 
-use crate::error::LogError;
-use crate::types::AccountDb;
-
-mod error;
-mod types;
+use self::{account_db::AccountDb, error::LogError};
 
 #[derive(BorshStorageKey)]
 #[near(serializers=[borsh])]

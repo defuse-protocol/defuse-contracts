@@ -1,6 +1,6 @@
 use defuse_intent_contract::{Action, Intent, IntentContract};
-use near_contract_standards::fungible_token::core::ext_ft_core;
-use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
+
+use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
 use near_sdk::{
     env::{self, panic_str},
     json_types::U128,
