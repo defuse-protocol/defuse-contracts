@@ -1,3 +1,8 @@
-pub use defuse_account_contract as account;
-pub use defuse_controller_contract as controller;
-pub use defuse_intent_contract as intent;
+#[cfg(feature = "account")]
+pub mod account;
+#[cfg(feature = "controller")]
+pub mod controller;
+#[cfg(feature = "intent")]
+pub mod intent;
+#[cfg(feature = "mpc")]
+pub mod mpc;

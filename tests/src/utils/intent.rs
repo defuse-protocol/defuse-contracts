@@ -1,7 +1,6 @@
 use defuse_contracts::intent::{Action, Intent};
 use near_sdk::json_types::U128;
-use near_workspaces::types::NearToken;
-use near_workspaces::{Account, AccountId};
+use near_workspaces::{types::NearToken, Account, AccountId};
 use serde_json::json;
 
 pub trait Intending {
@@ -36,7 +35,7 @@ impl Intending for Account {
     ) {
         let amount = intent.send.amount;
         let intent = Action::CreateIntent(id.to_string(), intent);
-        let msg = intent.encode_base64().unwrap();
+        let msg = intent.encode_base64().expect("encode Action");
         let args = json!({
             "receiver_id": intent_account_id,
             "amount": amount,
@@ -64,7 +63,7 @@ impl Intending for Account {
         amount: U128,
     ) {
         let intent = Action::ExecuteIntent(id.to_string());
-        let msg = intent.encode_base64().unwrap();
+        let msg = intent.encode_base64().expect("encode Action");
         let args = json!({
             "receiver_id": intent_account_id,
             "amount": amount,

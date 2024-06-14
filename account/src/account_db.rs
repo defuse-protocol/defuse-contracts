@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
-use defuse_account_contract::Account;
-
+use defuse_contracts::account::Account;
 use near_sdk::{near, store::LookupMap, AccountId, IntoStorageKey};
 
-use crate::error::Error;
+use crate::Error;
 
 // Accounts that belong user. Key here is derivation path.
 type UserAccounts = HashMap<String, Account>;

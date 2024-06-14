@@ -6,7 +6,7 @@ use near_sdk::{
     near, AccountId,
 };
 
-use crate::ContractError;
+use super::IntentError;
 
 #[near(serializers=[borsh])]
 pub enum Action {
@@ -22,12 +22,12 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn base64_decode(msg: impl AsRef<[u8]>) -> Result<Self, ContractError> {
-        Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| ContractError::BorshDeserialize)
+    pub fn base64_decode(msg: impl AsRef<[u8]>) -> Result<Self, IntentError> {
+        Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| IntentError::Borsh)
     }
 
-    pub fn encode_base64(&self) -> Result<String, ContractError> {
-        Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| ContractError::BorshSerialize)?))
+    pub fn encode_base64(&self) -> Result<String, IntentError> {
+        Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| IntentError::Borsh)?))
     }
 }
 
