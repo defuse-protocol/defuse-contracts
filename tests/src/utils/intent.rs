@@ -1,5 +1,6 @@
 use defuse_intent_contract::types;
 use near_sdk::json_types::U128;
+use near_workspaces::result::ExecutionFinalResult;
 use near_workspaces::types::NearToken;
 use near_workspaces::{Account, AccountId};
 use serde_json::json;
@@ -19,11 +20,16 @@ pub trait Intent {
         id: &str,
         amount: U128,
     );
-    async fn rollback_intent(&self, contract_id: &AccountId, id: &str);
+    async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> ExecutionFinalResult;
     async fn add_solver(&self, contract_id: &AccountId, solver_id: &AccountId);
+    async fn set_min_ttl(&self, contract_id: &AccountId, min_ttl: u64);
 
     // View transactions
-    async fn get_intent(&self, intent_contract_id: &AccountId, id: &str) -> Option<types::Intent>;
+    async fn get_intent(
+        &self,
+        intent_contract_id: &AccountId,
+        id: &str,
+    ) -> Option<types::DetailedIntent>;
 }
 
 impl Intent for Account {
@@ -52,7 +58,6 @@ impl Intent for Account {
             .transact()
             .await
             .unwrap();
-        dbg!(&result);
         assert!(result.is_success(), "creation intent error: {result:#?}");
     }
 
@@ -83,18 +88,15 @@ impl Intent for Account {
         assert!(result.is_success(), "execution intent error: {result:#?}");
     }
 
-    async fn rollback_intent(&self, contract_id: &AccountId, id: &str) {
-        let result = self
-            .call(contract_id, "rollback_intent")
+    async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> ExecutionFinalResult {
+        self.call(contract_id, "rollback_intent")
             .args_json(json!({
                 "id": id
             }))
             .max_gas()
             .transact()
             .await
-            .unwrap();
-        dbg!(&result);
-        assert!(result.is_success(), "intent rollback error: {result:#?}");
+            .unwrap()
     }
 
     async fn add_solver(&self, contract_id: &AccountId, solver_id: &AccountId) {
@@ -109,8 +111,24 @@ impl Intent for Account {
         assert!(result.is_success(), "execution intent error: {result:#?}");
     }
 
+    async fn set_min_ttl(&self, contract_id: &AccountId, min_ttl: u64) {
+        let result = self
+            .call(contract_id, "set_min_intent_ttl")
+            .args_json(json!({
+                "min_ttl": min_ttl
+            }))
+            .transact()
+            .await
+            .unwrap();
+        assert!(result.is_success(), "set min ttl error: {result:#?}");
+    }
+
     // View transactions
-    async fn get_intent(&self, intent_contract_id: &AccountId, id: &str) -> Option<types::Intent> {
+    async fn get_intent(
+        &self,
+        intent_contract_id: &AccountId,
+        id: &str,
+    ) -> Option<types::DetailedIntent> {
         let result = self
             .call(intent_contract_id, "get_intent")
             .args_json(json!({

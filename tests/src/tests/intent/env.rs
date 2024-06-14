@@ -52,4 +52,11 @@ impl Env {
     pub fn solver_id(&self) -> &AccountId {
         self.solver.id()
     }
+
+    pub async fn set_min_ttl(&self, min_ttl: u64) {
+        self.intent
+            .as_account()
+            .set_min_ttl(self.intent.id(), min_ttl)
+            .await;
+    }
 }

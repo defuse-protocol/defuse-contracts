@@ -1,15 +1,18 @@
-use near_sdk::env::panic_str;
 use near_sdk::json_types::U128;
+use near_sdk::store::lookup_map::Entry;
 use near_sdk::store::{LookupMap, LookupSet};
 use near_sdk::{
     env, ext_contract, log, near, AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise,
     PromiseOrValue,
 };
 
-use crate::{types::intent::Action, types::Intent};
+use crate::error::{ContractError, LogUnwrap};
+use crate::types::intent::{Action, DetailedIntent, Intent, Status};
 
 pub mod error;
 pub mod types;
+
+const DEFAULT_MIN_TTL: u64 = 60; // 1 minute
 
 #[derive(BorshStorageKey)]
 #[near(serializers=[borsh])]
@@ -25,7 +28,8 @@ pub struct IntentContract {
     owner_id: AccountId,
     supported_tokens: LookupSet<String>,
     allowed_solvers: LookupSet<AccountId>,
-    intents: LookupMap<String, Intent>,
+    intents: LookupMap<String, DetailedIntent>,
+    min_intent_ttl: u64,
 }
 
 #[near]
@@ -40,6 +44,7 @@ impl IntentContract {
             supported_tokens: LookupSet::new(Prefix::SupportedTokens),
             allowed_solvers: LookupSet::new(Prefix::AllowedSolvers),
             intents: LookupMap::new(Prefix::Intents),
+            min_intent_ttl: DEFAULT_MIN_TTL,
         }
     }
 
@@ -59,57 +64,34 @@ impl IntentContract {
         &mut self,
         sender_id: &AccountId,
         amount: U128,
-        msg: &String,
+        msg: String,
     ) -> PromiseOrValue<U128> {
         // Validate that sender_id is in white token list.
         // self.assert_token(&sender_id); // TODO: Check if we need tokens validation.
-        let action = Action::decode(msg)
-            .unwrap_or_else(|e| panic_str(&format!("Action decode error: {}", e.as_ref())));
-
-        log!(format!("{sender_id} : {}: msg: {msg}", amount.0));
+        let action = Action::decode(msg).log_unwrap();
 
         match action {
             Action::CreateIntent((id, intent)) => {
-                assert!(
-                    self.intents.insert(id, intent).is_none(),
-                    "Intent already exists"
+                log!(
+                    "Creating the intent with id: {id} by: {sender_id}, amount: {}",
+                    amount.0
                 );
-
-                PromiseOrValue::Value(0.into())
+                self.create_intent(id, amount, intent).log_unwrap()
             }
-            Action::ExecuteIntent(id) => {
-                let current_id = env::current_account_id();
-                let solver_id = env::signer_account_id();
-                self.assert_solver(&solver_id);
-
-                let intent = self
-                    .intents
-                    .get(&id)
-                    .unwrap_or_else(|| panic_str(&format!("No intent for id: {id}")));
-
-                let promise = if intent.is_expired() {
-                    Self::ext(current_id).rollback_intent(&id)
-                } else {
-                    ext_ft::ext(intent.send.token_id.clone())
-                        .with_attached_deposit(NearToken::from_yoctonear(1))
-                        .ft_transfer(solver_id, intent.send.amount)
-                        .then(
-                            ext_ft::ext(intent.receive.token_id.clone())
-                                .with_attached_deposit(NearToken::from_yoctonear(1))
-                                .ft_transfer(intent.initiator.clone(), intent.receive.amount),
-                        )
-                        .then(Self::ext(current_id).cleanup_intent(&id))
-                };
-
-                PromiseOrValue::Promise(promise)
-            }
+            Action::ExecuteIntent(id) => self.execute_intent(&id, amount).log_unwrap(),
         }
     }
 
-    /// Callback which removes an intent after successful execution.
+    /// Callback which changes a status of the intent.
     #[private]
-    pub fn cleanup_intent(&mut self, intent_id: &String) {
-        self.intents.remove(intent_id);
+    pub fn change_intent_status(&mut self, intent_id: &String, status: Status) {
+        let intent_with_status = self
+            .intents
+            .get_mut(intent_id)
+            .ok_or(ContractError::IntentNotFound)
+            .log_unwrap();
+
+        intent_with_status.set_status(status);
     }
 
     /// Rollback created intent and refund tokens to the intent's initiator.
@@ -119,11 +101,25 @@ impl IntentContract {
     ///
     /// The panic occurs if intent doesn't exist of caller is not allowed.
     pub fn rollback_intent(&mut self, id: &String) -> Promise {
-        let intent = self
+        let detailed_intent = self
             .intents
-            .get(id)
-            .unwrap_or_else(|| panic_str(&format!("No intent for id: {id}")));
+            .get_mut(id)
+            .ok_or(ContractError::IntentNotFound)
+            .log_unwrap();
+
+        if !detailed_intent.could_be_rollbacked() {
+            env::panic_str("Too early to roll back the intent");
+        }
+
+        assert!(
+            matches!(detailed_intent.get_status(), Status::Available),
+            "Only intents with created status could be rolled back"
+        );
+
+        detailed_intent.set_status(Status::Processing);
+
         let predecessor_id = env::predecessor_account_id();
+        let intent = detailed_intent.get_intent();
 
         assert!(
             predecessor_id == intent.initiator
@@ -135,7 +131,7 @@ impl IntentContract {
         ext_ft::ext(intent.send.token_id.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .ft_transfer(intent.initiator.clone(), intent.send.amount)
-            .then(Self::ext(env::current_account_id()).cleanup_intent(id))
+            .then(Self::ext(env::current_account_id()).change_intent_status(id, Status::RolledBack))
     }
 
     /// Set a new owner of the contract.
@@ -150,13 +146,31 @@ impl IntentContract {
     }
 
     /// Return pending intent by id.
-    pub fn get_intent(&self, id: &String) -> Option<&Intent> {
+    pub fn get_intent(&self, id: &String) -> Option<&DetailedIntent> {
         self.intents.get(id)
     }
 
     /// Check if the provided solver is allowed.
     pub fn is_allowed_solver(&self, solver_id: &AccountId) -> bool {
         self.allowed_solvers.contains(solver_id)
+    }
+
+    /// Set the minimum TTL for the intent.
+    ///
+    /// # Panics
+    ///
+    /// A panic could be thrown if the provided TTL is too long
+    /// or the transaction is invoked not by the owner.
+    pub fn set_min_intent_ttl(&mut self, min_ttl: u64) {
+        self.assert_owner();
+        // Check for too long value of TTL
+        assert!(min_ttl.checked_mul(1000).is_some(), "TTL is too long");
+        self.min_intent_ttl = min_ttl;
+    }
+
+    /// Return the minimum time to live for the intent.
+    pub const fn get_min_intent_ttl(&self) -> u64 {
+        self.min_intent_ttl
     }
 
     fn assert_owner(&self) {
@@ -180,6 +194,80 @@ impl IntentContract {
             self.supported_tokens.contains(token_id.as_str()),
             "Unsupported token"
         );
+    }
+
+    fn create_intent(
+        &mut self,
+        id: String,
+        amount: U128,
+        intent: Intent,
+    ) -> Result<PromiseOrValue<U128>, ContractError> {
+        if amount != intent.send.amount {
+            return Err(ContractError::IncorrectAmount);
+        }
+
+        match self.intents.entry(id) {
+            Entry::Occupied(_) => Err(ContractError::IntentAlreadyExists),
+            Entry::Vacant(entry) => {
+                let detailed_intent = DetailedIntent::new(intent, self.min_intent_ttl);
+                entry.insert(detailed_intent);
+
+                Ok(PromiseOrValue::Value(0.into()))
+            }
+        }
+    }
+
+    fn execute_intent(
+        &mut self,
+        id: &String,
+        amount: U128,
+    ) -> Result<PromiseOrValue<U128>, ContractError> {
+        let solver_id = env::signer_account_id();
+
+        log!(
+            "Executing the intent with id: {id} by: {}, amount: {}",
+            &solver_id,
+            amount.0
+        );
+
+        self.assert_solver(&solver_id);
+
+        let detailed_intent = self
+            .intents
+            .get_mut(id)
+            .ok_or(ContractError::IntentNotFound)?;
+
+        if !matches!(detailed_intent.get_status(), Status::Available) {
+            return Err(ContractError::WrongIntentStatus);
+        }
+
+        detailed_intent.set_status(Status::Processing);
+
+        let intent = detailed_intent.get_intent();
+        let current_id = env::current_account_id();
+
+        let promise = if detailed_intent.get_intent().is_expired() {
+            ext_ft::ext(intent.send.token_id.clone())
+                .with_attached_deposit(NearToken::from_yoctonear(1))
+                .ft_transfer(intent.initiator.clone(), intent.send.amount)
+                .then(Self::ext(current_id).change_intent_status(id, Status::Expired))
+        } else {
+            if amount != intent.receive.amount {
+                return Err(ContractError::IncorrectAmount);
+            }
+
+            ext_ft::ext(intent.send.token_id.clone())
+                .with_attached_deposit(NearToken::from_yoctonear(1))
+                .ft_transfer(solver_id, intent.send.amount)
+                .then(
+                    ext_ft::ext(intent.receive.token_id.clone())
+                        .with_attached_deposit(NearToken::from_yoctonear(1))
+                        .ft_transfer(intent.initiator.clone(), intent.receive.amount),
+                )
+                .then(Self::ext(current_id).change_intent_status(id, Status::Completed))
+        };
+
+        Ok(PromiseOrValue::Promise(promise))
     }
 }
 
