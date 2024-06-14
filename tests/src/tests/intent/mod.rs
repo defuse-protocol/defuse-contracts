@@ -189,7 +189,7 @@ async fn test_rollback_intent() {
     assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
-    assert!(matches!(intent.get_status(), Status::Created));
+    assert!(matches!(intent.get_status(), Status::Available));
 
     // The user decides to roll back intent.
     let status = env.user.rollback_intent(env.intent.id(), "1").await;
@@ -255,7 +255,7 @@ async fn test_rollback_intent_too_early() {
     assert!(result.is_failure());
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
-    assert!(matches!(intent.get_status(), Status::Created));
+    assert!(matches!(intent.get_status(), Status::Available));
 
     // Check balances after intent execution.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);

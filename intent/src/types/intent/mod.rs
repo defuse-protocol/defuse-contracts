@@ -27,7 +27,7 @@ impl DetailedIntent {
     pub fn new(intent: Intent, min_ttl: u64) -> Self {
         Self {
             intent,
-            status: Status::Created,
+            status: Status::Available,
             created_at: env::block_timestamp_ms(),
             min_ttl: min_ttl * 1000, // Safe. Validation for overflow happens in the transaction
         }
@@ -145,8 +145,8 @@ pub struct TokenAmount {
 #[derive(Debug, Clone, Copy)]
 #[near(serializers=[borsh, json])]
 pub enum Status {
-    /// Intent is created by the user and waiting for execution
-    Created,
+    /// Intent is created by the user and available for the execution
+    Available,
     /// Intent is processing
     Processing,
     /// Intent is completed by the solver

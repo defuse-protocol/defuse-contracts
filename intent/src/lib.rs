@@ -112,7 +112,7 @@ impl IntentContract {
         }
 
         assert!(
-            matches!(detailed_intent.get_status(), Status::Created),
+            matches!(detailed_intent.get_status(), Status::Available),
             "Only intents with created status could be rolled back"
         );
 
@@ -237,7 +237,7 @@ impl IntentContract {
             .get_mut(id)
             .ok_or(ContractError::IntentNotFound)?;
 
-        if !matches!(detailed_intent.get_status(), Status::Created) {
+        if !matches!(detailed_intent.get_status(), Status::Available) {
             return Err(ContractError::WrongIntentStatus);
         }
 
