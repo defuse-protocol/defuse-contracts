@@ -1,15 +1,16 @@
 [package]
-name = "defuse-contract-tests"
+name = "defuse-contracts-tests"
 version = "0.1.0"
 edition.workspace = true
 
 [lints]
 workspace = true
 
-[dependencies]
-defuse-intent-contract = { path = "../intent" }
+[dev-dependencies]
+defuse-contracts.workspace = true
 
 anyhow.workspace = true
+lazy_static.workspace = true
 near-sdk = { workspace = true, features = ["unit-testing"] }
 near-workspaces.workspace = true
 serde_json.workspace = true

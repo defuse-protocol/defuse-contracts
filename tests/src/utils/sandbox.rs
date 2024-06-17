@@ -1,11 +1,23 @@
-use near_workspaces::types::NearToken;
-use near_workspaces::{Account, AccountId, Contract, Worker};
+use std::fs;
+use std::path::Path;
+
+use lazy_static::lazy_static;
+use near_workspaces::{types::NearToken, Account, AccountId, Contract, Worker};
 use serde_json::json;
 
-const ACCOUNT_WASM: &[u8] = include_bytes!("../../../res/defuse-account-contract.wasm");
-const CONTROLLER_WASM: &[u8] = include_bytes!("../../../res/defuse-controller-contract.wasm");
-const INTENT_WASM: &[u8] = include_bytes!("../../../res/defuse-intent-contract.wasm");
-const TOKEN_WASM: &[u8] = include_bytes!("../../../res/fungible-token.wasm");
+fn read_wasm(name: impl AsRef<Path>) -> Vec<u8> {
+    let filename = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../res/")
+        .join(name)
+        .with_extension("wasm");
+    fs::read(filename).unwrap()
+}
+lazy_static! {
+    static ref ACCOUNT_WASM: Vec<u8> = read_wasm("defuse-account-contract");
+    static ref CONTROLLER_WASM: Vec<u8> = read_wasm("defuse-controller-contract");
+    static ref INTENT_WASM: Vec<u8> = read_wasm("defuse-intent-contract");
+    static ref FUNGIBLE_TOKEN_WASM: Vec<u8> = read_wasm("fungible-token");
+}
 
 const TOTAL_SUPPLY: u128 = 1_000_000_000;
 
@@ -55,7 +67,7 @@ impl Sandbox {
     }
 
     pub async fn deploy_account_contract(&self) -> Contract {
-        let contract = self.deploy_contract("account", ACCOUNT_WASM).await;
+        let contract = self.deploy_contract("account", &ACCOUNT_WASM).await;
         let result = contract
             .call("new")
             .args_json(json!({
@@ -72,7 +84,7 @@ impl Sandbox {
     }
 
     pub async fn deploy_controller_contract(&self) -> Contract {
-        let contract = self.deploy_contract("controller", CONTROLLER_WASM).await;
+        let contract = self.deploy_contract("controller", &CONTROLLER_WASM).await;
         let result = contract
             .call("new")
             .args_json(json!({
@@ -88,7 +100,7 @@ impl Sandbox {
     }
 
     pub async fn deploy_intent_contract(&self) -> Contract {
-        let contract = self.deploy_contract("intent", INTENT_WASM).await;
+        let contract = self.deploy_contract("intent", &INTENT_WASM).await;
         let result = contract
             .call("new")
             .args_json(json!({
@@ -104,7 +116,7 @@ impl Sandbox {
     }
 
     pub async fn deploy_token(&self, token: &str) -> Contract {
-        let contract = self.deploy_contract(token, TOKEN_WASM).await;
+        let contract = self.deploy_contract(token, &FUNGIBLE_TOKEN_WASM).await;
         let result = contract
             .call("new")
             .args_json(json!({

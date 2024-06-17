@@ -1,12 +1,10 @@
-use defuse_intent_contract::types::intent::Status;
-use defuse_intent_contract::{types, types::intent::Expiration, types::intent::TokenAmount};
-
-use crate::{
-    tests::intent::env::Env,
-    utils::{intent::Intent, token::Token},
-};
-
 mod env;
+
+use defuse_contracts::intent::{Expiration, Intent, Status, TokenAmount};
+
+use crate::utils::{intent::Intending, token::Token};
+
+use self::env::Env;
 
 #[tokio::test]
 async fn test_generic_successful_flow() {
@@ -29,7 +27,7 @@ async fn test_generic_successful_flow() {
             env.token_a.id(),
             env.intent.id(),
             "1",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),
@@ -63,7 +61,7 @@ async fn test_generic_successful_flow() {
 
     // Check that intent has been removed form the state.
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
-    assert!(matches!(intent.get_status(), Status::Completed));
+    assert!(matches!(intent.status(), Status::Completed));
 }
 
 #[tokio::test]
@@ -87,7 +85,7 @@ async fn test_successful_flow_partly() {
             env.token_a.id(),
             env.intent.id(),
             "1",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),
@@ -168,7 +166,7 @@ async fn test_rollback_intent() {
             env.token_a.id(),
             env.intent.id(),
             "1",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),
@@ -189,14 +187,14 @@ async fn test_rollback_intent() {
     assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
-    assert!(matches!(intent.get_status(), Status::Available));
+    assert!(matches!(intent.status(), Status::Available));
 
     // The user decides to roll back intent.
     let status = env.user.rollback_intent(env.intent.id(), "1").await;
     assert!(status.is_success());
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
-    assert!(matches!(intent.get_status(), Status::RolledBack));
+    assert!(matches!(intent.status(), Status::RolledBack));
 
     // Check balances after intent execution.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
@@ -227,7 +225,7 @@ async fn test_rollback_intent_too_early() {
             env.token_a.id(),
             env.intent.id(),
             "1",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),
@@ -255,7 +253,7 @@ async fn test_rollback_intent_too_early() {
     assert!(result.is_failure());
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
-    assert!(matches!(intent.get_status(), Status::Available));
+    assert!(matches!(intent.status(), Status::Available));
 
     // Check balances after intent execution.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
@@ -303,7 +301,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
             env.token_a.id(),
             env.intent.id(),
             "1",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),
@@ -332,7 +330,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
         .await;
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
-    assert!(matches!(intent.get_status(), Status::Expired));
+    assert!(matches!(intent.status(), Status::Expired));
 
     // Check balances after intent execution.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
@@ -347,7 +345,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
             env.token_a.id(),
             env.intent.id(),
             "2",
-            types::Intent {
+            Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
                     token_id: env.token_a.id().clone(),

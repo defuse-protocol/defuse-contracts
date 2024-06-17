@@ -1,9 +1,7 @@
-use near_sdk::store::LookupMap;
-use near_sdk::{near, AccountId, IntoStorageKey};
 use std::collections::HashMap;
 
-use crate::error::Error;
-use crate::types::Account;
+use defuse_contracts::account::{Account, AccountError};
+use near_sdk::{near, store::LookupMap, AccountId, IntoStorageKey};
 
 // Accounts that belong user. Key here is derivation path.
 type UserAccounts = HashMap<String, Account>;
@@ -21,10 +19,10 @@ impl AccountDb {
         account_id: AccountId,
         derivation_path: String,
         account: Account,
-    ) -> Result<(), Error> {
+    ) -> Result<(), AccountError> {
         if let Some(accounts) = self.0.get_mut(&account_id) {
             if accounts.contains_key(&derivation_path) {
-                return Err(Error::AccountExist);
+                return Err(AccountError::AccountExist);
             }
 
             accounts.insert(derivation_path, account);
@@ -41,20 +39,27 @@ impl AccountDb {
         from: &AccountId,
         to: AccountId,
         derivation_path: String,
-    ) -> Result<(), Error> {
+    ) -> Result<(), AccountError> {
         let account = self
             .0
             .get_mut(from)
-            .ok_or(Error::EmptyAccounts)
-            .and_then(|accounts| accounts.remove(&derivation_path).ok_or(Error::NoAccount))?;
+            .ok_or(AccountError::EmptyAccounts)
+            .and_then(|accounts| {
+                accounts
+                    .remove(&derivation_path)
+                    .ok_or(AccountError::NoAccount)
+            })?;
 
         self.add_account(to, derivation_path, account)
     }
 
-    pub fn get_accounts(&self, account_id: &AccountId) -> Result<Vec<(String, Account)>, Error> {
+    pub fn get_accounts(
+        &self,
+        account_id: &AccountId,
+    ) -> Result<Vec<(String, Account)>, AccountError> {
         self.0
             .get(account_id)
-            .map_or(Err(Error::EmptyAccounts), |accounts| {
+            .map_or(Err(AccountError::EmptyAccounts), |accounts| {
                 Ok(accounts
                     .iter()
                     .map(|(d, a)| (d.clone(), a.clone()))
@@ -63,7 +68,11 @@ impl AccountDb {
     }
 
     #[allow(dead_code)]
-    pub fn assert_owner(&self, account_id: &AccountId, derivation_path: &str) -> Result<(), Error> {
+    pub fn assert_owner(
+        &self,
+        account_id: &AccountId,
+        derivation_path: &str,
+    ) -> Result<(), AccountError> {
         self.0
             .get(account_id)
             .and_then(|accounts| {
@@ -73,7 +82,7 @@ impl AccountDb {
                     None
                 }
             })
-            .ok_or(Error::EmptyAccounts)
+            .ok_or(AccountError::EmptyAccounts)
     }
 }
 
@@ -108,7 +117,7 @@ fn test_account_db_change_owner() {
 
     assert!(matches!(
         db.assert_owner(&account_id, &path),
-        Err(Error::EmptyAccounts)
+        Err(AccountError::EmptyAccounts)
     ));
     assert!(matches!(db.assert_owner(&new_owner, &path), Ok(())));
 }

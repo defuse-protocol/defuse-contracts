@@ -1,11 +1,69 @@
-use near_sdk::json_types::U128;
+use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{
-    base64::{engine::general_purpose::STANDARD, Engine},
-    borsh::BorshDeserialize,
-    env, near, AccountId,
+    base64::engine::{general_purpose::STANDARD, Engine},
+    borsh::{self, BorshDeserialize},
+    env, ext_contract,
+    json_types::U128,
+    near, AccountId, Promise,
 };
 
-use crate::error::ContractError;
+pub use self::error::*;
+
+mod error;
+
+#[ext_contract(ext_intent_contract)]
+pub trait IntentContract: FungibleTokenReceiver {
+    /// Return pending intent by id.
+    fn get_intent(&self, id: String) -> Option<&DetailedIntent>;
+
+    /// Rollback created intent and refund tokens to the intent's initiator.
+    /// The transaction could be called by an intent initiator or owner.
+    ///
+    /// # Panics
+    ///
+    /// The panic occurs if intent doesn't exist of caller is not allowed.
+    fn rollback_intent(&mut self, id: String) -> Promise;
+
+    /// Add a new solver to the whitelist.
+    fn add_solver(&mut self, solver_id: AccountId);
+
+    /// Check if the provided solver is allowed.
+    fn is_allowed_solver(&self, solver_id: AccountId) -> bool;
+}
+
+#[near(serializers=[borsh])]
+pub enum Action {
+    CreateIntent(
+        /// ID
+        String,
+        Intent,
+    ),
+    ExecuteIntent(
+        /// ID
+        String,
+    ),
+}
+
+impl Action {
+    /// Decode provided msg into `Action`.
+    ///
+    /// # Errors
+    ///
+    /// `IntentError::Base64`
+    /// `IntentError::Borsh`
+    pub fn decode(msg: impl AsRef<[u8]>) -> Result<Self, IntentError> {
+        Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| IntentError::Borsh)
+    }
+
+    /// Encode the action into a string message.
+    ///
+    /// # Errors
+    ///
+    /// `IntentError::Borch`
+    pub fn encode(&self) -> Result<String, IntentError> {
+        Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| IntentError::Borsh)?))
+    }
+}
 
 /// Intent with status
 #[derive(Debug)]
@@ -35,13 +93,15 @@ impl DetailedIntent {
 
     /// Get the inner intent
     #[must_use]
-    pub const fn get_intent(&self) -> &Intent {
+    #[inline]
+    pub const fn intent(&self) -> &Intent {
         &self.intent
     }
 
     /// Get the status of the intent
     #[must_use]
-    pub const fn get_status(&self) -> Status {
+    #[inline]
+    pub const fn status(&self) -> Status {
         self.status
     }
 
@@ -74,7 +134,6 @@ pub struct Intent {
 }
 
 impl Intent {
-    /// Check if the intent is expired
     #[must_use]
     pub fn is_expired(&self) -> bool {
         match self.expiration {
@@ -82,39 +141,6 @@ impl Intent {
             Expiration::Time(time) => time * 1000 <= env::block_timestamp_ms(),
             Expiration::Block(block) => block <= env::block_height(),
         }
-    }
-}
-
-#[near(serializers=[borsh])]
-pub enum Action {
-    CreateIntent((String, Intent)),
-    ExecuteIntent(String),
-}
-
-impl Action {
-    /// Decode provided msg into `Action`.
-    ///
-    /// # Errors
-    ///
-    /// `Base64DecodeError`
-    /// `BorshDeserializeError`
-    pub fn decode<M: AsRef<str>>(msg: M) -> Result<Self, ContractError> {
-        let bytes = STANDARD
-            .decode(msg.as_ref())
-            .map_err(|_| ContractError::Base64DecodeError)?;
-
-        Self::try_from_slice(&bytes).map_err(|_| ContractError::BorshDeserializeError)
-    }
-
-    /// Encode the action into a string.
-    ///
-    /// # Errors
-    ///
-    /// `BorshSerializeError`
-    pub fn encode(&self) -> Result<String, ContractError> {
-        near_sdk::borsh::to_vec(&self)
-            .map(|bytes| STANDARD.encode(bytes))
-            .map_err(|_| ContractError::BorshSerializeError)
     }
 }
 
@@ -135,9 +161,7 @@ pub enum Expiration {
 #[derive(Debug, Clone)]
 #[near(serializers=[borsh, json])]
 pub struct TokenAmount {
-    /// Token account id
     pub token_id: AccountId,
-    /// Amount of tokens
     pub amount: U128,
 }
 
@@ -159,7 +183,7 @@ pub enum Status {
 
 #[test]
 fn test_create_action_serialize() {
-    let action = Action::CreateIntent((
+    let action = Action::CreateIntent(
         "1".to_string(),
         Intent {
             initiator: "user.near".parse().unwrap(),
@@ -174,7 +198,7 @@ fn test_create_action_serialize() {
             expiration: Expiration::Block(123_456),
             referral: Some("referral.near".parse().unwrap()),
         },
-    ));
+    );
 
     assert_eq!(
         action.encode().unwrap(),
@@ -185,7 +209,7 @@ fn test_create_action_serialize() {
 #[test]
 fn test_create_action_deserialize() {
     let action = Action::decode("AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAABDQAAAHJlZmVycmFsLm5lYXI=").unwrap();
-    assert!(matches!(action, Action::CreateIntent((id, _)) if id == "1"));
+    assert!(matches!(action, Action::CreateIntent(id, _) if id == "1"));
 }
 
 #[test]

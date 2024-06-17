@@ -1,5 +1,6 @@
-use crate::utils::Sandbox;
 use near_sdk::NearToken;
+
+use crate::utils::Sandbox;
 
 #[tokio::test]
 async fn test_deploy_contract() {

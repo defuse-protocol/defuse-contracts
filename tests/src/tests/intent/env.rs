@@ -1,8 +1,7 @@
-use crate::utils::intent::Intent;
-use crate::utils::token::Token;
-use crate::utils::Sandbox;
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
+
+use crate::utils::{intent::Intending, token::Token, Sandbox};
 
 pub struct Env {
     pub sandbox: Sandbox,

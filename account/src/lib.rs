@@ -1,13 +1,9 @@
-use near_sdk::store::LookupSet;
-use near_sdk::{
-    env, ext_contract, near, AccountId, BorshStorageKey, PanicOnDefault, PromiseOrValue,
-};
+use defuse_contracts::account::{Account, AccountContract};
+use near_sdk::{env, near, store::LookupSet, AccountId, BorshStorageKey, PanicOnDefault};
 
-use crate::error::LogError;
-use crate::types::{Account, AccountDb};
+use self::account_db::AccountDb;
 
-mod error;
-mod types;
+mod account_db;
 
 #[derive(BorshStorageKey)]
 #[near(serializers=[borsh])]
@@ -18,7 +14,7 @@ enum Prefix {
 
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
-pub struct AccountContract {
+pub struct AccountContractImpl {
     owner_id: AccountId,
     /// MPC contract id.
     mpc_contract_id: AccountId,
@@ -30,7 +26,34 @@ pub struct AccountContract {
 }
 
 #[near]
-impl AccountContract {
+impl AccountContract for AccountContractImpl {
+    fn create_account(&mut self, account_id: AccountId, derivation_path: String) {
+        // Only indexers can call this transaction.
+        let predecessor_id = env::predecessor_account_id();
+        self.assert_indexer(&predecessor_id);
+
+        self.accounts
+            .add_account(account_id, derivation_path, Account::default())
+            .unwrap();
+    }
+
+    fn change_owner(&mut self, from: &AccountId, to: AccountId, derivation_path: String) {
+        self.accounts
+            .change_owner(from, to, derivation_path)
+            .unwrap();
+    }
+
+    fn get_accounts(&self, account_id: &AccountId) -> Vec<(String, Account)> {
+        self.accounts.get_accounts(account_id).unwrap()
+    }
+
+    fn mpc_contract(&self) -> &AccountId {
+        &self.mpc_contract_id
+    }
+}
+
+#[near]
+impl AccountContractImpl {
     #[init]
     #[must_use]
     #[allow(clippy::use_self)]
@@ -43,36 +66,9 @@ impl AccountContract {
         }
     }
 
-    /// Add a new ownership of a new tokens.
-    pub fn add_account(&mut self, account_id: AccountId, derivation_path: String) {
-        // Only indexers can call this transaction.
-        let predecessor_id = env::predecessor_account_id();
-        self.assert_indexer(&predecessor_id);
-
-        self.accounts
-            .add_account(account_id, derivation_path, Account::default())
-            .log_error();
-    }
-
-    /// Change an owner of the account.
-    pub fn change_owner(&mut self, from: &AccountId, to: AccountId, derivation_path: String) {
-        self.accounts
-            .change_owner(from, to, derivation_path)
-            .log_error();
-    }
-
-    /// Return a user's accounts.
-    pub fn get_accounts(&self, account_id: &AccountId) -> Vec<(String, Account)> {
-        self.accounts.get_accounts(account_id).log_error()
-    }
-
     #[private]
     pub fn set_mpc_contract(&mut self, contract_id: AccountId) {
         self.mpc_contract_id = contract_id;
-    }
-
-    pub const fn get_mpc_contract(&self) -> &AccountId {
-        &self.mpc_contract_id
     }
 
     fn assert_indexer(&self, account_id: &AccountId) {
@@ -82,16 +78,3 @@ impl AccountContract {
         );
     }
 }
-
-#[ext_contract(ext_mpc)]
-pub trait MpcRecovery {
-    fn sign(
-        &self,
-        payload: Vec<u8>,
-        path: &str,
-        key_version: u32,
-    ) -> PromiseOrValue<(String, String)>;
-}
-
-#[cfg(test)]
-mod contract_tests {}
