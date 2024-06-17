@@ -1,5 +1,9 @@
 use near_sdk::{ext_contract, near, AccountId};
 
+pub use self::error::AccountError;
+
+mod error;
+
 // TODO: make this contract an extension of NFT, since every Account
 // is a unique item. This will ease the integration of Defuse
 // with already existing tooling around NFTs
