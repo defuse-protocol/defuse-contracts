@@ -45,10 +45,21 @@ pub enum Action {
 }
 
 impl Action {
+    /// Decode provided msg into `Action`.
+    ///
+    /// # Errors
+    ///
+    /// `IntentError::Base64`
+    /// `IntentError::Borsh`
     pub fn decode(msg: impl AsRef<[u8]>) -> Result<Self, IntentError> {
         Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| IntentError::Borsh)
     }
 
+    /// Encode the action into a string message.
+    ///
+    /// # Errors
+    ///
+    /// `IntentError::Borch`
     pub fn encode(&self) -> Result<String, IntentError> {
         Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| IntentError::Borsh)?))
     }
