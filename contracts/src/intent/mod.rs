@@ -1,7 +1,3 @@
-mod error;
-
-pub use self::error::*;
-
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{
     base64::engine::{general_purpose::STANDARD, Engine},
@@ -10,6 +6,10 @@ use near_sdk::{
     json_types::U128,
     near, AccountId, Promise,
 };
+
+pub use self::error::*;
+
+mod error;
 
 #[ext_contract(ext_intent_contract)]
 pub trait IntentContract: FungibleTokenReceiver {
@@ -45,11 +45,11 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn decode_base64(msg: impl AsRef<[u8]>) -> Result<Self, IntentError> {
+    pub fn decode(msg: impl AsRef<[u8]>) -> Result<Self, IntentError> {
         Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| IntentError::Borsh)
     }
 
-    pub fn encode_base64(&self) -> Result<String, IntentError> {
+    pub fn encode(&self) -> Result<String, IntentError> {
         Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| IntentError::Borsh)?))
     }
 }
@@ -146,6 +146,7 @@ pub enum Expiration {
     Block(u64),
 }
 
+/// The struct describes the token and amount of these tokens a user wants to exchange
 #[derive(Debug, Clone)]
 #[near(serializers=[borsh, json])]
 pub struct TokenAmount {
@@ -189,25 +190,25 @@ fn test_create_action_serialize() {
     );
 
     assert_eq!(
-        action.encode_base64().unwrap(),
+        action.encode().unwrap(),
         "AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAABDQAAAHJlZmVycmFsLm5lYXI="
     );
 }
 
 #[test]
 fn test_create_action_deserialize() {
-    let action = Action::decode_base64("AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAABDQAAAHJlZmVycmFsLm5lYXI=").unwrap();
+    let action = Action::decode("AAEAAAAxCQAAAHVzZXIubmVhcgwAAAB0b2tlbl9hLm5lYXLoAwAAAAAAAAAAAAAAAAAADAAAAHRva2VuX2IubmVhctAHAAAAAAAAAAAAAAAAAAACQOIBAAAAAAABDQAAAHJlZmVycmFsLm5lYXI=").unwrap();
     assert!(matches!(action, Action::CreateIntent(id, _) if id == "1"));
 }
 
 #[test]
 fn test_execute_action_serialize() {
     let action = Action::ExecuteIntent("1".to_string());
-    assert_eq!(action.encode_base64().unwrap(), "AQEAAAAx");
+    assert_eq!(action.encode().unwrap(), "AQEAAAAx");
 }
 
 #[test]
 fn test_execute_action_deserialize() {
-    let action = Action::decode_base64("AQEAAAAx").unwrap();
+    let action = Action::decode("AQEAAAAx").unwrap();
     assert!(matches!(action, Action::ExecuteIntent(id) if id == "1"));
 }

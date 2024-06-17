@@ -1,11 +1,11 @@
-mod account_db;
-mod error;
-
 use defuse_contracts::account::{Account, AccountContract};
 use near_sdk::{env, near, store::LookupSet, AccountId, BorshStorageKey, PanicOnDefault};
 
 use self::account_db::AccountDb;
 pub use self::error::*;
+
+mod account_db;
+mod error;
 
 #[derive(BorshStorageKey)]
 #[near(serializers=[borsh])]

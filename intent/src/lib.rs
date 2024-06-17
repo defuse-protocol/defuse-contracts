@@ -101,7 +101,7 @@ impl FungibleTokenReceiver for IntentContractImpl {
     ) -> PromiseOrValue<U128> {
         // Validate that sender_id is in white token list.
         // self.assert_token(&sender_id); // TODO: Check if we need tokens validation.
-        let action = Action::decode_base64(msg).expect("decode Action");
+        let action = Action::decode(msg).expect("decode Action");
 
         match action {
             Action::CreateIntent(id, intent) => {

@@ -37,7 +37,7 @@ impl Intending for Account {
     ) {
         let amount = intent.send.amount;
         let intent = Action::CreateIntent(id.to_string(), intent);
-        let msg = intent.encode_base64().expect("encode Action");
+        let msg = intent.encode().expect("encode Action");
         let args = json!({
             "receiver_id": intent_account_id,
             "amount": amount,
@@ -64,7 +64,7 @@ impl Intending for Account {
         amount: U128,
     ) {
         let intent = Action::ExecuteIntent(id.to_string());
-        let msg = intent.encode_base64().expect("encode Action");
+        let msg = intent.encode().expect("encode Action");
         let args = json!({
             "receiver_id": intent_account_id,
             "amount": amount,
