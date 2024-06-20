@@ -1,5 +1,5 @@
-use defuse_contracts::intent::{
-    Action, DetailedIntent, Intent, IntentContract, IntentError, Status,
+use defuse_contracts::intents::ft::{
+    Action, DetailedIntent, FtIntentContract, FtIntentError, Intent, Status,
 };
 
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
@@ -26,7 +26,7 @@ enum Prefix {
 
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
-pub struct IntentContractImpl {
+pub struct FtIntentContractImpl {
     owner_id: AccountId,
     supported_tokens: LookupSet<String>,
     allowed_solvers: LookupSet<AccountId>,
@@ -35,7 +35,7 @@ pub struct IntentContractImpl {
 }
 
 #[near]
-impl IntentContract for IntentContractImpl {
+impl FtIntentContract for FtIntentContractImpl {
     /// Add a new solver to the whitelist.
     fn add_solver(&mut self, solver_id: AccountId) {
         self.assert_owner();
@@ -46,7 +46,7 @@ impl IntentContract for IntentContractImpl {
         let detailed_intent = self
             .intents
             .get_mut(&id)
-            .ok_or_else(|| IntentError::NotFound(id.clone()))
+            .ok_or_else(|| FtIntentError::NotFound(id.clone()))
             .unwrap();
 
         if !detailed_intent.could_be_rollbacked() {
@@ -86,7 +86,7 @@ impl IntentContract for IntentContractImpl {
 }
 
 #[near]
-impl FungibleTokenReceiver for IntentContractImpl {
+impl FungibleTokenReceiver for FtIntentContractImpl {
     /// The callback is called by NEP-141 after `ft_transfer_call`.
     ///
     /// # Panics
@@ -117,7 +117,7 @@ impl FungibleTokenReceiver for IntentContractImpl {
 }
 
 #[near]
-impl IntentContractImpl {
+impl FtIntentContractImpl {
     /// Contract constructor.
     #[init]
     #[must_use]
@@ -142,7 +142,7 @@ impl IntentContractImpl {
         let intent_with_status = self
             .intents
             .get_mut(intent_id)
-            .ok_or_else(|| IntentError::NotFound(intent_id.clone()))
+            .ok_or_else(|| FtIntentError::NotFound(intent_id.clone()))
             .unwrap();
 
         intent_with_status.set_status(status);
@@ -209,13 +209,13 @@ impl IntentContractImpl {
         id: String,
         amount: U128,
         intent: Intent,
-    ) -> Result<PromiseOrValue<U128>, IntentError> {
+    ) -> Result<PromiseOrValue<U128>, FtIntentError> {
         if amount != intent.send.amount {
-            return Err(IntentError::AmountMismatch);
+            return Err(FtIntentError::AmountMismatch);
         }
 
         match self.intents.entry(id) {
-            Entry::Occupied(entry) => Err(IntentError::AlreadyExists(entry.key().clone())),
+            Entry::Occupied(entry) => Err(FtIntentError::AlreadyExists(entry.key().clone())),
             Entry::Vacant(entry) => {
                 let detailed_intent = DetailedIntent::new(intent, self.min_intent_ttl);
                 entry.insert(detailed_intent);
@@ -229,7 +229,7 @@ impl IntentContractImpl {
         &mut self,
         id: &String,
         amount: U128,
-    ) -> Result<PromiseOrValue<U128>, IntentError> {
+    ) -> Result<PromiseOrValue<U128>, FtIntentError> {
         let solver_id = env::signer_account_id();
 
         log!(
@@ -243,10 +243,10 @@ impl IntentContractImpl {
         let detailed_intent = self
             .intents
             .get_mut(id)
-            .ok_or_else(|| IntentError::NotFound(id.clone()))?;
+            .ok_or_else(|| FtIntentError::NotFound(id.clone()))?;
 
         if !matches!(detailed_intent.status(), Status::Available) {
-            return Err(IntentError::WrongStatus);
+            return Err(FtIntentError::WrongStatus);
         }
 
         detailed_intent.set_status(Status::Processing);
@@ -261,7 +261,7 @@ impl IntentContractImpl {
                 .then(Self::ext(current_id).change_intent_status(id, Status::Expired))
         } else {
             if amount != intent.receive.amount {
-                return Err(IntentError::AmountMismatch);
+                return Err(FtIntentError::AmountMismatch);
             }
 
             ext_ft_core::ext(intent.send.token_id.clone())

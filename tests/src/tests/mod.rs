@@ -1,3 +1,3 @@
 mod account;
 mod controller;
-mod intent;
+mod intents;

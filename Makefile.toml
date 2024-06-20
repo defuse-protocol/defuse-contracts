@@ -7,12 +7,14 @@ TARGET = "wasm32-unknown-unknown"
 TARGET_DIR = "${PWD}/res"
 ACCOUNT_WASM_FILE = "defuse-account-contract.wasm"
 CONTROLLER_WASM_FILE = "defuse-controller-contract.wasm"
-INTENT_WASM_FILE = "defuse-intent-contract.wasm"
+FT_INTENT_WASM_FILE = "defuse-ft-intent-contract.wasm"
+MPC_INTENT_WASM_FILE = "defuse-mpc-intent-contract.wasm"
 
 [tasks.build]
 dependencies = [
     "build-account",
-    "build-intent",
+    "build-ft-intent",
+    "build-mpc-intent",
     "cp-contracts",
     "build-controller",
     "cp-controller",
@@ -43,7 +45,7 @@ args = [
     "defuse-account-contract",
 ]
 
-[tasks.build-intent]
+[tasks.build-ft-intent]
 command = "cargo"
 args = [
     "build",
@@ -51,7 +53,18 @@ args = [
     "${TARGET}",
     "--release",
     "--package",
-    "defuse-intent-contract",
+    "defuse-ft-intent-contract",
+]
+
+[tasks.build-mpc-intent]
+command = "cargo"
+args = [
+    "build",
+    "--target",
+    "${TARGET}",
+    "--release",
+    "--package",
+    "defuse-mpc-intent-contract",
 ]
 
 [tasks.build-controller]
@@ -68,7 +81,8 @@ args = [
 [tasks.cp-contracts]
 script = """
 cp target/${TARGET}/release/defuse_account_contract.wasm ${TARGET_DIR}/${ACCOUNT_WASM_FILE}
-cp target/${TARGET}/release/defuse_intent_contract.wasm ${TARGET_DIR}/${INTENT_WASM_FILE}
+cp target/${TARGET}/release/defuse_ft_intent_contract.wasm ${TARGET_DIR}/${FT_INTENT_WASM_FILE}
+cp target/${TARGET}/release/defuse_mpc_intent_contract.wasm ${TARGET_DIR}/${MPC_INTENT_WASM_FILE}
 """
 
 [tasks.cp-controller]
@@ -91,8 +105,10 @@ echo "Environment:"
 echo "    CARGO_MAKE_PROFILE:       ${CARGO_MAKE_PROFILE}"
 echo "    ACCOUNT_CONTRACT_FILE:    ${ACCOUNT_WASM_FILE}"
 echo "    ACCOUNT_CONTRACT_SIZE:    $(wc -c ${TARGET_DIR}/${ACCOUNT_WASM_FILE} | awk '{print $1}')"
-echo "    INTENT_CONTRACT_FILE:     ${INTENT_WASM_FILE}"
-echo "    INTENT_CONTRACT_SIZE:     $(wc -c ${TARGET_DIR}/${INTENT_WASM_FILE} | awk '{print $1}')"
+echo "    FT_INTENT_CONTRACT_FILE:     ${FT_INTENT_WASM_FILE}"
+echo "    FT_INTENT_CONTRACT_SIZE:     $(wc -c ${TARGET_DIR}/${FT_INTENT_WASM_FILE} | awk '{print $1}')"
+echo "    MPC_INTENT_CONTRACT_FILE:     ${MPC_INTENT_WASM_FILE}"
+echo "    MPC_INTENT_CONTRACT_SIZE:     $(wc -c ${TARGET_DIR}/${MPC_INTENT_WASM_FILE} | awk '{print $1}')"
 echo "    CONTROLLER_CONTRACT_FILE: ${CONTROLLER_WASM_FILE}"
 echo "    CONTROLLER_CONTRACT_SIZE: $(wc -c ${TARGET_DIR}/${CONTROLLER_WASM_FILE} | awk '{print $1}')"
 echo "    CONTRACTS_DIR:            ${TARGET_DIR}"

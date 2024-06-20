@@ -7,7 +7,7 @@ pub struct Env {
     pub sandbox: Sandbox,
     pub token_a: Contract,
     pub token_b: Contract,
-    pub intent: Contract,
+    pub ft_intent: Contract,
     pub user: Account,
     pub solver: Account,
 }
@@ -38,7 +38,7 @@ impl Env {
             sandbox,
             token_a,
             token_b,
-            intent,
+            ft_intent: intent,
             user,
             solver,
         }
@@ -53,9 +53,9 @@ impl Env {
     }
 
     pub async fn set_min_ttl(&self, min_ttl: u64) {
-        self.intent
+        self.ft_intent
             .as_account()
-            .set_min_ttl(self.intent.id(), min_ttl)
+            .set_min_ttl(self.ft_intent.id(), min_ttl)
             .await;
     }
 }

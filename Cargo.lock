@@ -882,6 +882,7 @@ name = "defuse-account-contract"
 version = "0.1.0"
 dependencies = [
  "defuse-contracts",
+ "near-contract-standards",
  "near-sdk",
  "thiserror",
 ]
@@ -902,6 +903,7 @@ dependencies = [
  "anyhow",
  "defuse-contracts",
  "lazy_static",
+ "near-contract-standards",
  "near-sdk",
  "near-workspaces",
  "serde_json",
@@ -917,7 +919,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "defuse-intent-contract"
+name = "defuse-ft-intent-contract"
+version = "0.1.0"
+dependencies = [
+ "defuse-contracts",
+ "near-contract-standards",
+ "near-sdk",
+]
+
+[[package]]
+name = "defuse-mpc-intent-contract"
 version = "0.1.0"
 dependencies = [
  "defuse-contracts",
@@ -2058,8 +2069,7 @@ dependencies = [
 [[package]]
 name = "near-contract-standards"
 version = "5.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0e78fe14d389ae76f792735a2108a6b8332a2bed61197310bf5ad718fb1e424"
+source = "git+https://github.com/mitinarseny/near-sdk-rs?branch=feat/nft_ext_contract#e41d339f3d906a2b500a287cd9dca72dc21444e9"
 dependencies = [
  "near-sdk",
 ]
@@ -2297,8 +2307,7 @@ dependencies = [
 [[package]]
 name = "near-sdk"
 version = "5.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "520234cfdf04a805ac2f04715889d096eb83fdd5b99ca7d0f8027ae473f891a8"
+source = "git+https://github.com/mitinarseny/near-sdk-rs?branch=feat/nft_ext_contract#e41d339f3d906a2b500a287cd9dca72dc21444e9"
 dependencies = [
  "base64 0.21.7",
  "borsh 1.5.1",
@@ -2322,8 +2331,7 @@ dependencies = [
 [[package]]
 name = "near-sdk-macros"
 version = "5.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee2fe3fc30068c5f20e89b0985d6104c5cc1c6742dbc6efbf352be4189b9bbf7"
+source = "git+https://github.com/mitinarseny/near-sdk-rs?branch=feat/nft_ext_contract#e41d339f3d906a2b500a287cd9dca72dc21444e9"
 dependencies = [
  "Inflector",
  "darling",
@@ -2345,8 +2353,7 @@ checksum = "855fd5540e3b4ff6fedf12aba2db1ee4b371b36f465da1363a6d022b27cb43b8"
 [[package]]
 name = "near-sys"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "397688591acf8d3ebf2c2485ba32d4b24fc10aad5334e3ad8ec0b7179bfdf06b"
+source = "git+https://github.com/mitinarseny/near-sdk-rs?branch=feat/nft_ext_contract#e41d339f3d906a2b500a287cd9dca72dc21444e9"
 
 [[package]]
 name = "near-token"

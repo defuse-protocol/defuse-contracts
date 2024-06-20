@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["account", "contracts", "controller", "intent", "tests"]
+members = [
+    "account",
+    "contracts",
+    "controller",
+    "ft-intent",
+    "mpc-intent",
+    "tests",
+]
 default-members = ["contracts"]
 
 [workspace.package]
@@ -10,7 +17,8 @@ edition = "2021"
 defuse-account-contract.path = "./account"
 defuse-contracts = { path = "./contracts", default-features = false }
 defuse-controller-contract.path = "./controller"
-defuse-intent-contract.path = "./intent"
+defuse-ft-intent-contract.path = "./ft-intent"
+defuse-mpc-intent-contract.path = "./mpc-intent"
 
 anyhow = "1"
 lazy_static = "1.4"
@@ -35,3 +43,11 @@ debug = false
 strip = "symbols"
 panic = "abort"
 overflow-checks = true
+
+[patch.crates-io.near-contract-standards]
+git = "https://github.com/mitinarseny/near-sdk-rs"
+branch = "feat/nft_ext_contract"
+
+[patch.crates-io.near-sdk]
+git = "https://github.com/mitinarseny/near-sdk-rs"
+branch = "feat/nft_ext_contract"

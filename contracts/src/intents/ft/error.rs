@@ -2,7 +2,7 @@ use near_sdk::base64;
 use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]
-pub enum IntentError {
+pub enum FtIntentError {
     #[error("Borsh")]
     Borsh,
     #[error("base64: {0}")]

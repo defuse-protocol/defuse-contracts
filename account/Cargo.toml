@@ -13,6 +13,7 @@ workspace = true
 defuse-contracts = { workspace = true, features = ["account"] }
 
 near-sdk.workspace = true
+near-contract-standards.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

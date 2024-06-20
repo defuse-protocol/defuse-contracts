@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use near_workspaces::{types::NearToken, Account, AccountId, Contract, Worker};
 use serde_json::json;
 
-fn read_wasm(name: impl AsRef<Path>) -> Vec<u8> {
+pub fn read_wasm(name: impl AsRef<Path>) -> Vec<u8> {
     let filename = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../res/")
         .join(name)
@@ -15,7 +15,8 @@ fn read_wasm(name: impl AsRef<Path>) -> Vec<u8> {
 lazy_static! {
     static ref ACCOUNT_WASM: Vec<u8> = read_wasm("defuse-account-contract");
     static ref CONTROLLER_WASM: Vec<u8> = read_wasm("defuse-controller-contract");
-    static ref INTENT_WASM: Vec<u8> = read_wasm("defuse-intent-contract");
+    static ref FT_INTENT_WASM: Vec<u8> = read_wasm("defuse-ft-intent-contract");
+    static ref MPC_INTENT_WASM: Vec<u8> = read_wasm("defuse-mpc-intent-contract");
     static ref FUNGIBLE_TOKEN_WASM: Vec<u8> = read_wasm("fungible-token");
 }
 
@@ -71,7 +72,7 @@ impl Sandbox {
         let result = contract
             .call("new")
             .args_json(json!({
-                "owner_id": "controller.test.near",
+                "owner": "controller.test.near",
                 "mpc_contract_id": "mpc.test.net"
             }))
             .max_gas()
@@ -100,7 +101,7 @@ impl Sandbox {
     }
 
     pub async fn deploy_intent_contract(&self) -> Contract {
-        let contract = self.deploy_contract("intent", &INTENT_WASM).await;
+        let contract = self.deploy_contract("ft-intent", &FT_INTENT_WASM).await;
         let result = contract
             .call("new")
             .args_json(json!({
