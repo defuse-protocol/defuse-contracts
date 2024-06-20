@@ -44,28 +44,30 @@ impl MpcIntentContract for MpcIntentContractImpl {
     }
 }
 
+#[near]
 impl NonFungibleTokenReceiver for MpcIntentContractImpl {
     fn nft_on_transfer(
         &mut self,
         sender_id: AccountId,
         previous_owner_id: AccountId,
-        derivation_path: String,
+        token_id: String,
         msg: String,
     ) -> PromiseOrValue<bool> {
         // TODO: check predeccessor id to be subaccount of `.defuse`
         let account_shard = env::predecessor_account_id();
-        assert!(
-            account_shard.is_sub_account_of(AccountIdRef::new_or_panic(
-                // TODO: store TLA in state?
-                "defuse"
-            )),
-            "only calls from Defuse Account Shards are allowed"
-        );
+        // TODO
+        // assert!(
+        //     account_shard.is_sub_account_of(AccountIdRef::new_or_panic(
+        //         // TODO: store TLA in state?
+        //         "defuse"
+        //     )),
+        //     "only calls from Defuse Account Shards are allowed"
+        // );
 
         let action = Action::decode(msg).expect("decode Action");
         let received = Account {
             account_shard,
-            derivation_path,
+            derivation_path: token_id,
         };
 
         match action {
@@ -83,7 +85,7 @@ impl NonFungibleTokenReceiver for MpcIntentContractImpl {
                 recipient,
                 memo,
                 msg,
-            } => self.execute_intent(id, received, recipient, memo, msg),
+            } => self.execute_intent(id, received, recipient.unwrap_or(sender_id), memo, msg),
         }
     }
 }
@@ -184,6 +186,7 @@ impl MpcIntentContractImpl {
     // TODO: refund according to storage management
     #[private]
     // #[handle_result]
+    // TODO: return Some(true)?
     pub fn cleanup_intent(&mut self, id: IntentID) {
         match self.intents.entry(id) {
             Entry::Vacant(_) => env::panic_str("intent doesn't exist"),

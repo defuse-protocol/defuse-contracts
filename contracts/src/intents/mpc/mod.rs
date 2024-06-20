@@ -34,6 +34,7 @@ pub struct BarterIntent {
     // pub send: Account,
     pub receive: Account,
     // Typically, sender
+    // TODO: make optional
     pub recepient: AccountId,
     pub memo: Option<String>,
     // TODO: to forward msg
@@ -51,7 +52,8 @@ pub enum Action {
     },
     Fulfill {
         id: IntentID,
-        recipient: AccountId,
+        /// By default: back to sender
+        recipient: Option<AccountId>,
         memo: Option<String>,
         msg: Option<String>,
     },

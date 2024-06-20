@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+
 use defuse_contracts::account::{Account, AccountContract};
 use near_contract_standards::non_fungible_token::{
-    core::NonFungibleTokenCore, NonFungibleToken, NonFungibleTokenEnumeration, Token, TokenId,
+    core::NonFungibleTokenCore, NonFungibleToken, NonFungibleTokenEnumeration,
+    NonFungibleTokenResolver, Token, TokenId,
 };
 use near_sdk::{
     env, json_types::U128, near, store::LookupSet, AccountId, BorshStorageKey, PanicOnDefault,
@@ -62,6 +65,25 @@ impl NonFungibleTokenCore for AccountContractImpl {
     }
 }
 
+#[near]
+impl NonFungibleTokenResolver for AccountContractImpl {
+    fn nft_resolve_transfer(
+        &mut self,
+        previous_owner_id: AccountId,
+        receiver_id: AccountId,
+        token_id: TokenId,
+        approved_account_ids: Option<HashMap<AccountId, u64>>,
+    ) -> bool {
+        self.accounts.nft_resolve_transfer(
+            previous_owner_id,
+            receiver_id,
+            token_id,
+            approved_account_ids,
+        )
+    }
+}
+
+#[near]
 impl NonFungibleTokenEnumeration for AccountContractImpl {
     fn nft_total_supply(&self) -> U128 {
         self.accounts.nft_total_supply()

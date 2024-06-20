@@ -10,7 +10,7 @@ lazy_static! {
     static ref ACCOUNT_WASM: Vec<u8> = read_wasm("defuse-account-contract");
 }
 
-pub trait Account {
+pub trait MpcAccount {
     async fn deploy_account_shard(
         &self,
         account_shard_id: impl AsRef<str>,
@@ -28,21 +28,21 @@ pub trait Account {
     async fn transfer_account(
         &self,
         account_shard_id: &AccountId,
-        receiver_id: &AccountId,
         derivation_path: impl AsRef<str>,
+        receiver_id: &AccountId,
         memo: impl Into<Option<String>>,
     );
 
     async fn transfer_account_call(
         &self,
         account_shard_id: &AccountId,
-        receiver_id: &AccountId,
         derivation_path: impl AsRef<str>,
+        receiver_id: &AccountId,
         memo: impl Into<Option<String>>,
         msg: String,
     );
 }
-impl Account for near_workspaces::Account {
+impl MpcAccount for near_workspaces::Account {
     async fn deploy_account_shard(
         &self,
         account_shard_id: impl AsRef<str>,
@@ -90,8 +90,8 @@ impl Account for near_workspaces::Account {
     async fn transfer_account(
         &self,
         account_shard_id: &AccountId,
-        receiver_id: &AccountId,
         derivation_path: impl AsRef<str>,
+        receiver_id: &AccountId,
         memo: impl Into<Option<String>>,
     ) {
         self.call(account_shard_id, "nft_transfer")
@@ -113,8 +113,8 @@ impl Account for near_workspaces::Account {
     async fn transfer_account_call(
         &self,
         account_shard_id: &AccountId,
-        receiver_id: &AccountId,
         derivation_path: impl AsRef<str>,
+        receiver_id: &AccountId,
         memo: impl Into<Option<String>>,
         msg: String,
     ) {
@@ -141,11 +141,12 @@ impl Account for near_workspaces::Account {
 }
 
 pub trait AccountContract {
-    async fn owner_of(&self, derivation_path: impl AsRef<str>) -> Option<Token>;
+    async fn nft_token(&self, derivation_path: impl AsRef<str>) -> Option<Token>;
+    async fn owner_of(&self, derivation_path: impl AsRef<str>) -> Option<AccountId>;
 }
 
 impl AccountContract for Contract {
-    async fn owner_of(&self, derivation_path: impl AsRef<str>) -> Option<Token> {
+    async fn nft_token(&self, derivation_path: impl AsRef<str>) -> Option<Token> {
         self.view("nft_token")
             .args_json(json!({
                 "token_id": derivation_path.as_ref(),
@@ -154,6 +155,11 @@ impl AccountContract for Contract {
             .unwrap()
             .json()
             .unwrap()
+    }
+    async fn owner_of(&self, derivation_path: impl AsRef<str>) -> Option<AccountId> {
+        self.nft_token(derivation_path)
+            .await
+            .map(|token| token.owner_id)
     }
 }
 
@@ -177,22 +183,10 @@ async fn test_account_shard() {
     let user2 = sandbox.create_account("user2").await;
 
     user1.create_account(account_shard.id(), "a", None).await;
-    assert_eq!(
-        account_shard
-            .owner_of("a")
-            .await
-            .map(|token| token.owner_id),
-        Some(user1.id().clone())
-    );
+    assert_eq!(account_shard.owner_of("a").await, Some(user1.id().clone()));
 
     user1
-        .transfer_account(account_shard.id(), user2.id(), "a", None)
+        .transfer_account(account_shard.id(), "a", user2.id(), None)
         .await;
-    assert_eq!(
-        account_shard
-            .owner_of("a")
-            .await
-            .map(|token| token.owner_id),
-        Some(user2.id().clone())
-    );
+    assert_eq!(account_shard.owner_of("a").await, Some(user2.id().clone()));
 }

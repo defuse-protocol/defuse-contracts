@@ -44,10 +44,9 @@ strip = "symbols"
 panic = "abort"
 overflow-checks = true
 
+# TODO: remove when near-sdk 6.0.0 is released:
+# https://github.com/near/near-sdk-rs/pull/1192
 [patch.crates-io.near-contract-standards]
-git = "https://github.com/mitinarseny/near-sdk-rs"
-branch = "feat/nft_ext_contract"
-
+git = "https://github.com/near/near-sdk-rs"
 [patch.crates-io.near-sdk]
-git = "https://github.com/mitinarseny/near-sdk-rs"
-branch = "feat/nft_ext_contract"
+git = "https://github.com/near/near-sdk-rs"
