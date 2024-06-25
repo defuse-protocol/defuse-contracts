@@ -145,7 +145,7 @@ impl FungibleTokenReceiver for IntentContractImpl {
                 let detailed_intent = self
                     .intents
                     .get_mut(&id)
-                    .ok_or(IntentError::NotFound(id.clone()))
+                    .ok_or_else(|| IntentError::NotFound(id.clone()))
                     .unwrap();
 
                 // First check that the solver has storage deposit on token he wants to get.

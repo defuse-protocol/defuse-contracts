@@ -59,7 +59,7 @@ impl Intending for Account {
             intent,
             NearGas::from_tgas(50),
         )
-        .await
+        .await;
     }
 
     async fn create_intent_with_gas(
@@ -105,7 +105,7 @@ impl Intending for Account {
             amount,
             NearGas::from_tgas(65),
         )
-        .await
+        .await;
     }
 
     async fn execute_intent_with_gas(

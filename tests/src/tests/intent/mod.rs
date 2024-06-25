@@ -212,7 +212,7 @@ async fn test_time_expired_intent() {
 async fn test_intent_without_initiator_storage_deposit() {
     let env = EnvBuilder::new().build().await;
 
-    // Making storage deposit user on token_a and for solver on token_b for intent on both.
+    // Storage deposit for user on token_a and for solver and intent on both.
     env.token_a.storage_deposit(env.user_id()).await;
     env.token_a.storage_deposit(env.solver_id()).await;
     env.token_b.storage_deposit(env.solver_id()).await;
@@ -230,11 +230,11 @@ async fn test_intent_without_initiator_storage_deposit() {
     assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
     assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
 
-    // User creates intent for swapping 1000 TokenA to 2000 TokenB.
+    // Initiator creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
     let result = env.user.get_intent(env.intent.id(), "1").await;
-    assert!(result.is_none()); // The intent is not created because the initiator has no storage deposit.
+    assert!(result.is_none()); // No intent because the initiator has no storage deposit.
 
     // Check that the balances haven't been changed.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
@@ -248,7 +248,7 @@ async fn test_intent_without_initiator_storage_deposit() {
 async fn test_intent_without_solver_storage_deposit() {
     let env = EnvBuilder::new().build().await;
 
-    // Making storage deposit for the user and intent on both tokens and for solver on token_b only.
+    // Storage deposit for the initiator and intent on both tokens and for solver on token_b only.
     env.token_a.storage_deposit(env.user_id()).await;
     env.token_b.storage_deposit(env.user_id()).await;
     env.token_b.storage_deposit(env.solver_id()).await;
@@ -269,7 +269,7 @@ async fn test_intent_without_solver_storage_deposit() {
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
-    // The solver is trying to execute it but doesn't have a storage deposit.
+    // The solver is trying to execute it, but he has no storage deposit.
     env.solver
         .execute_intent(env.token_b.id(), env.intent.id(), "1", 2000.into())
         .await;
@@ -308,12 +308,12 @@ async fn test_intent_with_lack_of_gas_for_creation() {
         1000,
         2000,
         Expiration::default(),
-        NearGas::from_tgas(45), // 40 TGas is not enough for the creation.
+        NearGas::from_tgas(45), // 45 TGas is not enough for the creation.
     )
     .await;
 
     let result = env.user.get_intent(env.intent.id(), "1").await;
-    assert!(result.is_none()); // The intent is not created because the initiator has no storage deposit.
+    assert!(result.is_none()); // No intent because not enough gas was provided.
 
     // Check that the balances haven't been changed.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
@@ -341,7 +341,7 @@ async fn test_intent_with_lack_of_gas_for_execution() {
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
-    // The solver is trying to execute it but doesn't have a storage deposit.
+    // The solver is trying to execute it, but provided not enough gas.
     env.solver
         .execute_intent_with_gas(
             env.token_b.id(),
