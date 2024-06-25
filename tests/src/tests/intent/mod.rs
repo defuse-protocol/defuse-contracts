@@ -136,7 +136,6 @@ async fn test_rollback_intent() {
 
     // The user decides to roll back the intent.
     let status = env.user.rollback_intent(env.intent.id(), "1").await;
-    dbg!(&status);
     assert!(status.is_success());
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();

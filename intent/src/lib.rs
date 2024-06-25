@@ -87,9 +87,11 @@ impl IntentContract for IntentContractImpl {
         ext_ft_core::ext(intent.send.token_id.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .ft_transfer(intent.initiator.clone(), intent.send.amount, None)
-            .then(
-                Self::ext(env::current_account_id()).change_intent_status(&id, Status::RolledBack),
-            )
+            .then(Self::ext(env::current_account_id()).change_intent_status(
+                &id,
+                Status::RolledBack,
+                0.into(),
+            ))
     }
 
     fn get_intent(&self, id: String) -> Option<&DetailedIntent> {
@@ -179,13 +181,21 @@ impl IntentContractImpl {
         }
     }
 
-    /// Callback which changes a status of the intent.
+    /// Callback which changes a status of the intent. The `amount` arg makes sense in case of
+    /// calling this transaction by `ft_transfer_call`. In case if the intent is expired the amount
+    /// should be the same as the solver send to return the funds back. In successful execution the
+    /// amount should be 0 to prevent refund funds in the `ft_resolve_transfer` callback to the solver.
     ///
     /// # Panics
     ///
     /// Panics if intent with given ID doesn't exist.
     #[private]
-    pub fn change_intent_status(&mut self, intent_id: &String, status: Status) {
+    pub fn change_intent_status(
+        &mut self,
+        intent_id: &String,
+        status: Status,
+        amount: U128,
+    ) -> U128 {
         log!(
             "Changing status of the intent with id: {} to {status:?} status",
             intent_id
@@ -197,6 +207,7 @@ impl IntentContractImpl {
             .unwrap();
 
         intent_with_status.set_status(status);
+        amount
     }
 
     /// Callback which finishes creating an intent.
@@ -358,7 +369,7 @@ impl IntentContractImpl {
             ext_ft_core::ext(intent.send.token_id.clone())
                 .with_attached_deposit(NearToken::from_yoctonear(1))
                 .ft_transfer(intent.initiator.clone(), intent.send.amount, None)
-                .then(Self::ext(current_id).change_intent_status(id, Status::Expired))
+                .then(Self::ext(current_id).change_intent_status(id, Status::Expired, amount))
         } else {
             if amount != intent.receive.amount {
                 return Err(IntentError::AmountMismatch);
@@ -372,7 +383,7 @@ impl IntentContractImpl {
                         .with_attached_deposit(NearToken::from_yoctonear(1))
                         .ft_transfer(intent.initiator.clone(), intent.receive.amount, None),
                 )
-                .then(Self::ext(current_id).change_intent_status(id, Status::Completed))
+                .then(Self::ext(current_id).change_intent_status(id, Status::Completed, 0.into()))
         };
 
         Ok(promise)
