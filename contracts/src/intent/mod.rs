@@ -59,7 +59,7 @@ impl Action {
     ///
     /// # Errors
     ///
-    /// `IntentError::Borch`
+    /// `IntentError::Borsh`
     pub fn encode(&self) -> Result<String, IntentError> {
         Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| IntentError::Borsh)?))
     }
@@ -161,7 +161,9 @@ pub enum Expiration {
 #[derive(Debug, Clone)]
 #[near(serializers=[borsh, json])]
 pub struct TokenAmount {
+    /// Account id of the token
     pub token_id: AccountId,
+    /// Amount of tokens
     pub amount: U128,
 }
 

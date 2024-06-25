@@ -1,7 +1,9 @@
 mod env;
 
 use defuse_contracts::intent::{Expiration, Intent, Status, TokenAmount};
+use near_gas::NearGas;
 
+use crate::tests::intent::env::EnvBuilder;
 use crate::utils::{intent::Intending, token::Token};
 
 use self::env::Env;
@@ -22,26 +24,7 @@ async fn test_generic_successful_flow() {
     assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
 
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
-    env.user
-        .create_intent(
-            env.token_a.id(),
-            env.intent.id(),
-            "1",
-            Intent {
-                initiator: env.user_id().clone(),
-                send: TokenAmount {
-                    token_id: env.token_a.id().clone(),
-                    amount: 1000.into(),
-                },
-                receive: TokenAmount {
-                    token_id: env.token_b.id().clone(),
-                    amount: 2000.into(),
-                },
-                expiration: Expiration::default(),
-                referral: None,
-            },
-        )
-        .await;
+    create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
     // Check that intent contract owns user's TokenA.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
@@ -79,27 +62,8 @@ async fn test_successful_flow_partly() {
     assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
     assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
 
-    // User creates intent for swapping 1000 TokenA to 2000 TokenB.
-    env.user
-        .create_intent(
-            env.token_a.id(),
-            env.intent.id(),
-            "1",
-            Intent {
-                initiator: env.user_id().clone(),
-                send: TokenAmount {
-                    token_id: env.token_a.id().clone(),
-                    amount: 500.into(),
-                },
-                receive: TokenAmount {
-                    token_id: env.token_b.id().clone(),
-                    amount: 1000.into(),
-                },
-                expiration: Expiration::default(),
-                referral: None,
-            },
-        )
-        .await;
+    // User creates intent for swapping 500 TokenA to 1000 TokenB.
+    create_intent(&env, "1", 500, 1000, Expiration::default()).await;
 
     // Check that intent contract owns user's TokenA.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 500);
@@ -161,26 +125,7 @@ async fn test_rollback_intent() {
     env.set_min_ttl(1).await;
 
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
-    env.user
-        .create_intent(
-            env.token_a.id(),
-            env.intent.id(),
-            "1",
-            Intent {
-                initiator: env.user_id().clone(),
-                send: TokenAmount {
-                    token_id: env.token_a.id().clone(),
-                    amount: 1000.into(),
-                },
-                receive: TokenAmount {
-                    token_id: env.token_b.id().clone(),
-                    amount: 2000.into(),
-                },
-                expiration: Expiration::default(),
-                referral: None,
-            },
-        )
-        .await;
+    create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
     // Check that intent contract owns user's TokenA now.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
@@ -189,8 +134,9 @@ async fn test_rollback_intent() {
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
     assert!(matches!(intent.status(), Status::Available));
 
-    // The user decides to roll back intent.
+    // The user decides to roll back the intent.
     let status = env.user.rollback_intent(env.intent.id(), "1").await;
+    dbg!(&status);
     assert!(status.is_success());
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
@@ -220,26 +166,7 @@ async fn test_rollback_intent_too_early() {
     assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
 
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
-    env.user
-        .create_intent(
-            env.token_a.id(),
-            env.intent.id(),
-            "1",
-            Intent {
-                initiator: env.user_id().clone(),
-                send: TokenAmount {
-                    token_id: env.token_a.id().clone(),
-                    amount: 1000.into(),
-                },
-                receive: TokenAmount {
-                    token_id: env.token_b.id().clone(),
-                    amount: 2000.into(),
-                },
-                expiration: Expiration::default(),
-                referral: None,
-            },
-        )
-        .await;
+    create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
     // Check that intent contract owns user's TokenA now.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
@@ -281,6 +208,166 @@ async fn test_time_expired_intent() {
     test_expired_intent(Expiration::Time(now - 120), Expiration::Time(now + 120)).await;
 }
 
+#[tokio::test]
+async fn test_intent_without_initiator_storage_deposit() {
+    let env = EnvBuilder::new().build().await;
+
+    // Making storage deposit user on token_a and for solver on token_b for intent on both.
+    env.token_a.storage_deposit(env.user_id()).await;
+    env.token_a.storage_deposit(env.solver_id()).await;
+    env.token_b.storage_deposit(env.solver_id()).await;
+    env.token_a.storage_deposit(env.intent.id()).await;
+    env.token_b.storage_deposit(env.intent.id()).await;
+
+    // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
+    env.token_a.ft_transfer(env.user_id(), 1000).await;
+    env.token_b.ft_transfer(env.solver_id(), 2000).await;
+
+    // Check that the user doesn't have TokenB and the solver TokenA.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
+
+    // User creates intent for swapping 1000 TokenA to 2000 TokenB.
+    create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
+
+    let result = env.user.get_intent(env.intent.id(), "1").await;
+    assert!(result.is_none()); // The intent is not created because the initiator has no storage deposit.
+
+    // Check that the balances haven't been changed.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
+}
+
+#[tokio::test]
+async fn test_intent_without_solver_storage_deposit() {
+    let env = EnvBuilder::new().build().await;
+
+    // Making storage deposit for the user and intent on both tokens and for solver on token_b only.
+    env.token_a.storage_deposit(env.user_id()).await;
+    env.token_b.storage_deposit(env.user_id()).await;
+    env.token_b.storage_deposit(env.solver_id()).await;
+    env.token_a.storage_deposit(env.intent.id()).await;
+    env.token_b.storage_deposit(env.intent.id()).await;
+
+    // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
+    env.token_a.ft_transfer(env.user_id(), 1000).await;
+    env.token_b.ft_transfer(env.solver_id(), 2000).await;
+
+    // Check that the user doesn't have TokenB and the solver TokenA.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
+
+    // User creates intent for swapping 1000 TokenA to 2000 TokenB.
+    create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
+
+    // The solver is trying to execute it but doesn't have a storage deposit.
+    env.solver
+        .execute_intent(env.token_b.id(), env.intent.id(), "1", 2000.into())
+        .await;
+
+    let result = env.user.get_intent(env.intent.id(), "1").await.unwrap();
+    assert!(matches!(result.status(), Status::Available));
+
+    // Check that the balances haven't been changed.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
+}
+
+#[tokio::test]
+async fn test_intent_with_lack_of_gas_for_creation() {
+    let env = Env::create().await;
+
+    // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
+    env.token_a.ft_transfer(env.user_id(), 1000).await;
+    env.token_b.ft_transfer(env.solver_id(), 2000).await;
+
+    // Check that the user doesn't have TokenB and the solver TokenA.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
+
+    // User creates intent for swapping 1000 TokenA to 2000 TokenB.
+    create_intent_with_gas(
+        &env,
+        "1",
+        1000,
+        2000,
+        Expiration::default(),
+        NearGas::from_tgas(45), // 40 TGas is not enough for the creation.
+    )
+    .await;
+
+    let result = env.user.get_intent(env.intent.id(), "1").await;
+    assert!(result.is_none()); // The intent is not created because the initiator has no storage deposit.
+
+    // Check that the balances haven't been changed.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
+}
+
+#[tokio::test]
+async fn test_intent_with_lack_of_gas_for_execution() {
+    let env = Env::create().await;
+
+    // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
+    env.token_a.ft_transfer(env.user_id(), 1000).await;
+    env.token_b.ft_transfer(env.solver_id(), 2000).await;
+
+    // Check that the user doesn't have TokenB and the solver TokenA.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
+
+    // User creates intent for swapping 1000 TokenA to 2000 TokenB.
+    create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
+
+    // The solver is trying to execute it but doesn't have a storage deposit.
+    env.solver
+        .execute_intent_with_gas(
+            env.token_b.id(),
+            env.intent.id(),
+            "1",
+            2000.into(),
+            NearGas::from_tgas(60), // 60 TGas is not enough for the execution.
+        )
+        .await;
+
+    // Check that the balances haven't been changed.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
+
+    let result = env.user.get_intent(env.intent.id(), "1").await.unwrap();
+    assert!(
+        matches!(result.status(), Status::Available),
+        "{:?}",
+        result.status()
+    );
+}
+
 async fn test_expired_intent(past: Expiration, future: Expiration) {
     let env = Env::create().await;
 
@@ -296,26 +383,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
     assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
 
     // User creates an intent which is already expired and shouldn't be executed.
-    env.user
-        .create_intent(
-            env.token_a.id(),
-            env.intent.id(),
-            "1",
-            Intent {
-                initiator: env.user_id().clone(),
-                send: TokenAmount {
-                    token_id: env.token_a.id().clone(),
-                    amount: 1000.into(),
-                },
-                receive: TokenAmount {
-                    token_id: env.token_b.id().clone(),
-                    amount: 2000.into(),
-                },
-                expiration: past,
-                referral: None,
-            },
-        )
-        .await;
+    create_intent(&env, "1", 1000, 2000, past).await;
 
     // Check that intent contract owns user's TokenA now.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
@@ -340,26 +408,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
     assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
 
     // User creates an intent which will be expired in the future and should be executed.
-    env.user
-        .create_intent(
-            env.token_a.id(),
-            env.intent.id(),
-            "2",
-            Intent {
-                initiator: env.user_id().clone(),
-                send: TokenAmount {
-                    token_id: env.token_a.id().clone(),
-                    amount: 1000.into(),
-                },
-                receive: TokenAmount {
-                    token_id: env.token_b.id().clone(),
-                    amount: 2000.into(),
-                },
-                expiration: future,
-                referral: None,
-            },
-        )
-        .await;
+    create_intent(&env, "2", 1000, 2000, future).await;
 
     // The solver is happy with such intent and executes it.
     env.solver
@@ -372,4 +421,39 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
 
     assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 1000);
     assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 0);
+}
+
+async fn create_intent(env: &Env, id: &str, send: u128, receive: u128, expiration: Expiration) {
+    create_intent_with_gas(env, id, send, receive, expiration, NearGas::from_tgas(50)).await;
+}
+
+async fn create_intent_with_gas(
+    env: &Env,
+    id: &str,
+    send: u128,
+    receive: u128,
+    expiration: Expiration,
+    gas: NearGas,
+) {
+    env.user
+        .create_intent_with_gas(
+            env.token_a.id(),
+            env.intent.id(),
+            id,
+            Intent {
+                initiator: env.user_id().clone(),
+                send: TokenAmount {
+                    token_id: env.token_a.id().clone(),
+                    amount: send.into(),
+                },
+                receive: TokenAmount {
+                    token_id: env.token_b.id().clone(),
+                    amount: receive.into(),
+                },
+                expiration,
+                referral: None,
+            },
+            gas,
+        )
+        .await;
 }

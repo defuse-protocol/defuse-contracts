@@ -3,10 +3,12 @@ use defuse_contracts::intent::{
 };
 
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
+use near_contract_standards::storage_management::StorageBalance;
+use near_gas::NearGas;
 use near_sdk::{
-    env,
+    env, ext_contract,
     json_types::U128,
-    log, near,
+    log, near, require,
     store::{
         lookup_map::{Entry, LookupMap},
         LookupSet,
@@ -15,6 +17,12 @@ use near_sdk::{
 };
 
 const DEFAULT_MIN_TTL: u64 = 60; // 1 minute
+const MIN_STORAGE_DEPOSIT: NearToken = NearToken::from_yoctonear(1_250_000_000_000_000_000_000);
+
+// Gas
+const FINISH_CREATING_GAS: NearGas = NearGas::from_tgas(5);
+const FINISH_EXECUTING_GAS: NearGas = NearGas::from_tgas(20);
+const ROLLBACK_INTENT_GAS: NearGas = NearGas::from_tgas(10);
 
 #[derive(BorshStorageKey)]
 #[near(serializers=[borsh])]
@@ -68,6 +76,14 @@ impl IntentContract for IntentContractImpl {
             "Only initiator, self or owner can roll back the intent"
         );
 
+        require!(
+            env::prepaid_gas()
+                .checked_sub(env::used_gas())
+                .unwrap_or_default()
+                >= ROLLBACK_INTENT_GAS,
+            "Not enough gas to rollback the intent"
+        );
+
         ext_ft_core::ext(intent.send.token_id.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .ft_transfer(intent.initiator.clone(), intent.send.amount, None)
@@ -103,16 +119,47 @@ impl FungibleTokenReceiver for IntentContractImpl {
         // self.assert_token(&sender_id); // TODO: Check if we need tokens validation.
         let action = Action::decode(msg).expect("decode Action");
 
-        match action {
+        let promise = match action {
             Action::CreateIntent(id, intent) => {
                 log!(
                     "Creating the intent with id: {id} by: {sender_id}, amount: {}",
                     amount.0
                 );
-                self.create_intent(id, amount, intent).unwrap()
+
+                require!(id.len() <= 128, "ID is too long");
+
+                // First check that initiator has storage deposit on token he wants to get.
+                ext_storage_management::ext(intent.receive.token_id.clone())
+                    .storage_balance_of(sender_id)
+                    .then(
+                        Self::ext(env::current_account_id())
+                            .with_static_gas(FINISH_CREATING_GAS)
+                            .finish_creating_intent(id, amount, intent),
+                    )
             }
-            Action::ExecuteIntent(id) => self.execute_intent(&id, amount).unwrap(),
-        }
+            Action::ExecuteIntent(id) => {
+                log!(
+                    "Executing the intent with id: {id} by: {sender_id}, amount: {}",
+                    amount.0
+                );
+                let detailed_intent = self
+                    .intents
+                    .get_mut(&id)
+                    .ok_or(IntentError::NotFound(id.clone()))
+                    .unwrap();
+
+                // First check that the solver has storage deposit on token he wants to get.
+                ext_storage_management::ext(detailed_intent.intent().send.token_id.clone())
+                    .storage_balance_of(sender_id.clone())
+                    .then(
+                        Self::ext(env::current_account_id())
+                            .with_static_gas(FINISH_EXECUTING_GAS)
+                            .finish_executing_intent(&id, amount, detailed_intent, &sender_id),
+                    )
+            }
+        };
+
+        PromiseOrValue::Promise(promise)
     }
 }
 
@@ -139,6 +186,10 @@ impl IntentContractImpl {
     /// Panics if intent with given ID doesn't exist.
     #[private]
     pub fn change_intent_status(&mut self, intent_id: &String, status: Status) {
+        log!(
+            "Changing status of the intent with id: {} to {status:?} status",
+            intent_id
+        );
         let intent_with_status = self
             .intents
             .get_mut(intent_id)
@@ -146,6 +197,59 @@ impl IntentContractImpl {
             .unwrap();
 
         intent_with_status.set_status(status);
+    }
+
+    /// Callback which finishes creating an intent.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the storage deposit is too low or there is no storage deposit for the initiator.
+    #[private]
+    pub fn finish_creating_intent(
+        &mut self,
+        id: String,
+        amount: U128,
+        intent: Intent,
+        #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
+    ) -> U128 {
+        match result {
+            Ok(Some(balance)) => {
+                assert!(
+                    balance.total >= MIN_STORAGE_DEPOSIT,
+                    "Too low storage deposit"
+                );
+                self.create_intent(id, amount, intent).unwrap()
+            }
+            Ok(None) => env::panic_str(&format!("No storage deposit for: {}", &intent.initiator)),
+            Err(e) => env::panic_str(&format!("Error getting storage deposit: {e:?}")),
+        }
+    }
+
+    /// Callback which finishes executing an intent.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the storage deposit is too low or there is no storage deposit for the solver.
+    #[private]
+    pub fn finish_executing_intent(
+        &mut self,
+        id: &String,
+        amount: U128,
+        detailed_intent: &mut DetailedIntent,
+        solver_id: &AccountId,
+        #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
+    ) -> Promise {
+        match result {
+            Ok(Some(balance)) => {
+                assert!(
+                    balance.total >= MIN_STORAGE_DEPOSIT,
+                    "Too low storage deposit"
+                );
+                self.execute_intent(id, amount, detailed_intent).unwrap()
+            }
+            Ok(None) => env::panic_str(&format!("No storage deposit for: {solver_id}")),
+            Err(e) => env::panic_str(&format!("Error getting storage deposit: {e:?}")),
+        }
     }
 
     /// Set a new owner of the contract.
@@ -209,7 +313,7 @@ impl IntentContractImpl {
         id: String,
         amount: U128,
         intent: Intent,
-    ) -> Result<PromiseOrValue<U128>, IntentError> {
+    ) -> Result<U128, IntentError> {
         if amount != intent.send.amount {
             return Err(IntentError::AmountMismatch);
         }
@@ -220,7 +324,7 @@ impl IntentContractImpl {
                 let detailed_intent = DetailedIntent::new(intent, self.min_intent_ttl);
                 entry.insert(detailed_intent);
 
-                Ok(PromiseOrValue::Value(0.into()))
+                Ok(0.into())
             }
         }
     }
@@ -229,7 +333,8 @@ impl IntentContractImpl {
         &mut self,
         id: &String,
         amount: U128,
-    ) -> Result<PromiseOrValue<U128>, IntentError> {
+        detailed_intent: &mut DetailedIntent,
+    ) -> Result<Promise, IntentError> {
         let solver_id = env::signer_account_id();
 
         log!(
@@ -239,11 +344,6 @@ impl IntentContractImpl {
         );
 
         self.assert_solver(&solver_id);
-
-        let detailed_intent = self
-            .intents
-            .get_mut(id)
-            .ok_or_else(|| IntentError::NotFound(id.clone()))?;
 
         if !matches!(detailed_intent.status(), Status::Available) {
             return Err(IntentError::WrongStatus);
@@ -267,7 +367,7 @@ impl IntentContractImpl {
             ext_ft_core::ext(intent.send.token_id.clone())
                 .with_attached_deposit(NearToken::from_yoctonear(1))
                 .ft_transfer(solver_id, intent.send.amount, None)
-                .then(
+                .and(
                     ext_ft_core::ext(intent.receive.token_id.clone())
                         .with_attached_deposit(NearToken::from_yoctonear(1))
                         .ft_transfer(intent.initiator.clone(), intent.receive.amount, None),
@@ -275,6 +375,12 @@ impl IntentContractImpl {
                 .then(Self::ext(current_id).change_intent_status(id, Status::Completed))
         };
 
-        Ok(PromiseOrValue::Promise(promise))
+        Ok(promise)
     }
+}
+
+// Could be removed after merging https://github.com/near/near-sdk-rs/pull/1208
+#[ext_contract(ext_storage_management)]
+pub trait StorageManagement {
+    fn storage_balance_of(&self, account_id: AccountId) -> Option<StorageBalance>;
 }
