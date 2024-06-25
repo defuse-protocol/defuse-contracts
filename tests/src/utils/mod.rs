@@ -1,7 +1,7 @@
 pub mod account;
-pub mod deploy;
+pub mod ft;
 pub mod intent;
+pub mod nft;
 mod sandbox;
-pub mod token;
 
 pub use sandbox::*;

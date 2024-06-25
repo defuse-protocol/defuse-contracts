@@ -1,18 +1,13 @@
 use std::collections::HashMap;
 
-use defuse_contracts::account::{Account, AccountContract};
+use defuse_contracts::account::AccountContract;
 use near_contract_standards::non_fungible_token::{
     core::NonFungibleTokenCore, NonFungibleToken, NonFungibleTokenEnumeration,
     NonFungibleTokenResolver, Token, TokenId,
 };
 use near_sdk::{
-    env, json_types::U128, near, store::LookupSet, AccountId, BorshStorageKey, PanicOnDefault,
-    PromiseOrValue,
+    env, json_types::U128, near, AccountId, BorshStorageKey, PanicOnDefault, PromiseOrValue,
 };
-
-use self::account_db::AccountDb;
-
-mod account_db;
 
 #[derive(BorshStorageKey)]
 #[near(serializers=[borsh])]
@@ -27,10 +22,42 @@ enum Prefix {
 #[derive(PanicOnDefault)]
 pub struct AccountContractImpl {
     accounts: NonFungibleToken,
-    /// MPC contract id.
-    mpc_contract_id: AccountId,
-    // /// List of indexers. Accounts which allow to add a new account.
-    // indexers: LookupSet<AccountId>,
+    // TODO: MPC
+}
+
+#[near]
+impl AccountContractImpl {
+    #[init]
+    #[must_use]
+    #[allow(clippy::use_self)]
+    pub fn new(owner: AccountId) -> Self {
+        Self {
+            accounts: NonFungibleToken::new::<_, u8, u8, u8>(
+                Prefix::OwnerById,
+                owner,
+                None,
+                None,
+                None,
+            ),
+        }
+    }
+}
+
+#[near]
+impl AccountContract for AccountContractImpl {
+    #[payable]
+    // TODO: make owner optional and default to env::predecessor_account_id()?
+    // TODO: allow to create only accounts where owner is specified somewhere
+    // in derivation_path. So, we should agree on a format
+    fn create_account(&mut self, derivation_path: String, owner: Option<AccountId>) {
+        self.accounts.internal_mint(
+            derivation_path,
+            owner.unwrap_or_else(env::predecessor_account_id),
+            None,
+        );
+    }
+
+    // TODO: storage management
 }
 
 #[near]
@@ -110,52 +137,4 @@ impl NonFungibleTokenEnumeration for AccountContractImpl {
         self.accounts
             .nft_tokens_for_owner(account_id, from_index, limit)
     }
-}
-
-#[near]
-impl AccountContract for AccountContractImpl {
-    #[payable]
-    // TODO: make owner optional and default to env::predecessor_account_id()?
-    fn create_account(&mut self, owner: AccountId, derivation_path: String) {
-        // // Only indexers can call this transaction.
-        // let predecessor_id = env::predecessor_account_id();
-        // self.assert_indexer(&predecessor_id);
-
-        self.accounts.internal_mint(derivation_path, owner, None);
-    }
-
-    fn mpc_contract(&self) -> &AccountId {
-        &self.mpc_contract_id
-    }
-}
-
-#[near]
-impl AccountContractImpl {
-    #[init]
-    #[must_use]
-    #[allow(clippy::use_self)]
-    pub fn new(owner: AccountId, mpc_contract_id: AccountId) -> Self {
-        Self {
-            accounts: NonFungibleToken::new::<_, u8, u8, u8>(
-                Prefix::OwnerById,
-                owner,
-                None,
-                None,
-                None,
-            ),
-            mpc_contract_id,
-        }
-    }
-
-    #[private]
-    pub fn set_mpc_contract(&mut self, contract_id: AccountId) {
-        self.mpc_contract_id = contract_id;
-    }
-
-    // fn assert_indexer(&self, account_id: &AccountId) {
-    //     assert!(
-    //         self.indexers.contains(account_id),
-    //         "Only indexers allow adding an account"
-    //     );
-    // }
 }

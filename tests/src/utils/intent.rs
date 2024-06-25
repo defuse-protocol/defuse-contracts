@@ -1,4 +1,4 @@
-use defuse_contracts::intents::ft::{Action, DetailedIntent, Intent};
+use defuse_contracts::intents::swap_ft::{Action, DetailedIntent, Intent};
 
 use near_sdk::json_types::U128;
 use near_workspaces::{result::ExecutionFinalResult, types::NearToken, Account, AccountId};

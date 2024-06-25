@@ -1,5 +1,5 @@
 [package]
-name = "defuse-mpc-intent-contract"
+name = "defuse-swap-ft-intent-contract"
 version = "0.1.0"
 edition.workspace = true
 

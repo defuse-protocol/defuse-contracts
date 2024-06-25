@@ -1,7 +1,9 @@
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
 
-use crate::utils::{intent::Intending, token::Token, Sandbox};
+use crate::utils::{ft::FtExt, intent::Intending, Sandbox};
+
+use super::SwapFtIntentShard;
 
 pub struct Env {
     pub sandbox: Sandbox,
@@ -15,9 +17,12 @@ pub struct Env {
 impl Env {
     pub async fn create() -> Self {
         let sandbox = Sandbox::new().await.unwrap();
-        let token_a = sandbox.deploy_token("token_a").await;
-        let token_b = sandbox.deploy_token("token_b").await;
-        let intent = sandbox.deploy_intent_contract().await;
+        let token_a = sandbox.root_account().deploy_ft_token("token_a").await;
+        let token_b = sandbox.root_account().deploy_ft_token("token_b").await;
+        let intent = sandbox
+            .root_account()
+            .deploy_swap_ft_intent_shard("ft-intent")
+            .await;
 
         let user = sandbox.create_account("user").await;
         let solver = sandbox.create_account("solver").await;
@@ -26,12 +31,17 @@ impl Env {
             .as_account()
             .add_solver(intent.id(), solver.id())
             .await;
-
-        token_a
-            .register_accounts(&[&user, &solver, intent.as_account()])
+        user.storage_deposit(token_a.id(), None).await;
+        user.storage_deposit(token_b.id(), None).await;
+        solver.storage_deposit(token_a.id(), None).await;
+        solver.storage_deposit(token_b.id(), None).await;
+        intent
+            .as_account()
+            .storage_deposit(token_a.id(), None)
             .await;
-        token_b
-            .register_accounts(&[&user, &solver, intent.as_account()])
+        intent
+            .as_account()
+            .storage_deposit(token_b.id(), None)
             .await;
 
         Self {

@@ -1,4 +1,4 @@
-use defuse_contracts::intents::ft::{
+use defuse_contracts::intents::swap_ft::{
     Action, DetailedIntent, FtIntentContract, FtIntentError, Intent, Status,
 };
 

@@ -1,16 +1,6 @@
 #![allow(dead_code)]
 use near_sdk::NearToken;
-use near_workspaces::{Account, AccountId, Contract};
-
-// pub trait Account {
-//     async fn add_account(&self, account_id: AccountId);
-// }
-
-// impl Account for near_workspaces::Account {
-//     async fn add_account(&self, _account_id: AccountId) {
-//         todo!()
-//     }
-// }
+use near_workspaces::{Account, Contract};
 
 pub trait AccountExt {
     async fn deploy_contract(&self, account_id: impl AsRef<str>, wasm: &[u8]) -> Contract;
