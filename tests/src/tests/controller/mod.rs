@@ -14,7 +14,7 @@ pub trait ControllerExt {
         &self,
         controller_id: impl AsRef<str>,
         owner: impl Into<Option<AccountId>>,
-    ) -> Contract;
+    ) -> anyhow::Result<Contract>;
 }
 
 impl ControllerExt for near_workspaces::Account {
@@ -22,8 +22,10 @@ impl ControllerExt for near_workspaces::Account {
         &self,
         controller_id: impl AsRef<str>,
         owner: impl Into<Option<AccountId>>,
-    ) -> Contract {
-        let contract = self.deploy_contract(controller_id, &CONTROLLER_WASM).await;
+    ) -> anyhow::Result<Contract> {
+        let contract = self
+            .deploy_contract(controller_id, &CONTROLLER_WASM)
+            .await?;
         contract
             .call("new")
             .args_json(json!({
@@ -31,12 +33,10 @@ impl ControllerExt for near_workspaces::Account {
             }))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap();
+            .await?
+            .into_result()?;
 
-        contract
+        Ok(contract)
     }
 }
 
@@ -46,7 +46,8 @@ async fn test_deploy_contract() {
     let controller = sandbox
         .root_account()
         .deploy_controller("controller", None)
-        .await;
+        .await
+        .unwrap();
 
     assert_eq!(controller.id().as_str(), "controller.test.near");
 }

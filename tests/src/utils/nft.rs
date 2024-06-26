@@ -9,7 +9,7 @@ pub trait NftExt {
         receiver_id: &AccountId,
         token_id: TokenId,
         memo: impl Into<Option<String>>,
-    );
+    ) -> anyhow::Result<()>;
 
     async fn nft_transfer_call(
         &self,
@@ -18,9 +18,9 @@ pub trait NftExt {
         token_id: TokenId,
         memo: impl Into<Option<String>>,
         msg: String,
-    ) -> bool;
+    ) -> anyhow::Result<bool>;
 
-    async fn nft_token(&self, token_id: &TokenId) -> Option<Token>;
+    async fn nft_token(&self, token_id: &TokenId) -> anyhow::Result<Option<Token>>;
 }
 
 impl NftExt for near_workspaces::Account {
@@ -30,7 +30,7 @@ impl NftExt for near_workspaces::Account {
         receiver_id: &AccountId,
         token_id: TokenId,
         memo: impl Into<Option<String>>,
-    ) {
+    ) -> anyhow::Result<()> {
         self.call(&collection, "nft_transfer")
             .args_json(json!({
                 "receiver_id": receiver_id,
@@ -40,10 +40,9 @@ impl NftExt for near_workspaces::Account {
             .deposit(NearToken::from_yoctonear(1))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap();
+            .await?
+            .into_result()?;
+        Ok(())
     }
 
     async fn nft_transfer_call(
@@ -53,7 +52,7 @@ impl NftExt for near_workspaces::Account {
         token_id: TokenId,
         memo: impl Into<Option<String>>,
         msg: String,
-    ) -> bool {
+    ) -> anyhow::Result<bool> {
         self.call(&collection, "nft_transfer_call")
             .args_json(json!({
                 "receiver_id": receiver_id,
@@ -64,22 +63,19 @@ impl NftExt for near_workspaces::Account {
             .deposit(NearToken::from_yoctonear(1))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap()
+            .await?
+            .into_result()?
             .json()
-            .unwrap()
+            .map_err(Into::into)
     }
 
-    async fn nft_token(&self, token_id: &TokenId) -> Option<Token> {
+    async fn nft_token(&self, token_id: &TokenId) -> anyhow::Result<Option<Token>> {
         self.view(self.id(), "nft_token")
             .args_json(json!({
                 "token_id": token_id,
             }))
-            .await
-            .unwrap()
+            .await?
             .json()
-            .unwrap()
+            .map_err(Into::into)
     }
 }

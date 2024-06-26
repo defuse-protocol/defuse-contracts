@@ -18,15 +18,15 @@ lazy_static! {
 }
 
 pub trait FtExt: StorageManagementExt {
-    async fn deploy_ft_token(&self, token: impl AsRef<str>) -> Contract;
-    async fn ft_balance_of(&self, token_id: &AccountId) -> u128;
+    async fn deploy_ft_token(&self, token: impl AsRef<str>) -> anyhow::Result<Contract>;
+    async fn ft_balance_of(&self, token_id: &AccountId) -> anyhow::Result<u128>;
     async fn ft_transfer(
         &self,
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
         memo: impl Into<Option<String>>,
-    );
+    ) -> anyhow::Result<()>;
     async fn ft_transfer_call(
         &self,
         token_id: &AccountId,
@@ -34,22 +34,22 @@ pub trait FtExt: StorageManagementExt {
         amount: u128,
         memo: impl Into<Option<String>>,
         msg: impl AsRef<str>,
-    ) -> u128;
+    ) -> anyhow::Result<u128>;
     async fn ft_storage_deposit(
         &self,
         token_id: &AccountId,
         account_id: impl Into<Option<AccountId>>,
-    ) -> StorageBalance {
+    ) -> anyhow::Result<StorageBalance> {
         self.storage_deposit(token_id, account_id, STORAGE_DEPOSIT)
             .await
     }
 }
 
 impl FtExt for Account {
-    async fn deploy_ft_token(&self, token: impl AsRef<str>) -> Contract {
+    async fn deploy_ft_token(&self, token: impl AsRef<str>) -> anyhow::Result<Contract> {
         let token = token.as_ref();
 
-        let contract = self.deploy_contract(token, &FUNGIBLE_TOKEN_WASM).await;
+        let contract = self.deploy_contract(token, &FUNGIBLE_TOKEN_WASM).await?;
         contract
             .call("new")
             .args_json(json!({
@@ -64,25 +64,21 @@ impl FtExt for Account {
             }))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap();
+            .await?
+            .into_result()?;
 
-        contract
+        Ok(contract)
     }
 
-    async fn ft_balance_of(&self, account_id: &AccountId) -> u128 {
+    async fn ft_balance_of(&self, account_id: &AccountId) -> anyhow::Result<u128> {
         self.view(self.id(), "ft_balance_of")
             .args_json(json!({
                 "account_id": account_id,
             }))
-            .await
-            .unwrap()
-            .json::<String>()
-            .unwrap()
+            .await?
+            .json::<String>()?
             .parse()
-            .unwrap()
+            .map_err(Into::into)
     }
 
     async fn ft_transfer(
@@ -91,7 +87,7 @@ impl FtExt for Account {
         receiver_id: &AccountId,
         amount: u128,
         memo: impl Into<Option<String>>,
-    ) {
+    ) -> anyhow::Result<()> {
         self.call(token_id, "ft_transfer")
             .args_json(json!({
                 "receiver_id": receiver_id,
@@ -101,10 +97,9 @@ impl FtExt for Account {
             .deposit(NearToken::from_yoctonear(1))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap();
+            .await?
+            .into_result()?;
+        Ok(())
     }
 
     async fn ft_transfer_call(
@@ -114,7 +109,7 @@ impl FtExt for Account {
         amount: u128,
         memo: impl Into<Option<String>>,
         msg: impl AsRef<str>,
-    ) -> u128 {
+    ) -> anyhow::Result<u128> {
         self.call(token_id, "ft_transfer_call")
             .args_json(json!({
                 "receiver_id": receiver_id,
@@ -125,13 +120,10 @@ impl FtExt for Account {
             .deposit(NearToken::from_yoctonear(1))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap()
-            .json::<String>()
-            .unwrap()
+            .await?
+            .into_result()?
+            .json::<String>()?
             .parse()
-            .unwrap()
+            .map_err(Into::into)
     }
 }

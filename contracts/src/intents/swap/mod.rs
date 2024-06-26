@@ -175,7 +175,23 @@ impl SwapIntent {
     }
 
     #[inline]
+    pub fn as_swap_mut(&mut self) -> Option<&mut Swap> {
+        match self {
+            Self::Swap(swap) => Some(swap),
+            _ => None,
+        }
+    }
+
+    #[inline]
     pub fn as_lost_found(&self) -> Option<&LostFound> {
+        match self {
+            Self::LostFound(lost_found) => Some(lost_found),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn as_lost_found_mut(&mut self) -> Option<&mut LostFound> {
         match self {
             Self::LostFound(lost_found) => Some(lost_found),
             _ => None,

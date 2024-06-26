@@ -14,14 +14,14 @@ pub trait AccountShardExt {
         &self,
         account_shard_id: impl AsRef<str>,
         owner: impl Into<Option<AccountId>>,
-    ) -> Contract;
+    ) -> anyhow::Result<Contract>;
 
     async fn create_account(
         &self,
         account_shard_id: &AccountId,
         derivation_path: impl AsRef<str>,
         owner: impl Into<Option<AccountId>>,
-    );
+    ) -> anyhow::Result<()>;
 }
 
 impl AccountShardExt for near_workspaces::Account {
@@ -29,8 +29,10 @@ impl AccountShardExt for near_workspaces::Account {
         &self,
         account_shard_id: impl AsRef<str>,
         owner: impl Into<Option<AccountId>>,
-    ) -> Contract {
-        let contract = self.deploy_contract(account_shard_id, &ACCOUNT_WASM).await;
+    ) -> anyhow::Result<Contract> {
+        let contract = self
+            .deploy_contract(account_shard_id, &ACCOUNT_WASM)
+            .await?;
 
         contract
             .call("new")
@@ -39,12 +41,10 @@ impl AccountShardExt for near_workspaces::Account {
             }))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap();
+            .await?
+            .into_result()?;
 
-        contract
+        Ok(contract)
     }
 
     async fn create_account(
@@ -52,7 +52,7 @@ impl AccountShardExt for near_workspaces::Account {
         account_shard_id: &AccountId,
         derivation_path: impl AsRef<str>,
         owner: impl Into<Option<AccountId>>,
-    ) {
+    ) -> anyhow::Result<()> {
         self.call(account_shard_id, "create_account")
             .args_json(json!({
                 "derivation_path": derivation_path.as_ref(),
@@ -61,10 +61,9 @@ impl AccountShardExt for near_workspaces::Account {
             .deposit(NearToken::from_millinear(2))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap();
+            .await?
+            .into_result()?;
+        Ok(())
     }
 }
 
@@ -76,17 +75,30 @@ async fn test_account_shard() {
         .create_subaccount("dao", NearToken::from_near(100))
         .await
         .unwrap();
-    let account_shard = dao.deploy_account_shard("account-shard", None).await;
+    let account_shard = dao
+        .deploy_account_shard("account-shard", None)
+        .await
+        .unwrap();
 
-    let user1 = sandbox.create_account("user1").await;
-    let user2 = sandbox.create_account("user2").await;
+    let user1 = sandbox
+        .create_subaccount("user1", NearToken::from_near(10))
+        .await
+        .unwrap();
+    let user2 = sandbox
+        .create_subaccount("user2", NearToken::from_near(10))
+        .await
+        .unwrap();
 
-    user1.create_account(account_shard.id(), "a", None).await;
+    user1
+        .create_account(account_shard.id(), "a", None)
+        .await
+        .unwrap();
     assert_eq!(
         &account_shard
             .as_account()
             .nft_token(&"a".to_string())
             .await
+            .unwrap()
             .unwrap()
             .owner_id,
         user1.id()
@@ -94,12 +106,14 @@ async fn test_account_shard() {
 
     user1
         .nft_transfer(account_shard.id(), user2.id(), "a".to_string(), None)
-        .await;
+        .await
+        .unwrap();
     assert_eq!(
         &account_shard
             .as_account()
             .nft_token(&"a".to_string())
             .await
+            .unwrap()
             .unwrap()
             .owner_id,
         user2.id()

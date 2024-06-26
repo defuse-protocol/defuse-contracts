@@ -27,7 +27,8 @@ impl SwapFtIntentShard for near_workspaces::Account {
     ) -> Contract {
         let contract = self
             .deploy_contract(swap_ft_intent_shard_id, &SWAP_FT_INTENT_WASM)
-            .await;
+            .await
+            .unwrap();
 
         contract
             .call("new")
@@ -53,19 +54,29 @@ async fn test_generic_successful_flow() {
     env.token_a
         .as_account()
         .ft_transfer(env.token_a.id(), env.user_id(), 1000, None)
-        .await;
+        .await
+        .unwrap();
     env.token_b
         .as_account()
         .ft_transfer(env.token_b.id(), env.solver_id(), 2000, None)
-        .await;
+        .await
+        .unwrap();
 
     // Check that the user doesn't have TokenB and the solver TokenA.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000,
     );
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
 
@@ -73,14 +84,16 @@ async fn test_generic_successful_flow() {
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 
@@ -108,14 +121,19 @@ async fn test_generic_successful_flow() {
 
     // Check that intent contract owns user's TokenA.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_a
             .as_account()
             .ft_balance_of(env.ft_intent.id())
-            .await,
+            .await
+            .unwrap(),
         1000
     );
 
@@ -126,11 +144,19 @@ async fn test_generic_successful_flow() {
 
     // Check balances after intent execution.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         2000
     );
 
@@ -138,14 +164,16 @@ async fn test_generic_successful_flow() {
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
 
@@ -162,19 +190,29 @@ async fn test_successful_flow_partly() {
     env.token_a
         .as_account()
         .ft_transfer(env.token_a.id(), env.user_id(), 1000, None)
-        .await;
+        .await
+        .unwrap();
     env.token_b
         .as_account()
         .ft_transfer(env.token_b.id(), env.solver_id(), 2000, None)
-        .await;
+        .await
+        .unwrap();
 
     // Check that the user doesn't have TokenB and the solver TokenA.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
 
@@ -182,14 +220,16 @@ async fn test_successful_flow_partly() {
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 
@@ -217,14 +257,19 @@ async fn test_successful_flow_partly() {
 
     // Check that intent contract owns user's TokenA.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         500
     );
     assert_eq!(
         env.token_a
             .as_account()
             .ft_balance_of(env.ft_intent.id())
-            .await,
+            .await
+            .unwrap(),
         500
     );
 
@@ -235,11 +280,19 @@ async fn test_successful_flow_partly() {
 
     // Check balances after intent execution.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         500
     );
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000
     );
 
@@ -247,14 +300,16 @@ async fn test_successful_flow_partly() {
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         500
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         1000
     );
 }
@@ -266,33 +321,45 @@ async fn test_execute_non_existed_intent() {
     env.token_a
         .as_account()
         .ft_transfer(env.token_a.id(), env.user_id(), 1000, None)
-        .await;
+        .await
+        .unwrap();
     env.token_b
         .as_account()
         .ft_transfer(env.token_b.id(), env.solver_id(), 2000, None)
-        .await;
+        .await
+        .unwrap();
 
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
 
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 
@@ -301,26 +368,36 @@ async fn test_execute_non_existed_intent() {
         .await;
 
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
 
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 }
@@ -333,19 +410,29 @@ async fn test_rollback_intent() {
     env.token_a
         .as_account()
         .ft_transfer(env.token_a.id(), env.user_id(), 1000, None)
-        .await;
+        .await
+        .unwrap();
     env.token_b
         .as_account()
         .ft_transfer(env.token_b.id(), env.solver_id(), 2000, None)
-        .await;
+        .await
+        .unwrap();
 
     // Check that the user doesn't have TokenB and the solver TokenA.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
 
@@ -353,14 +440,16 @@ async fn test_rollback_intent() {
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 
@@ -391,14 +480,19 @@ async fn test_rollback_intent() {
 
     // Check that intent contract owns user's TokenA now.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_a
             .as_account()
             .ft_balance_of(env.ft_intent.id())
-            .await,
+            .await
+            .unwrap(),
         1000
     );
 
@@ -414,26 +508,36 @@ async fn test_rollback_intent() {
 
     // Check balances after intent execution.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
 
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 }
@@ -446,19 +550,29 @@ async fn test_rollback_intent_too_early() {
     env.token_a
         .as_account()
         .ft_transfer(env.token_a.id(), env.user_id(), 1000, None)
-        .await;
+        .await
+        .unwrap();
     env.token_b
         .as_account()
         .ft_transfer(env.token_b.id(), env.solver_id(), 2000, None)
-        .await;
+        .await
+        .unwrap();
 
     // Check that the user doesn't have TokenB and the solver TokenA.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
 
@@ -466,14 +580,16 @@ async fn test_rollback_intent_too_early() {
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 
@@ -501,14 +617,19 @@ async fn test_rollback_intent_too_early() {
 
     // Check that intent contract owns user's TokenA now.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_a
             .as_account()
             .ft_balance_of(env.ft_intent.id())
-            .await,
+            .await
+            .unwrap(),
         1000
     );
 
@@ -524,11 +645,19 @@ async fn test_rollback_intent_too_early() {
 
     // Check balances after intent execution.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
 
@@ -537,7 +666,8 @@ async fn test_rollback_intent_too_early() {
         env.token_a
             .as_account()
             .ft_balance_of(env.ft_intent.id())
-            .await,
+            .await
+            .unwrap(),
         1000
     );
 
@@ -545,14 +675,16 @@ async fn test_rollback_intent_too_early() {
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 }
@@ -579,19 +711,29 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
     env.token_a
         .as_account()
         .ft_transfer(env.token_a.id(), env.user_id(), 1000, None)
-        .await;
+        .await
+        .unwrap();
     env.token_b
         .as_account()
         .ft_transfer(env.token_b.id(), env.solver_id(), 2000, None)
-        .await;
+        .await
+        .unwrap();
 
     // Check that the user doesn't have TokenB and the solver TokenA.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
 
@@ -599,14 +741,16 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 
@@ -634,14 +778,19 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
 
     // Check that intent contract owns user's TokenA now.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_a
             .as_account()
             .ft_balance_of(env.ft_intent.id())
-            .await,
+            .await
+            .unwrap(),
         1000
     );
 
@@ -658,26 +807,36 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
 
     // Check balances after intent execution.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
 
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         2000
     );
 
@@ -710,11 +869,19 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
 
     // Check balances after intent execution.
     assert_eq!(
-        env.token_a.as_account().ft_balance_of(env.user_id()).await,
+        env.token_a
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
-        env.token_b.as_account().ft_balance_of(env.user_id()).await,
+        env.token_b
+            .as_account()
+            .ft_balance_of(env.user_id())
+            .await
+            .unwrap(),
         2000
     );
 
@@ -722,14 +889,16 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
         env.token_a
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         1000
     );
     assert_eq!(
         env.token_b
             .as_account()
             .ft_balance_of(env.solver_id())
-            .await,
+            .await
+            .unwrap(),
         0
     );
 }

@@ -17,45 +17,53 @@ lazy_static! {
 }
 
 pub trait SwapIntentShard {
-    async fn deploy_swap_intent_shard(&self, swap_intent_shard_id: impl AsRef<str>) -> Contract;
+    async fn deploy_swap_intent_shard(
+        &self,
+        swap_intent_shard_id: impl AsRef<str>,
+    ) -> anyhow::Result<Contract>;
 
     async fn create_swap_intent(
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
         create: CreateSwapIntentAction,
-    ) -> bool;
+    ) -> anyhow::Result<bool>;
 
-    async fn get_swap_intent(&self, id: &IntentId) -> Option<Mutex<SwapIntent>>;
+    async fn get_swap_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>>;
 
     async fn fulfill_swap_intent(
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
         fulfill: FulfillSwapIntentAction,
-    ) -> bool;
+    ) -> anyhow::Result<bool>;
 
-    async fn rollback_intent(&self, swap_intent_id: &AccountId, id: &IntentId) -> bool;
+    async fn rollback_intent(
+        &self,
+        swap_intent_id: &AccountId,
+        id: &IntentId,
+    ) -> anyhow::Result<bool>;
 
-    async fn lost_found(&self, swap_intent_id: &AccountId, id: &IntentId) -> bool;
+    async fn lost_found(&self, swap_intent_id: &AccountId, id: &IntentId) -> anyhow::Result<bool>;
 }
 
 impl SwapIntentShard for near_workspaces::Account {
-    async fn deploy_swap_intent_shard(&self, swap_intent_shard_id: impl AsRef<str>) -> Contract {
+    async fn deploy_swap_intent_shard(
+        &self,
+        swap_intent_shard_id: impl AsRef<str>,
+    ) -> anyhow::Result<Contract> {
         let contract = self
             .deploy_contract(swap_intent_shard_id, &SWAP_INTENT_WASM)
-            .await;
+            .await?;
 
         contract
             .call("new")
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap();
+            .await?
+            .into_result()?;
 
-        contract
+        Ok(contract)
     }
 
     async fn create_swap_intent(
@@ -63,7 +71,7 @@ impl SwapIntentShard for near_workspaces::Account {
         swap_intent_id: &AccountId,
         asset_in: Asset,
         create: CreateSwapIntentAction,
-    ) -> bool {
+    ) -> anyhow::Result<bool> {
         match asset_in {
             Asset::Native(amount) => self
                 .call(swap_intent_id, "native_action")
@@ -73,23 +81,20 @@ impl SwapIntentShard for near_workspaces::Account {
                 .deposit(amount)
                 .max_gas()
                 .transact()
-                .await
-                .unwrap()
-                .into_result()
-                .unwrap()
+                .await?
+                .into_result()?
                 .json()
-                .unwrap(),
-            Asset::Ft(FtAmount { token, amount }) => {
-                self.ft_transfer_call(
+                .map_err(Into::into),
+            Asset::Ft(FtAmount { token, amount }) => Ok(self
+                .ft_transfer_call(
                     &token,
                     swap_intent_id,
                     amount,
                     None,
                     serde_json::to_string(&SwapIntentAction::Create(create)).unwrap(),
                 )
-                .await
-                    == amount
-            }
+                .await?
+                == amount),
             Asset::Nft(NftItem {
                 collection,
                 token_id,
@@ -106,15 +111,14 @@ impl SwapIntentShard for near_workspaces::Account {
         }
     }
 
-    async fn get_swap_intent(&self, id: &IntentId) -> Option<Mutex<SwapIntent>> {
+    async fn get_swap_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
         self.view(self.id(), "get_swap_intent")
             .args_json(json!({
                 "id": id,
             }))
-            .await
-            .unwrap()
+            .await?
             .json()
-            .unwrap()
+            .map_err(Into::into)
     }
 
     async fn fulfill_swap_intent(
@@ -122,7 +126,7 @@ impl SwapIntentShard for near_workspaces::Account {
         swap_intent_id: &AccountId,
         asset_in: Asset,
         fulfill: FulfillSwapIntentAction,
-    ) -> bool {
+    ) -> anyhow::Result<bool> {
         match asset_in {
             Asset::Native(amount) => self
                 .call(swap_intent_id, "native_action")
@@ -132,23 +136,20 @@ impl SwapIntentShard for near_workspaces::Account {
                 .deposit(amount)
                 .max_gas()
                 .transact()
-                .await
-                .unwrap()
-                .into_result()
-                .unwrap()
+                .await?
+                .into_result()?
                 .json()
-                .unwrap(),
-            Asset::Ft(FtAmount { token, amount }) => {
-                self.ft_transfer_call(
+                .map_err(Into::into),
+            Asset::Ft(FtAmount { token, amount }) => Ok(self
+                .ft_transfer_call(
                     &token,
                     swap_intent_id,
                     amount,
                     None,
                     serde_json::to_string(&SwapIntentAction::Fulfill(fulfill)).unwrap(),
                 )
-                .await
-                    == amount
-            }
+                .await?
+                == amount),
             Asset::Nft(NftItem {
                 collection,
                 token_id,
@@ -165,33 +166,33 @@ impl SwapIntentShard for near_workspaces::Account {
         }
     }
 
-    async fn rollback_intent(&self, swap_intent_id: &AccountId, id: &IntentId) -> bool {
+    async fn rollback_intent(
+        &self,
+        swap_intent_id: &AccountId,
+        id: &IntentId,
+    ) -> anyhow::Result<bool> {
         self.call(swap_intent_id, "rollback_intent")
             .args_json(json!({
                 "id": id,
             }))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap()
+            .await?
+            .into_result()?
             .json()
-            .unwrap()
+            .map_err(Into::into)
     }
 
-    async fn lost_found(&self, swap_intent_id: &AccountId, id: &IntentId) -> bool {
+    async fn lost_found(&self, swap_intent_id: &AccountId, id: &IntentId) -> anyhow::Result<bool> {
         self.call(swap_intent_id, "lost_found")
             .args_json(json!({
                 "id": id,
             }))
             .max_gas()
             .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap()
+            .await?
+            .into_result()?
             .json()
-            .unwrap()
+            .map_err(Into::into)
     }
 }

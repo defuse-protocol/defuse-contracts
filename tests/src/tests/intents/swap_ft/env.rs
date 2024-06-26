@@ -17,8 +17,16 @@ pub struct Env {
 impl Env {
     pub async fn create() -> Self {
         let sandbox = Sandbox::new().await.unwrap();
-        let token_a = sandbox.root_account().deploy_ft_token("token_a").await;
-        let token_b = sandbox.root_account().deploy_ft_token("token_b").await;
+        let token_a = sandbox
+            .root_account()
+            .deploy_ft_token("token_a")
+            .await
+            .unwrap();
+        let token_b = sandbox
+            .root_account()
+            .deploy_ft_token("token_b")
+            .await
+            .unwrap();
         let intent = sandbox
             .root_account()
             .deploy_swap_ft_intent_shard("ft-intent")
@@ -31,18 +39,20 @@ impl Env {
             .as_account()
             .add_solver(intent.id(), solver.id())
             .await;
-        user.ft_storage_deposit(token_a.id(), None).await;
-        user.ft_storage_deposit(token_b.id(), None).await;
-        solver.ft_storage_deposit(token_a.id(), None).await;
-        solver.ft_storage_deposit(token_b.id(), None).await;
+        user.ft_storage_deposit(token_a.id(), None).await.unwrap();
+        user.ft_storage_deposit(token_b.id(), None).await.unwrap();
+        solver.ft_storage_deposit(token_a.id(), None).await.unwrap();
+        solver.ft_storage_deposit(token_b.id(), None).await.unwrap();
         intent
             .as_account()
             .ft_storage_deposit(token_a.id(), None)
-            .await;
+            .await
+            .unwrap();
         intent
             .as_account()
             .ft_storage_deposit(token_b.id(), None)
-            .await;
+            .await
+            .unwrap();
 
         Self {
             sandbox,

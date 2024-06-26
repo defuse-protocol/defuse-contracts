@@ -55,10 +55,10 @@ impl SwapIntentContractImpl {
             .get_mut(id)
             .ok_or_else(|| SwapError::NotFound(id.clone()))
             .unwrap();
-        // TODO: assert_locked
+
         if transfer_asset_out.is_err() {
             let intent = intent
-                .unlock_mut()
+                .unlock()
                 .ok_or(SwapError::Unlocked)
                 .unwrap()
                 .as_swap()
@@ -81,7 +81,11 @@ impl SwapIntentContractImpl {
                 }
             };
         }
-        let intent = unsafe { intent.get_unchecked() }
+
+        let intent = intent
+            .get_locked()
+            .ok_or(SwapError::Unlocked)
+            .unwrap()
             .as_swap()
             .ok_or(SwapError::WrongStatus)
             .unwrap();
