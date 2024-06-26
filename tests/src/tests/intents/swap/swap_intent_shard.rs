@@ -1,5 +1,9 @@
-use defuse_contracts::intents::swap::{
-    Asset, CreateSwapIntentAction, FtAmount, FulfillSwapIntentAction, NftItem, SwapIntentAction,
+use defuse_contracts::{
+    intents::swap::{
+        Asset, CreateSwapIntentAction, FtAmount, FulfillSwapIntentAction, IntentId, NftItem,
+        SwapIntent, SwapIntentAction,
+    },
+    utils::Mutex,
 };
 use lazy_static::lazy_static;
 use near_sdk::AccountId;
@@ -22,12 +26,18 @@ pub trait SwapIntentShard {
         create: CreateSwapIntentAction,
     );
 
+    async fn get_swap_intent(&self, id: &IntentId) -> Option<Mutex<SwapIntent>>;
+
     async fn fulfill_swap_intent(
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
         fulfill: FulfillSwapIntentAction,
     );
+
+    async fn rollback_intent(&self, swap_intent_id: &AccountId, id: &IntentId) -> bool;
+
+    async fn lost_found(&self, swap_intent_id: &AccountId, id: &IntentId) -> bool;
 }
 
 impl SwapIntentShard for near_workspaces::Account {
@@ -97,6 +107,17 @@ impl SwapIntentShard for near_workspaces::Account {
         }
     }
 
+    async fn get_swap_intent(&self, id: &IntentId) -> Option<Mutex<SwapIntent>> {
+        self.view(self.id(), "get_swap_intent")
+            .args_json(json!({
+                "id": id,
+            }))
+            .await
+            .unwrap()
+            .json()
+            .unwrap()
+    }
+
     async fn fulfill_swap_intent(
         &self,
         swap_intent_id: &AccountId,
@@ -144,5 +165,35 @@ impl SwapIntentShard for near_workspaces::Account {
                 .await
             ),
         }
+    }
+
+    async fn rollback_intent(&self, swap_intent_id: &AccountId, id: &IntentId) -> bool {
+        self.call(swap_intent_id, "rollback_intent")
+            .args_json(json!({
+                "id": id,
+            }))
+            .max_gas()
+            .transact()
+            .await
+            .unwrap()
+            .into_result()
+            .unwrap()
+            .json()
+            .unwrap()
+    }
+
+    async fn lost_found(&self, swap_intent_id: &AccountId, id: &IntentId) -> bool {
+        self.call(swap_intent_id, "lost_found")
+            .args_json(json!({
+                "id": id,
+            }))
+            .max_gas()
+            .transact()
+            .await
+            .unwrap()
+            .into_result()
+            .unwrap()
+            .json()
+            .unwrap()
     }
 }

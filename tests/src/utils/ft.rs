@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use near_contract_standards::storage_management::StorageBalance;
 use near_sdk::json_types::U128;
 use near_workspaces::types::NearToken;
 use near_workspaces::{Account, AccountId, Contract};
@@ -7,6 +8,7 @@ use serde_json::json;
 use crate::utils::read_wasm;
 
 use super::account::AccountExt;
+use super::storage_management::StorageManagementExt;
 
 const STORAGE_DEPOSIT: NearToken = NearToken::from_yoctonear(2_350_000_000_000_000_000_000);
 const TOTAL_SUPPLY: u128 = 1_000_000_000;
@@ -15,7 +17,7 @@ lazy_static! {
     static ref FUNGIBLE_TOKEN_WASM: Vec<u8> = read_wasm("fungible-token");
 }
 
-pub trait FtExt {
+pub trait FtExt: StorageManagementExt {
     async fn deploy_ft_token(&self, token: impl AsRef<str>) -> Contract;
     async fn ft_balance_of(&self, token_id: &AccountId) -> u128;
     async fn ft_transfer(
@@ -33,7 +35,14 @@ pub trait FtExt {
         memo: impl Into<Option<String>>,
         msg: impl AsRef<str>,
     ) -> u128;
-    async fn storage_deposit(&self, token_id: &AccountId, account_id: impl Into<Option<AccountId>>);
+    async fn ft_storage_deposit(
+        &self,
+        token_id: &AccountId,
+        account_id: impl Into<Option<AccountId>>,
+    ) -> StorageBalance {
+        self.storage_deposit(token_id, account_id, STORAGE_DEPOSIT)
+            .await
+    }
 }
 
 impl FtExt for Account {
@@ -124,23 +133,5 @@ impl FtExt for Account {
             .unwrap()
             .parse()
             .unwrap()
-    }
-
-    async fn storage_deposit(
-        &self,
-        token_id: &AccountId,
-        account_id: impl Into<Option<AccountId>>,
-    ) {
-        self.call(token_id, "storage_deposit")
-            .args_json(json!({
-                "account_id": account_id.into().unwrap_or(self.id().clone())
-            }))
-            .deposit(STORAGE_DEPOSIT)
-            .max_gas()
-            .transact()
-            .await
-            .unwrap()
-            .into_result()
-            .unwrap();
     }
 }

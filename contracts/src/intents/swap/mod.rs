@@ -5,19 +5,25 @@ use near_contract_standards::{
 use near_sdk::{env, ext_contract, near, AccountId, Gas, NearToken, Promise, PromiseOrValue};
 use serde_with::{serde_as, DefaultOnNull, DisplayFromStr};
 
+use crate::utils::Mutex;
+
 pub use self::error::*;
 
 mod error;
 
-pub type IntentID = String;
+pub type IntentId = String;
 
 #[ext_contract(ext_swap_intent)]
 pub trait SwapIntentContract: FungibleTokenReceiver + NonFungibleTokenReceiver {
-    fn get_swap_intent(&self, id: &IntentID) -> Option<&SwapIntent>;
+    fn get_swap_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntent>>;
 
+    // TODO: return bool?
     fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<()>;
 
-    fn rollback_intent(&mut self, id: IntentID) -> Promise;
+    // TODO: return bool?
+    fn rollback_intent(&mut self, id: IntentId) -> PromiseOrValue<bool>;
+
+    fn lost_found(&mut self, id: &IntentId) -> Promise;
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +39,7 @@ pub enum SwapIntentAction {
 #[near(serializers = [json, borsh])]
 pub struct CreateSwapIntentAction {
     /// This should not exist before
-    pub id: IntentID,
+    pub id: IntentId,
     /// Desired asset as an output
     pub asset_out: Asset,
     /// Where to send asset_out.
@@ -48,7 +54,7 @@ pub struct CreateSwapIntentAction {
 #[derive(Debug, Clone)]
 #[near(serializers = [json, borsh])]
 pub struct FulfillSwapIntentAction {
-    pub id: IntentID,
+    pub id: IntentId,
     /// By default: back to sender
     pub recipient: Option<AccountId>,
 }
@@ -96,10 +102,10 @@ pub struct NftItem {
     pub token_id: TokenId,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[serde_as]
 #[near(serializers = [borsh, json])]
-pub struct SwapIntent {
+pub struct Swap {
     pub initiator: AccountId,
     pub asset_in: Asset,
     // TODO: in case of NFT, this only allows for simple "barter",
@@ -123,11 +129,61 @@ pub struct SwapIntent {
     pub deadline: Deadline,
 }
 
-impl SwapIntent {
+impl Swap {
     #[inline]
     pub fn has_expired(&self) -> bool {
         self.deadline.has_expired()
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[serde_as]
+#[near(serializers = [borsh, json])]
+pub struct LostFound {
+    pub asset: Asset,
+    pub recipient: AccountId,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[serde_as] // TODO
+#[near(serializers = [borsh, json])]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum SwapIntent {
+    Swap(Swap),
+    LostFound(LostFound),
+}
+
+impl SwapIntent {
+    #[inline]
+    pub fn is_swap(&self) -> bool {
+        matches!(self, Self::Swap(_))
+    }
+
+    #[inline]
+    pub fn is_lost_found(&self) -> bool {
+        matches!(self, Self::LostFound(_))
+    }
+
+    #[inline]
+    pub fn as_swap(&self) -> Option<&Swap> {
+        match self {
+            Self::Swap(swap) => Some(swap),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn as_lost_found(&self) -> Option<&LostFound> {
+        match self {
+            Self::LostFound(lost_found) => Some(lost_found),
+            _ => None,
+        }
+    }
+
+    //     #[inline]
+    //     pub fn has_expired(&self) -> bool {
+    //         self.deadline.has_expired()
+    //     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -151,3 +207,10 @@ impl Deadline {
         }
     }
 }
+
+// #[near(serializers=[borsh, json])]
+// #[serde(rename_all = "snake_case")]
+// pub enum SwapIntentWithStaus {
+//     Intent(SwapIntent),
+//     Lost { asset: Asset, recipient: AccountId },
+// }

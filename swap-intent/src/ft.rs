@@ -15,6 +15,7 @@ impl FungibleTokenReceiver for SwapIntentContractImpl {
         msg: String,
     ) -> PromiseOrValue<U128> {
         let action = serde_json::from_str(&msg).expect("JSON");
+
         match self
             .handle_action(
                 sender_id,
@@ -26,6 +27,7 @@ impl FungibleTokenReceiver for SwapIntentContractImpl {
             )
             .unwrap()
         {
+            // TODO: separate callback
             PromiseOrValue::Value(()) => PromiseOrValue::Value(0.into()),
             PromiseOrValue::Promise(promise) => PromiseOrValue::Promise(promise),
         }

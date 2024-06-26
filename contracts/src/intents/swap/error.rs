@@ -1,16 +1,16 @@
 use near_sdk::serde_json;
 use thiserror::Error as ThisError;
 
-use super::IntentID;
+use super::IntentId;
 
 #[derive(Debug, ThisError)]
 pub enum SwapError {
     #[error("JSON: {0}")]
     JSON(serde_json::Error),
     #[error("intent '{0}' not found")]
-    NotFound(IntentID),
+    NotFound(IntentId),
     #[error("intent '{0}' already exists")]
-    AlreadyExists(IntentID),
+    AlreadyExists(IntentId),
     #[error("wrong asset")]
     // TODO: add expected/got
     WrongAsset,
@@ -20,4 +20,8 @@ pub enum SwapError {
     Expired,
     #[error("locked")]
     Locked,
+    #[error("unlocked")]
+    Unlocked,
+    #[error("wrong status")]
+    WrongStatus,
 }

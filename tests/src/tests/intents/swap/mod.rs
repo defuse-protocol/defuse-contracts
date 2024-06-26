@@ -1,4 +1,4 @@
-use std::time::{self, Duration, SystemTime};
+use std::time::{Duration, SystemTime};
 
 use defuse_contracts::intents::swap::{
     Asset, CreateSwapIntentAction, Deadline, FtAmount, FulfillSwapIntentAction, NftItem,
@@ -13,6 +13,8 @@ use crate::{
 
 pub use swap_intent_shard::*;
 
+mod lost_found;
+mod rollback;
 mod swap_intent_shard;
 
 /// Completely synthetic case, but still a valid one
@@ -51,7 +53,7 @@ async fn test_swap_native_to_native() {
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
                 deadline: Deadline::Timestamp(
-                    (time::SystemTime::now()
+                    (SystemTime::now()
                         .duration_since(SystemTime::UNIX_EPOCH)
                         .unwrap()
                         + Duration::from_secs(60))
@@ -97,11 +99,11 @@ async fn test_swap_native_to_ft() {
         .await
         .unwrap();
 
-    user1.storage_deposit(ft_token.id(), None).await;
-    user2.storage_deposit(ft_token.id(), None).await;
+    user1.ft_storage_deposit(ft_token.id(), None).await;
+    user2.ft_storage_deposit(ft_token.id(), None).await;
     swap_intent_shard
         .as_account()
-        .storage_deposit(ft_token.id(), None)
+        .ft_storage_deposit(ft_token.id(), None)
         .await;
 
     ft_token
@@ -245,10 +247,6 @@ async fn test_swap_ft_to_native() {
         .await
         .unwrap();
     let swap_intent_shard = dao.deploy_swap_intent_shard("swap-intent").await;
-    swap_intent_shard
-        .as_account()
-        .storage_deposit(ft_token.id(), None)
-        .await;
 
     let user1 = sandbox
         .create_subaccount("user1", NearToken::from_near(10))
@@ -259,11 +257,11 @@ async fn test_swap_ft_to_native() {
         .await
         .unwrap();
 
-    user1.storage_deposit(ft_token.id(), None).await;
-    user2.storage_deposit(ft_token.id(), None).await;
+    user1.ft_storage_deposit(ft_token.id(), None).await;
+    user2.ft_storage_deposit(ft_token.id(), None).await;
     swap_intent_shard
         .as_account()
-        .storage_deposit(ft_token.id(), None)
+        .ft_storage_deposit(ft_token.id(), None)
         .await;
 
     ft_token
@@ -350,17 +348,17 @@ async fn test_swap_ft_to_ft() {
         .await
         .unwrap();
 
-    user1.storage_deposit(ft_token_a.id(), None).await;
-    user1.storage_deposit(ft_token_b.id(), None).await;
-    user2.storage_deposit(ft_token_a.id(), None).await;
-    user2.storage_deposit(ft_token_b.id(), None).await;
+    user1.ft_storage_deposit(ft_token_a.id(), None).await;
+    user1.ft_storage_deposit(ft_token_b.id(), None).await;
+    user2.ft_storage_deposit(ft_token_a.id(), None).await;
+    user2.ft_storage_deposit(ft_token_b.id(), None).await;
     swap_intent_shard
         .as_account()
-        .storage_deposit(ft_token_a.id(), None)
+        .ft_storage_deposit(ft_token_a.id(), None)
         .await;
     swap_intent_shard
         .as_account()
-        .storage_deposit(ft_token_b.id(), None)
+        .ft_storage_deposit(ft_token_b.id(), None)
         .await;
 
     ft_token_a
@@ -478,11 +476,11 @@ async fn test_swap_ft_to_nft() {
         .await
         .unwrap();
 
-    user1.storage_deposit(ft_token.id(), None).await;
-    user2.storage_deposit(ft_token.id(), None).await;
+    user1.ft_storage_deposit(ft_token.id(), None).await;
+    user2.ft_storage_deposit(ft_token.id(), None).await;
     swap_intent_shard
         .as_account()
-        .storage_deposit(ft_token.id(), None)
+        .ft_storage_deposit(ft_token.id(), None)
         .await;
 
     ft_token

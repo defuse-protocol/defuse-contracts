@@ -31,17 +31,17 @@ impl Env {
             .as_account()
             .add_solver(intent.id(), solver.id())
             .await;
-        user.storage_deposit(token_a.id(), None).await;
-        user.storage_deposit(token_b.id(), None).await;
-        solver.storage_deposit(token_a.id(), None).await;
-        solver.storage_deposit(token_b.id(), None).await;
+        user.ft_storage_deposit(token_a.id(), None).await;
+        user.ft_storage_deposit(token_b.id(), None).await;
+        solver.ft_storage_deposit(token_a.id(), None).await;
+        solver.ft_storage_deposit(token_b.id(), None).await;
         intent
             .as_account()
-            .storage_deposit(token_a.id(), None)
+            .ft_storage_deposit(token_a.id(), None)
             .await;
         intent
             .as_account()
-            .storage_deposit(token_b.id(), None)
+            .ft_storage_deposit(token_b.id(), None)
             .await;
 
         Self {

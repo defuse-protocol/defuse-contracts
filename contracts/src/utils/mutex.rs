@@ -1,7 +1,9 @@
 use near_sdk::near;
 
-#[near(serializers = [borsh])]
+#[derive(Debug, PartialEq, Eq)]
+#[near(serializers = [borsh, json])]
 pub struct Mutex<T> {
+    #[serde(flatten)]
     value: T,
     locked: bool,
 }
@@ -14,6 +16,38 @@ impl<T> Mutex<T> {
             value,
             locked: false,
         }
+    }
+
+    #[inline]
+    pub const fn get_unlocked(&self) -> Option<&T> {
+        if self.locked {
+            return None;
+        }
+        Some(&self.value)
+    }
+
+    #[inline]
+    pub const fn get_locked(&self) -> Option<&T> {
+        if !self.locked {
+            return None;
+        }
+        Some(&self.value)
+    }
+
+    #[inline]
+    pub fn get_unlocked_mut(&mut self) -> Option<&mut T> {
+        if self.locked {
+            return None;
+        }
+        Some(&mut self.value)
+    }
+
+    #[inline]
+    pub fn get_locked_mut(&mut self) -> Option<&mut T> {
+        if !self.locked {
+            return None;
+        }
+        Some(&mut self.value)
     }
 
     #[inline]
@@ -45,12 +79,21 @@ impl<T> Mutex<T> {
     }
 
     #[inline]
-    pub fn unlock(&mut self) -> bool {
+    pub fn unlock(&mut self) -> Option<&T> {
         if !self.locked {
-            return false;
+            return None;
         }
         self.locked = false;
-        true
+        Some(&self.value)
+    }
+
+    #[inline]
+    pub fn unlock_mut(&mut self) -> Option<&mut T> {
+        if !self.locked {
+            return None;
+        }
+        self.locked = false;
+        Some(&mut self.value)
     }
 }
 
