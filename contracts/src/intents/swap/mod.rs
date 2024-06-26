@@ -17,6 +17,8 @@ pub type IntentId = String;
 pub trait SwapIntentContract: FungibleTokenReceiver + NonFungibleTokenReceiver {
     fn get_swap_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntent>>;
 
+    // TODO: separate native_create_swap_intent() and
+    // native_create_fulfill_intent()
     // TODO: return bool?
     fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<()>;
 

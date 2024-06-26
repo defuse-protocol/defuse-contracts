@@ -17,7 +17,6 @@ use near_sdk::{
 };
 
 mod ft;
-mod lost_found;
 mod nft;
 
 const GAS_FOR_RESOLVE_SWAP: Gas = Gas::from_tgas(5);
