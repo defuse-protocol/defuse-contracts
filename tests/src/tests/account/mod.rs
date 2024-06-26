@@ -23,6 +23,7 @@ pub trait AccountShardExt {
         owner: impl Into<Option<AccountId>>,
     );
 }
+
 impl AccountShardExt for near_workspaces::Account {
     async fn deploy_account_shard(
         &self,

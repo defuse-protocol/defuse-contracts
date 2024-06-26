@@ -1,21 +1,16 @@
 use defuse_contracts::intents::swap::{
-    Asset, CreateSwapIntentAction, FtAmount, FulfillSwapIntentAction, IntentID, NftItem, SwapError,
-    SwapIntent, SwapIntentAction, SwapIntentContract, GAS_FOR_FT_TRANSFER, GAS_FOR_NFT_TRANSFER,
+    Asset, CreateSwapIntentAction, FulfillSwapIntentAction, IntentID, SwapError, SwapIntent,
+    SwapIntentAction, SwapIntentContract,
 };
-use near_contract_standards::{
-    fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver},
-    non_fungible_token::{
-        core::{ext_nft_core, NonFungibleTokenReceiver},
-        TokenId,
-    },
-};
+
 use near_sdk::{
-    env,
-    json_types::U128,
-    log, near, serde_json,
+    env, log, near,
     store::lookup_map::{Entry, LookupMap},
     AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise, PromiseError, PromiseOrValue,
 };
+
+mod ft;
+mod nft;
 
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
@@ -78,59 +73,6 @@ impl SwapIntentContract for SwapIntentContractImpl {
         );
         // TODO: emit log
         Self::transfer(&id, intent.asset_in, intent.initiator)
-    }
-}
-
-#[near]
-impl FungibleTokenReceiver for SwapIntentContractImpl {
-    fn ft_on_transfer(
-        &mut self,
-        sender_id: AccountId,
-        amount: U128,
-        msg: String,
-    ) -> PromiseOrValue<U128> {
-        let action = serde_json::from_str(&msg).expect("JSON");
-        match self
-            .handle_action(
-                sender_id,
-                Asset::Ft(FtAmount {
-                    token: env::predecessor_account_id(),
-                    amount: amount.0,
-                }),
-                action,
-            )
-            .unwrap()
-        {
-            PromiseOrValue::Value(()) => PromiseOrValue::Value(0.into()),
-            PromiseOrValue::Promise(promise) => PromiseOrValue::Promise(promise),
-        }
-    }
-}
-
-#[near]
-impl NonFungibleTokenReceiver for SwapIntentContractImpl {
-    fn nft_on_transfer(
-        &mut self,
-        sender_id: AccountId,
-        #[allow(unused_variables)] previous_owner_id: AccountId,
-        token_id: TokenId,
-        msg: String,
-    ) -> PromiseOrValue<bool> {
-        let action = serde_json::from_str(&msg).expect("JSON");
-        match self
-            .handle_action(
-                sender_id,
-                Asset::Nft(NftItem {
-                    collection: env::predecessor_account_id(),
-                    token_id,
-                }),
-                action,
-            )
-            .unwrap()
-        {
-            PromiseOrValue::Value(()) => PromiseOrValue::Value(false),
-            PromiseOrValue::Promise(promise) => PromiseOrValue::Promise(promise),
-        }
     }
 }
 
@@ -247,38 +189,5 @@ impl SwapIntentContractImpl {
         // for function_call() to allow further communication
         // with other protocols
         Promise::new(recipient).transfer(amount)
-    }
-
-    #[inline]
-    fn transfer_ft(
-        FtAmount { token, amount }: FtAmount,
-        recipient: AccountId,
-        memo: impl Into<Option<String>>,
-    ) -> Promise {
-        // TODO: extend with optional msg for ft_transfer_call()
-        // for extensibility to allow further communication with other
-        // protocols
-        ext_ft_core::ext(token)
-            .with_attached_deposit(NearToken::from_yoctonear(1))
-            .with_static_gas(GAS_FOR_FT_TRANSFER)
-            .ft_transfer(recipient, amount.into(), memo.into())
-    }
-
-    #[inline]
-    fn transfer_nft(
-        NftItem {
-            collection,
-            token_id,
-        }: NftItem,
-        recipient: AccountId,
-        memo: impl Into<Option<String>>,
-    ) -> Promise {
-        // TODO: extend with optional msg for nft_transfer_call()
-        // for extensibility to allow further communication with other
-        // protocols
-        ext_nft_core::ext(collection)
-            .with_attached_deposit(NearToken::from_yoctonear(1))
-            .with_static_gas(GAS_FOR_NFT_TRANSFER)
-            .nft_transfer(recipient, token_id, None, memo.into())
     }
 }
