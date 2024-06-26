@@ -23,28 +23,32 @@ async fn test_rollback_native_intent() {
         .await
         .unwrap();
 
-    user.create_swap_intent(
-        swap_intent_shard.id(),
-        Asset::Native(NearToken::from_near(5)),
-        CreateSwapIntentAction {
-            id: "1".to_string(),
-            asset_out: Asset::Native(NearToken::from_near(1)),
-            recipient: None,
-            deadline: Deadline::Timestamp(
-                (SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    + Duration::from_secs(60))
-                .as_secs(),
-            ),
-        },
-    )
-    .await;
+    assert!(
+        user.create_swap_intent(
+            swap_intent_shard.id(),
+            Asset::Native(NearToken::from_near(5)),
+            CreateSwapIntentAction {
+                id: "1".to_string(),
+                asset_out: Asset::Native(NearToken::from_near(1)),
+                recipient: None,
+                deadline: Deadline::Timestamp(
+                    (SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        + Duration::from_secs(60))
+                    .as_secs(),
+                ),
+            },
+        )
+        .await
+    );
 
     assert!(user.view_account().await.unwrap().balance < NearToken::from_near(5));
 
-    user.rollback_intent(swap_intent_shard.id(), &"1".to_string())
-        .await;
+    assert!(
+        user.rollback_intent(swap_intent_shard.id(), &"1".to_string())
+            .await
+    );
 
     assert_eq!(
         swap_intent_shard
@@ -82,26 +86,28 @@ async fn test_rollback_ft_intent() {
         .await;
     assert_eq!(ft_token.as_account().ft_balance_of(user.id()).await, 1000);
 
-    user.create_swap_intent(
-        swap_intent_shard.id(),
-        Asset::Ft(FtAmount {
-            token: ft_token.id().clone(),
-            amount: 1000,
-        }),
-        CreateSwapIntentAction {
-            id: "1".to_string(),
-            asset_out: Asset::Native(NearToken::from_near(5)),
-            recipient: None,
-            deadline: Deadline::Timestamp(
-                (SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    + Duration::from_secs(60))
-                .as_secs(),
-            ),
-        },
-    )
-    .await;
+    assert!(
+        user.create_swap_intent(
+            swap_intent_shard.id(),
+            Asset::Ft(FtAmount {
+                token: ft_token.id().clone(),
+                amount: 1000,
+            }),
+            CreateSwapIntentAction {
+                id: "1".to_string(),
+                asset_out: Asset::Native(NearToken::from_near(5)),
+                recipient: None,
+                deadline: Deadline::Timestamp(
+                    (SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        + Duration::from_secs(60))
+                    .as_secs(),
+                ),
+            },
+        )
+        .await
+    );
 
     assert_eq!(ft_token.as_account().ft_balance_of(user.id()).await, 0);
     assert_eq!(
@@ -112,8 +118,10 @@ async fn test_rollback_ft_intent() {
         1000
     );
 
-    user.rollback_intent(swap_intent_shard.id(), &"1".to_string())
-        .await;
+    assert!(
+        user.rollback_intent(swap_intent_shard.id(), &"1".to_string())
+            .await
+    );
 
     assert_eq!(ft_token.as_account().ft_balance_of(user.id()).await, 1000);
     assert_eq!(
@@ -143,26 +151,28 @@ async fn test_rollback_nft_intent() {
     user.create_account(account_shard.id(), &derivation_path, None)
         .await;
 
-    user.create_swap_intent(
-        swap_intent_shard.id(),
-        Asset::Nft(NftItem {
-            collection: account_shard.id().clone(),
-            token_id: derivation_path.clone(),
-        }),
-        CreateSwapIntentAction {
-            id: "1".to_string(),
-            asset_out: Asset::Native(NearToken::from_near(5)),
-            recipient: None,
-            deadline: Deadline::Timestamp(
-                (SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    + Duration::from_secs(60))
-                .as_secs(),
-            ),
-        },
-    )
-    .await;
+    assert!(
+        user.create_swap_intent(
+            swap_intent_shard.id(),
+            Asset::Nft(NftItem {
+                collection: account_shard.id().clone(),
+                token_id: derivation_path.clone(),
+            }),
+            CreateSwapIntentAction {
+                id: "1".to_string(),
+                asset_out: Asset::Native(NearToken::from_near(5)),
+                recipient: None,
+                deadline: Deadline::Timestamp(
+                    (SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        + Duration::from_secs(60))
+                    .as_secs(),
+                ),
+            },
+        )
+        .await
+    );
 
     assert_eq!(
         &account_shard
@@ -174,8 +184,10 @@ async fn test_rollback_nft_intent() {
         swap_intent_shard.id(),
     );
 
-    user.rollback_intent(swap_intent_shard.id(), &"1".to_string())
-        .await;
+    assert!(
+        user.rollback_intent(swap_intent_shard.id(), &"1".to_string())
+            .await
+    );
 
     assert_eq!(
         &account_shard

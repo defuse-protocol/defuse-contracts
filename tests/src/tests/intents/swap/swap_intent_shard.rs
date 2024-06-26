@@ -24,7 +24,7 @@ pub trait SwapIntentShard {
         swap_intent_id: &AccountId,
         asset_in: Asset,
         create: CreateSwapIntentAction,
-    );
+    ) -> bool;
 
     async fn get_swap_intent(&self, id: &IntentId) -> Option<Mutex<SwapIntent>>;
 
@@ -33,7 +33,7 @@ pub trait SwapIntentShard {
         swap_intent_id: &AccountId,
         asset_in: Asset,
         fulfill: FulfillSwapIntentAction,
-    );
+    ) -> bool;
 
     async fn rollback_intent(&self, swap_intent_id: &AccountId, id: &IntentId) -> bool;
 
@@ -63,47 +63,46 @@ impl SwapIntentShard for near_workspaces::Account {
         swap_intent_id: &AccountId,
         asset_in: Asset,
         create: CreateSwapIntentAction,
-    ) {
+    ) -> bool {
         match asset_in {
-            Asset::Native(amount) => {
-                self.call(swap_intent_id, "native_action")
-                    .args_json(json!({
-                        "action": SwapIntentAction::Create(create),
-                    }))
-                    .deposit(amount)
-                    .max_gas()
-                    .transact()
-                    .await
-                    .unwrap()
-                    .into_result()
-                    .unwrap();
-            }
+            Asset::Native(amount) => self
+                .call(swap_intent_id, "native_action")
+                .args_json(json!({
+                    "action": SwapIntentAction::Create(create),
+                }))
+                .deposit(amount)
+                .max_gas()
+                .transact()
+                .await
+                .unwrap()
+                .into_result()
+                .unwrap()
+                .json()
+                .unwrap(),
             Asset::Ft(FtAmount { token, amount }) => {
-                assert_eq!(
-                    self.ft_transfer_call(
-                        &token,
-                        swap_intent_id,
-                        amount,
-                        None,
-                        serde_json::to_string(&SwapIntentAction::Create(create)).unwrap(),
-                    )
-                    .await,
+                self.ft_transfer_call(
+                    &token,
+                    swap_intent_id,
                     amount,
-                );
+                    None,
+                    serde_json::to_string(&SwapIntentAction::Create(create)).unwrap(),
+                )
+                .await
+                    == amount
             }
             Asset::Nft(NftItem {
                 collection,
                 token_id,
-            }) => assert!(
+            }) => {
                 self.nft_transfer_call(
                     &collection,
                     swap_intent_id,
                     token_id,
                     None,
-                    serde_json::to_string(&SwapIntentAction::Create(create)).unwrap()
+                    serde_json::to_string(&SwapIntentAction::Create(create)).unwrap(),
                 )
                 .await
-            ),
+            }
         }
     }
 
@@ -123,38 +122,37 @@ impl SwapIntentShard for near_workspaces::Account {
         swap_intent_id: &AccountId,
         asset_in: Asset,
         fulfill: FulfillSwapIntentAction,
-    ) {
+    ) -> bool {
         match asset_in {
-            Asset::Native(amount) => {
-                self.call(swap_intent_id, "native_action")
-                    .args_json(json!({
-                        "action": SwapIntentAction::Fulfill(fulfill),
-                    }))
-                    .deposit(amount)
-                    .max_gas()
-                    .transact()
-                    .await
-                    .unwrap()
-                    .into_result()
-                    .unwrap();
-            }
+            Asset::Native(amount) => self
+                .call(swap_intent_id, "native_action")
+                .args_json(json!({
+                    "action": SwapIntentAction::Fulfill(fulfill),
+                }))
+                .deposit(amount)
+                .max_gas()
+                .transact()
+                .await
+                .unwrap()
+                .into_result()
+                .unwrap()
+                .json()
+                .unwrap(),
             Asset::Ft(FtAmount { token, amount }) => {
-                assert_eq!(
-                    self.ft_transfer_call(
-                        &token,
-                        swap_intent_id,
-                        amount,
-                        None,
-                        serde_json::to_string(&SwapIntentAction::Fulfill(fulfill)).unwrap(),
-                    )
-                    .await,
+                self.ft_transfer_call(
+                    &token,
+                    swap_intent_id,
                     amount,
-                );
+                    None,
+                    serde_json::to_string(&SwapIntentAction::Fulfill(fulfill)).unwrap(),
+                )
+                .await
+                    == amount
             }
             Asset::Nft(NftItem {
                 collection,
                 token_id,
-            }) => assert!(
+            }) => {
                 self.nft_transfer_call(
                     &collection,
                     swap_intent_id,
@@ -163,7 +161,7 @@ impl SwapIntentShard for near_workspaces::Account {
                     serde_json::to_string(&SwapIntentAction::Fulfill(fulfill)).unwrap(),
                 )
                 .await
-            ),
+            }
         }
     }
 

@@ -31,7 +31,6 @@ pub struct SwapIntentContractImpl {
 #[near(serializers = [borsh])]
 enum Prefix {
     Intents,
-    LostFound,
 }
 
 #[near]
@@ -67,17 +66,16 @@ impl SwapIntentContractImpl {
                 .unwrap();
             return match intent.asset_out {
                 Asset::Native(amount) => {
-                    // TODO: unlock now?
+                    // TODO: what if it fails?
                     // refund manually
                     Self::transfer_native(amount, asset_out_sender).into()
+                    // TODO: return promise that returns bool
                 }
                 Asset::Ft(FtAmount { amount, .. }) => {
-                    // TODO: unlock now?
                     // return back to sender
                     PromiseOrValue::Value(json!(U128(amount)))
                 }
                 Asset::Nft(_) => {
-                    // TODO: unlock now?
                     // return back to sender
                     PromiseOrValue::Value(json!(true))
                 }
@@ -211,7 +209,7 @@ impl SwapIntentContract for SwapIntentContractImpl {
     }
 
     #[payable]
-    fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<()> {
+    fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<bool> {
         let amount = env::attached_deposit();
         assert!(!amount.is_zero());
         self.handle_action(env::predecessor_account_id(), Asset::Native(amount), action)
@@ -268,11 +266,11 @@ impl SwapIntentContractImpl {
         sender: AccountId,
         received: Asset,
         action: SwapIntentAction,
-    ) -> Result<PromiseOrValue<()>, SwapError> {
+    ) -> Result<PromiseOrValue<bool>, SwapError> {
         match action {
             SwapIntentAction::Create(create) => self
                 .create_intent(sender, received, create)
-                .map(PromiseOrValue::Value),
+                .map(|()| PromiseOrValue::Value(true)),
             SwapIntentAction::Fulfill(fulfill) => self
                 .fulfill_intent(sender, received, fulfill)
                 .map(Into::into),

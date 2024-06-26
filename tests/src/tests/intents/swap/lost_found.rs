@@ -38,26 +38,28 @@ async fn test_rollback_lost_found_ft() {
 
     let intent_id = "1".to_string();
 
-    user.create_swap_intent(
-        swap_intent_shard.id(),
-        Asset::Ft(FtAmount {
-            token: ft_token.id().clone(),
-            amount: 1000,
-        }),
-        CreateSwapIntentAction {
-            id: intent_id.clone(),
-            asset_out: Asset::Native(NearToken::from_near(5)),
-            recipient: None,
-            deadline: Deadline::Timestamp(
-                (SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    + Duration::from_secs(60))
-                .as_secs(),
-            ),
-        },
-    )
-    .await;
+    assert!(
+        user.create_swap_intent(
+            swap_intent_shard.id(),
+            Asset::Ft(FtAmount {
+                token: ft_token.id().clone(),
+                amount: 1000,
+            }),
+            CreateSwapIntentAction {
+                id: intent_id.clone(),
+                asset_out: Asset::Native(NearToken::from_near(5)),
+                recipient: None,
+                deadline: Deadline::Timestamp(
+                    (SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        + Duration::from_secs(60))
+                    .as_secs(),
+                ),
+            },
+        )
+        .await
+    );
 
     assert_eq!(ft_token.as_account().ft_balance_of(user.id()).await, 0);
     assert_eq!(
@@ -186,26 +188,28 @@ async fn test_fulfill_lost_found_ft() {
     assert_eq!(ft_token.as_account().ft_balance_of(user2.id()).await, 0);
 
     let intent_id = "1".to_string();
-    user1
-        .create_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Ft(FtAmount {
-                token: ft_token.id().clone(),
-                amount: 500,
-            }),
-            CreateSwapIntentAction {
-                id: intent_id.clone(),
-                asset_out: Asset::Native(NearToken::from_near(5)),
-                recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
-            },
-        )
-        .await;
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Ft(FtAmount {
+                    token: ft_token.id().clone(),
+                    amount: 500,
+                }),
+                CreateSwapIntentAction {
+                    id: intent_id.clone(),
+                    asset_out: Asset::Native(NearToken::from_near(5)),
+                    recipient: None,
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now() + Duration::from_secs(60))
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
 
     assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 0);
     assert_eq!(
@@ -216,16 +220,18 @@ async fn test_fulfill_lost_found_ft() {
         500
     );
 
-    user2
-        .fulfill_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Native(NearToken::from_near(5)),
-            FulfillSwapIntentAction {
-                id: intent_id.clone(),
-                recipient: None,
-            },
-        )
-        .await;
+    assert!(
+        user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Native(NearToken::from_near(5)),
+                FulfillSwapIntentAction {
+                    id: intent_id.clone(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
 
     assert_eq!(
         swap_intent_shard

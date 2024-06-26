@@ -44,37 +44,41 @@ async fn test_swap_native_to_native() {
         NearToken::from_near(20)
     );
 
-    user1
-        .create_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Native(NearToken::from_near(3)),
-            CreateSwapIntentAction {
-                id: "1".to_string(),
-                asset_out: Asset::Native(NearToken::from_near(5)),
-                recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        + Duration::from_secs(60))
-                    .as_secs(),
-                ),
-            },
-        )
-        .await;
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Native(NearToken::from_near(3)),
+                CreateSwapIntentAction {
+                    id: "1".to_string(),
+                    asset_out: Asset::Native(NearToken::from_near(5)),
+                    recipient: None,
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now()
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            + Duration::from_secs(60))
+                        .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
 
     assert!(user1.view_account().await.unwrap().balance < NearToken::from_near(7));
 
-    user2
-        .fulfill_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Native(NearToken::from_near(5)),
-            FulfillSwapIntentAction {
-                id: "1".to_string(),
-                recipient: None,
-            },
-        )
-        .await;
+    assert!(
+        user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Native(NearToken::from_near(5)),
+                FulfillSwapIntentAction {
+                    id: "1".to_string(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
 
     assert!(user1.view_account().await.unwrap().balance > NearToken::from_near(11));
     assert!(user2.view_account().await.unwrap().balance > NearToken::from_near(17));
@@ -114,42 +118,46 @@ async fn test_swap_native_to_ft() {
     assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 0);
     assert_eq!(ft_token.as_account().ft_balance_of(user2.id()).await, 500);
 
-    user1
-        .create_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Native(NearToken::from_near(5)),
-            CreateSwapIntentAction {
-                id: "1".to_string(),
-                asset_out: Asset::Ft(FtAmount {
-                    token: ft_token.id().clone(),
-                    amount: 500,
-                }),
-                recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
-            },
-        )
-        .await;
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Native(NearToken::from_near(5)),
+                CreateSwapIntentAction {
+                    id: "1".to_string(),
+                    asset_out: Asset::Ft(FtAmount {
+                        token: ft_token.id().clone(),
+                        amount: 500,
+                    }),
+                    recipient: None,
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now() + Duration::from_secs(60))
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
 
     assert!(user1.view_account().await.unwrap().balance <= NearToken::from_near(5));
 
-    user2
-        .fulfill_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Ft(FtAmount {
-                token: ft_token.id().clone(),
-                amount: 500,
-            }),
-            FulfillSwapIntentAction {
-                id: "1".to_string(),
-                recipient: None,
-            },
-        )
-        .await;
+    assert!(
+        user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Ft(FtAmount {
+                    token: ft_token.id().clone(),
+                    amount: 500,
+                }),
+                FulfillSwapIntentAction {
+                    id: "1".to_string(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
 
     assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 500);
     assert_eq!(ft_token.as_account().ft_balance_of(user2.id()).await, 0);
@@ -162,6 +170,104 @@ async fn test_swap_native_to_ft() {
             .await,
         0,
     );
+}
+
+#[tokio::test]
+async fn test_swap_native_to_ft_no_deposit() {
+    let sandbox = Sandbox::new().await.unwrap();
+    let ft_token = sandbox.root_account().deploy_ft_token("ft-token").await;
+    let dao = sandbox
+        .create_subaccount("dao", NearToken::from_near(100))
+        .await
+        .unwrap();
+    let swap_intent_shard = dao.deploy_swap_intent_shard("swap-intent").await;
+
+    let user1 = sandbox
+        .create_subaccount("user1", NearToken::from_near(10))
+        .await
+        .unwrap();
+    let user2 = sandbox
+        .create_subaccount("user2", NearToken::from_near(10))
+        .await
+        .unwrap();
+
+    user2.ft_storage_deposit(ft_token.id(), None).await;
+    swap_intent_shard
+        .as_account()
+        .ft_storage_deposit(ft_token.id(), None)
+        .await;
+
+    ft_token
+        .as_account()
+        .ft_transfer(ft_token.id(), user2.id(), 500, None)
+        .await;
+
+    assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 0);
+    assert_eq!(ft_token.as_account().ft_balance_of(user2.id()).await, 500);
+
+    let intent_id = "1".to_string();
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Native(NearToken::from_near(5)),
+                CreateSwapIntentAction {
+                    id: intent_id.clone(),
+                    asset_out: Asset::Ft(FtAmount {
+                        token: ft_token.id().clone(),
+                        amount: 500,
+                    }),
+                    recipient: None,
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now() + Duration::from_secs(60))
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
+
+    assert!(user1.view_account().await.unwrap().balance <= NearToken::from_near(5));
+
+    assert!(
+        !user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Ft(FtAmount {
+                    token: ft_token.id().clone(),
+                    amount: 500,
+                }),
+                FulfillSwapIntentAction {
+                    id: intent_id.clone(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
+
+    assert!(swap_intent_shard
+        .as_account()
+        .get_swap_intent(&intent_id)
+        .await
+        .unwrap()
+        .get_unlocked()
+        .unwrap()
+        .as_swap()
+        .is_some());
+
+    assert_eq!(ft_token.as_account().ft_balance_of(user2.id()).await, 500);
+    assert_eq!(
+        ft_token
+            .as_account()
+            .ft_balance_of(swap_intent_shard.id())
+            .await,
+        0,
+    );
+    assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 0);
+
+    assert!(user2.view_account().await.unwrap().balance < NearToken::from_near(10));
 }
 
 #[tokio::test]
@@ -188,42 +294,46 @@ async fn test_swap_native_to_nft() {
         .create_account(account_shard.id(), &derivation_path, None)
         .await;
 
-    user1
-        .create_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Native(NearToken::from_near(5)),
-            CreateSwapIntentAction {
-                id: "1".to_string(),
-                asset_out: Asset::Nft(NftItem {
-                    collection: account_shard.id().clone(),
-                    token_id: derivation_path.clone(),
-                }),
-                recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
-            },
-        )
-        .await;
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Native(NearToken::from_near(5)),
+                CreateSwapIntentAction {
+                    id: "1".to_string(),
+                    asset_out: Asset::Nft(NftItem {
+                        collection: account_shard.id().clone(),
+                        token_id: derivation_path.clone(),
+                    }),
+                    recipient: None,
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now() + Duration::from_secs(60))
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
 
     assert!(user1.view_account().await.unwrap().balance <= NearToken::from_near(5));
 
-    user2
-        .fulfill_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Nft(NftItem {
-                collection: account_shard.id().clone(),
-                token_id: derivation_path.clone(),
-            }),
-            FulfillSwapIntentAction {
-                id: "1".to_string(),
-                recipient: None,
-            },
-        )
-        .await;
+    assert!(
+        user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Nft(NftItem {
+                    collection: account_shard.id().clone(),
+                    token_id: derivation_path.clone(),
+                }),
+                FulfillSwapIntentAction {
+                    id: "1".to_string(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
 
     assert!(user1.view_account().await.unwrap().balance <= NearToken::from_near(5));
     assert!(user2.view_account().await.unwrap().balance >= NearToken::from_near(14));
@@ -272,26 +382,28 @@ async fn test_swap_ft_to_native() {
     assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 500);
     assert_eq!(ft_token.as_account().ft_balance_of(user2.id()).await, 0);
 
-    user1
-        .create_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Ft(FtAmount {
-                token: ft_token.id().clone(),
-                amount: 500,
-            }),
-            CreateSwapIntentAction {
-                id: "1".to_string(),
-                asset_out: Asset::Native(NearToken::from_near(5)),
-                recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
-            },
-        )
-        .await;
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Ft(FtAmount {
+                    token: ft_token.id().clone(),
+                    amount: 500,
+                }),
+                CreateSwapIntentAction {
+                    id: "1".to_string(),
+                    asset_out: Asset::Native(NearToken::from_near(5)),
+                    recipient: None,
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now() + Duration::from_secs(60))
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
 
     assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 0);
     assert_eq!(
@@ -302,16 +414,18 @@ async fn test_swap_ft_to_native() {
         500
     );
 
-    user2
-        .fulfill_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Native(NearToken::from_near(5)),
-            FulfillSwapIntentAction {
-                id: "1".to_string(),
-                recipient: None,
-            },
-        )
-        .await;
+    assert!(
+        user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Native(NearToken::from_near(5)),
+                FulfillSwapIntentAction {
+                    id: "1".to_string(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
 
     assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 0);
     assert_eq!(ft_token.as_account().ft_balance_of(user2.id()).await, 500);
@@ -381,30 +495,32 @@ async fn test_swap_ft_to_ft() {
         2000
     );
 
-    user1
-        .create_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Ft(FtAmount {
-                token: ft_token_a.id().clone(),
-                amount: 1000,
-            }),
-            CreateSwapIntentAction {
-                id: "1".to_string(),
-                asset_out: Asset::Ft(FtAmount {
-                    token: ft_token_b.id().clone(),
-                    amount: 2000,
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Ft(FtAmount {
+                    token: ft_token_a.id().clone(),
+                    amount: 1000,
                 }),
-                recipient: None,
-                // TODO
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
-            },
-        )
-        .await;
+                CreateSwapIntentAction {
+                    id: "1".to_string(),
+                    asset_out: Asset::Ft(FtAmount {
+                        token: ft_token_b.id().clone(),
+                        amount: 2000,
+                    }),
+                    recipient: None,
+                    // TODO
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now() + Duration::from_secs(60))
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
 
     assert_eq!(ft_token_a.as_account().ft_balance_of(user1.id()).await, 0);
     assert_eq!(
@@ -415,19 +531,21 @@ async fn test_swap_ft_to_ft() {
         1000
     );
 
-    user2
-        .fulfill_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Ft(FtAmount {
-                token: ft_token_b.id().clone(),
-                amount: 2000,
-            }),
-            FulfillSwapIntentAction {
-                id: "1".to_string(),
-                recipient: None,
-            },
-        )
-        .await;
+    assert!(
+        user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Ft(FtAmount {
+                    token: ft_token_b.id().clone(),
+                    amount: 2000,
+                }),
+                FulfillSwapIntentAction {
+                    id: "1".to_string(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
 
     assert_eq!(ft_token_a.as_account().ft_balance_of(user1.id()).await, 0);
     assert_eq!(
@@ -495,29 +613,31 @@ async fn test_swap_ft_to_nft() {
         .create_account(account_shard.id(), &derivation_path, None)
         .await;
 
-    user1
-        .create_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Ft(FtAmount {
-                token: ft_token.id().clone(),
-                amount: 1000,
-            }),
-            CreateSwapIntentAction {
-                id: "1".to_string(),
-                asset_out: Asset::Nft(NftItem {
-                    collection: account_shard.id().clone(),
-                    token_id: derivation_path.clone(),
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Ft(FtAmount {
+                    token: ft_token.id().clone(),
+                    amount: 1000,
                 }),
-                recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
-            },
-        )
-        .await;
+                CreateSwapIntentAction {
+                    id: "1".to_string(),
+                    asset_out: Asset::Nft(NftItem {
+                        collection: account_shard.id().clone(),
+                        token_id: derivation_path.clone(),
+                    }),
+                    recipient: None,
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now() + Duration::from_secs(60))
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
 
     assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 0);
     assert_eq!(
@@ -528,19 +648,21 @@ async fn test_swap_ft_to_nft() {
         1000
     );
 
-    user2
-        .fulfill_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Nft(NftItem {
-                collection: account_shard.id().clone(),
-                token_id: derivation_path.clone(),
-            }),
-            FulfillSwapIntentAction {
-                id: "1".to_string(),
-                recipient: None,
-            },
-        )
-        .await;
+    assert!(
+        user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Nft(NftItem {
+                    collection: account_shard.id().clone(),
+                    token_id: derivation_path.clone(),
+                }),
+                FulfillSwapIntentAction {
+                    id: "1".to_string(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
 
     assert_eq!(ft_token.as_account().ft_balance_of(user1.id()).await, 0);
     assert_eq!(ft_token.as_account().ft_balance_of(user2.id()).await, 1000);
@@ -586,26 +708,28 @@ async fn test_swap_nft_to_native() {
         .create_account(account_shard.id(), &derivation_path, None)
         .await;
 
-    user1
-        .create_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Nft(NftItem {
-                collection: account_shard.id().clone(),
-                token_id: derivation_path.clone(),
-            }),
-            CreateSwapIntentAction {
-                id: "1".to_string(),
-                asset_out: Asset::Native(NearToken::from_near(5)),
-                recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
-            },
-        )
-        .await;
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Nft(NftItem {
+                    collection: account_shard.id().clone(),
+                    token_id: derivation_path.clone(),
+                }),
+                CreateSwapIntentAction {
+                    id: "1".to_string(),
+                    asset_out: Asset::Native(NearToken::from_near(5)),
+                    recipient: None,
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now() + Duration::from_secs(60))
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
 
     assert_eq!(
         &account_shard
@@ -617,16 +741,18 @@ async fn test_swap_nft_to_native() {
         swap_intent_shard.id(),
     );
 
-    user2
-        .fulfill_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Native(NearToken::from_near(5)),
-            FulfillSwapIntentAction {
-                id: "1".to_string(),
-                recipient: None,
-            },
-        )
-        .await;
+    assert!(
+        user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Native(NearToken::from_near(5)),
+                FulfillSwapIntentAction {
+                    id: "1".to_string(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
 
     assert_eq!(
         &account_shard
@@ -668,29 +794,31 @@ async fn test_swap_nft_to_nft() {
         .create_account(account_shard.id(), &derivation_path_2, None)
         .await;
 
-    user1
-        .create_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Nft(NftItem {
-                collection: account_shard.id().clone(),
-                token_id: derivation_path_1.clone(),
-            }),
-            CreateSwapIntentAction {
-                id: "1".to_string(),
-                asset_out: Asset::Nft(NftItem {
+    assert!(
+        user1
+            .create_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Nft(NftItem {
                     collection: account_shard.id().clone(),
-                    token_id: derivation_path_2.clone(),
+                    token_id: derivation_path_1.clone(),
                 }),
-                recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
-            },
-        )
-        .await;
+                CreateSwapIntentAction {
+                    id: "1".to_string(),
+                    asset_out: Asset::Nft(NftItem {
+                        collection: account_shard.id().clone(),
+                        token_id: derivation_path_2.clone(),
+                    }),
+                    recipient: None,
+                    deadline: Deadline::Timestamp(
+                        (SystemTime::now() + Duration::from_secs(60))
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                    ),
+                },
+            )
+            .await
+    );
 
     assert_eq!(
         &account_shard
@@ -702,19 +830,21 @@ async fn test_swap_nft_to_nft() {
         swap_intent_shard.id(),
     );
 
-    user2
-        .fulfill_swap_intent(
-            swap_intent_shard.id(),
-            Asset::Nft(NftItem {
-                collection: account_shard.id().clone(),
-                token_id: derivation_path_2.clone(),
-            }),
-            FulfillSwapIntentAction {
-                id: "1".to_string(),
-                recipient: None,
-            },
-        )
-        .await;
+    assert!(
+        user2
+            .fulfill_swap_intent(
+                swap_intent_shard.id(),
+                Asset::Nft(NftItem {
+                    collection: account_shard.id().clone(),
+                    token_id: derivation_path_2.clone(),
+                }),
+                FulfillSwapIntentAction {
+                    id: "1".to_string(),
+                    recipient: None,
+                },
+            )
+            .await
+    );
 
     assert_eq!(
         &account_shard

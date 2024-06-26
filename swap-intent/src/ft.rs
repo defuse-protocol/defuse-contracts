@@ -28,7 +28,8 @@ impl FungibleTokenReceiver for SwapIntentContractImpl {
             .unwrap()
         {
             // TODO: separate callback
-            PromiseOrValue::Value(()) => PromiseOrValue::Value(0.into()),
+            PromiseOrValue::Value(true) => PromiseOrValue::Value(0.into()),
+            PromiseOrValue::Value(false) => PromiseOrValue::Value(amount),
             PromiseOrValue::Promise(promise) => PromiseOrValue::Promise(promise),
         }
     }

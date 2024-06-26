@@ -28,7 +28,7 @@ impl NonFungibleTokenReceiver for SwapIntentContractImpl {
             )
             .unwrap()
         {
-            PromiseOrValue::Value(()) => PromiseOrValue::Value(false),
+            PromiseOrValue::Value(success) => PromiseOrValue::Value(!success),
             PromiseOrValue::Promise(promise) => PromiseOrValue::Promise(promise),
         }
     }

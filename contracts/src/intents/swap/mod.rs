@@ -19,8 +19,7 @@ pub trait SwapIntentContract: FungibleTokenReceiver + NonFungibleTokenReceiver {
 
     // TODO: separate native_create_swap_intent() and
     // native_create_fulfill_intent()
-    // TODO: return bool?
-    fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<()>;
+    fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<bool>;
 
     // TODO: return bool?
     fn rollback_intent(&mut self, id: IntentId) -> PromiseOrValue<bool>;
@@ -128,6 +127,7 @@ pub struct Swap {
     #[serde_as(as = "DefaultOnNull")]
     pub recipient: Option<AccountId>,
     // TODO: prolong() method
+    // TODO: add tests for expired deadline
     pub deadline: Deadline,
 }
 
