@@ -77,11 +77,7 @@ impl SwapIntentContract for SwapIntentContractImpl {
                 >= intent.asset_in.gas_for_transfer()
         );
         // TODO: emit log
-        Self::transfer(
-            &id,
-            intent.asset_in,
-            intent.recipient.unwrap_or(intent.sender),
-        )
+        Self::transfer(&id, intent.asset_in, intent.initiator)
     }
 }
 
@@ -171,7 +167,7 @@ impl SwapIntentContractImpl {
             Entry::Vacant(entry) => {
                 entry.insert(
                     SwapIntent {
-                        sender,
+                        initiator: sender,
                         asset_in,
                         asset_out: create.asset_out,
                         recipient: create.recipient,
@@ -223,7 +219,7 @@ impl SwapIntentContractImpl {
             Self::transfer(
                 &fulfill.id,
                 intent.asset_out,
-                intent.recipient.unwrap_or(intent.sender),
+                intent.recipient.unwrap_or(intent.initiator),
             )
             // transfer to solver
             .and(Self::transfer(

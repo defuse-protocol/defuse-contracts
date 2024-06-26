@@ -100,7 +100,7 @@ pub struct NftItem {
 #[serde_as]
 #[near(serializers = [borsh, json])]
 pub struct SwapIntent {
-    pub sender: AccountId,
+    pub initiator: AccountId,
     pub asset_in: Asset,
     // TODO: in case of NFT, this only allows for simple "barter",
     // while in case of Defuse, the user doesn't know in advance which
@@ -119,11 +119,8 @@ pub struct SwapIntent {
     #[serde(default)]
     #[serde_as(as = "DefaultOnNull")]
     pub recipient: Option<AccountId>,
-    /// After deadline passes, intent can not be executed,
-    /// but roll-backed only
     // TODO: prolong() method
     pub deadline: Deadline,
-    // TODO: expiration
 }
 
 impl SwapIntent {
