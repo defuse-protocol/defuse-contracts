@@ -9,6 +9,7 @@ workspace = true
 [dependencies]
 near-sdk.workspace = true
 near-contract-standards.workspace = true
+serde_with.workspace = true
 thiserror.workspace = true
 
 [features]

@@ -41,7 +41,7 @@ impl SwapIntentContractImpl {
     #[private]
     #[allow(unused_variables)] // TODO
     pub fn resolve_swap(
-        &self,
+        &mut self,
         id: IntentID,
         #[callback_result] transfer_to_user: Result<(), PromiseError>,
         #[callback_result] transfer_to_solver: Result<(), PromiseError>,
@@ -54,6 +54,10 @@ impl SwapIntentContractImpl {
 
 #[near]
 impl SwapIntentContract for SwapIntentContractImpl {
+    fn get_swap_intent(&self, id: &IntentID) -> Option<&SwapIntent> {
+        self.intents.get(id)
+    }
+
     #[payable]
     fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<()> {
         let amount = env::attached_deposit();
@@ -215,13 +219,13 @@ impl SwapIntentContractImpl {
         log!("Intent '{}' fulfilled successfully", fulfill.id);
 
         Ok(
-            // transfer to user first
+            // transfer to user
             Self::transfer(
                 &fulfill.id,
                 intent.asset_out,
                 intent.recipient.unwrap_or(intent.sender),
             )
-            // then, transfer to sender
+            // transfer to solver
             .and(Self::transfer(
                 &fulfill.id,
                 intent.asset_in,
@@ -232,30 +236,53 @@ impl SwapIntentContractImpl {
         )
     }
 
+    #[inline]
     fn transfer(id: &IntentID, asset: Asset, recipient: AccountId) -> Promise {
         match asset {
-            Asset::Native(amount) => Promise::new(recipient)
-                // TODO: extend with optional function name and args
-                // for function_call() to allow further communication
-                // with other protocols
-                .transfer(amount),
-            Asset::Ft(FtAmount { token, amount }) => ext_ft_core::ext(token)
-                .with_attached_deposit(NearToken::from_yoctonear(1))
-                .with_static_gas(GAS_FOR_FT_TRANSFER)
-                // TODO: extend with optional msg for ft_transfer_call()
-                // for extensibility to allow further communication with other
-                // protocols
-                .ft_transfer(recipient, amount.into(), Some(format!("{id}"))),
-            Asset::Nft(NftItem {
-                collection,
-                token_id,
-            }) => ext_nft_core::ext(collection)
-                .with_attached_deposit(NearToken::from_yoctonear(1))
-                .with_static_gas(GAS_FOR_NFT_TRANSFER)
-                // TODO: extend with optional msg for nft_transfer_call()
-                // for extensibility to allow further communication with other
-                // protocols
-                .nft_transfer(recipient, token_id, None, Some(format!("{id}"))),
+            Asset::Native(amount) => Self::transfer_native(amount, recipient),
+            Asset::Ft(ft) => Self::transfer_ft(ft, recipient, format!("{id}")),
+            Asset::Nft(nft) => Self::transfer_nft(nft, recipient, format!("{id}")),
         }
+    }
+
+    #[inline]
+    fn transfer_native(amount: NearToken, recipient: AccountId) -> Promise {
+        // TODO: extend with optional function name and args
+        // for function_call() to allow further communication
+        // with other protocols
+        Promise::new(recipient).transfer(amount)
+    }
+
+    #[inline]
+    fn transfer_ft(
+        FtAmount { token, amount }: FtAmount,
+        recipient: AccountId,
+        memo: impl Into<Option<String>>,
+    ) -> Promise {
+        // TODO: extend with optional msg for ft_transfer_call()
+        // for extensibility to allow further communication with other
+        // protocols
+        ext_ft_core::ext(token)
+            .with_attached_deposit(NearToken::from_yoctonear(1))
+            .with_static_gas(GAS_FOR_FT_TRANSFER)
+            .ft_transfer(recipient, amount.into(), memo.into())
+    }
+
+    #[inline]
+    fn transfer_nft(
+        NftItem {
+            collection,
+            token_id,
+        }: NftItem,
+        recipient: AccountId,
+        memo: impl Into<Option<String>>,
+    ) -> Promise {
+        // TODO: extend with optional msg for nft_transfer_call()
+        // for extensibility to allow further communication with other
+        // protocols
+        ext_nft_core::ext(collection)
+            .with_attached_deposit(NearToken::from_yoctonear(1))
+            .with_static_gas(GAS_FOR_NFT_TRANSFER)
+            .nft_transfer(recipient, token_id, None, memo.into())
     }
 }
