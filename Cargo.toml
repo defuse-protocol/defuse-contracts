@@ -35,6 +35,8 @@ all = "deny"
 nursery = "deny"
 pedantic = "deny"
 module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
 
 [profile.release]
 codegen-units = 1

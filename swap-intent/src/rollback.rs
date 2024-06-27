@@ -13,7 +13,7 @@ impl Rollback for SwapIntentContractImpl {
     #[payable]
     fn rollback_intent(&mut self, id: &IntentId) -> PromiseOrValue<bool> {
         assert_eq!(env::attached_deposit(), NearToken::from_yoctonear(1));
-        self.internal_rollback_intent(id, env::predecessor_account_id())
+        self.internal_rollback_intent(id, &env::predecessor_account_id())
             .unwrap()
     }
 }
@@ -22,7 +22,7 @@ impl SwapIntentContractImpl {
     fn internal_rollback_intent(
         &mut self,
         id: &IntentId,
-        initiator: AccountId,
+        initiator: &AccountId,
     ) -> Result<PromiseOrValue<bool>, SwapIntentError> {
         let intent = self
             .intents
@@ -32,7 +32,7 @@ impl SwapIntentContractImpl {
             .and_then(|status| status.as_available())
             .ok_or(SwapIntentError::WrongStatus)?;
 
-        if initiator != intent.initiator {
+        if initiator != &intent.initiator {
             return Err(SwapIntentError::Unauthorized);
         }
 
