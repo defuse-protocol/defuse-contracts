@@ -1,7 +1,8 @@
 use std::time::{Duration, SystemTime};
 
 use defuse_contracts::intents::swap::{
-    Asset, CreateSwapIntentAction, Deadline, FtAmount, FulfillSwapIntentAction, Lost, SwapIntent,
+    Asset, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction, FtAmount, LostAsset,
+    SwapIntentStatus,
 };
 use near_sdk::NearToken;
 
@@ -103,10 +104,10 @@ async fn test_rollback_lost_found_ft() {
             .await
             .unwrap()
             .unwrap()
-            .get_unlocked()
+            .as_unlocked()
             .unwrap()
             .as_lost(),
-        Some(&Lost {
+        Some(&LostAsset {
             asset: Asset::Ft(FtAmount {
                 token: ft_token.id().clone(),
                 amount: 1000
@@ -143,10 +144,10 @@ async fn test_rollback_lost_found_ft() {
             .await
             .unwrap()
             .unwrap()
-            .get_unlocked()
+            .as_unlocked()
             .unwrap()
             .as_lost(),
-        Some(&Lost {
+        Some(&LostAsset {
             asset: Asset::Ft(FtAmount {
                 token: ft_token.id().clone(),
                 amount: 1000
@@ -303,7 +304,7 @@ async fn test_fulfill_lost_found_ft() {
         .fulfill_swap_intent(
             swap_intent_shard.id(),
             Asset::Native(NearToken::from_near(5)),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: None,
             },
@@ -318,8 +319,8 @@ async fn test_fulfill_lost_found_ft() {
             .await
             .unwrap()
             .unwrap()
-            .get_unlocked(),
-        Some(&SwapIntent::Lost(Lost {
+            .as_unlocked(),
+        Some(&SwapIntentStatus::Lost(LostAsset {
             asset: Asset::Ft(FtAmount {
                 token: ft_token.id().clone(),
                 amount: 500,

@@ -12,23 +12,23 @@ lazy_static! {
 pub trait AccountShardExt {
     async fn deploy_account_shard(
         &self,
-        account_shard_id: impl AsRef<str>,
-        owner: impl Into<Option<AccountId>>,
+        account_shard_id: &str,
+        owner: Option<AccountId>,
     ) -> anyhow::Result<Contract>;
 
     async fn create_account(
         &self,
         account_shard_id: &AccountId,
-        derivation_path: impl AsRef<str>,
-        owner: impl Into<Option<AccountId>>,
+        derivation_path: &str,
+        owner: Option<AccountId>,
     ) -> anyhow::Result<()>;
 }
 
 impl AccountShardExt for near_workspaces::Account {
     async fn deploy_account_shard(
         &self,
-        account_shard_id: impl AsRef<str>,
-        owner: impl Into<Option<AccountId>>,
+        account_shard_id: &str,
+        owner: Option<AccountId>,
     ) -> anyhow::Result<Contract> {
         let contract = self
             .deploy_contract(account_shard_id, &ACCOUNT_WASM)
@@ -37,7 +37,7 @@ impl AccountShardExt for near_workspaces::Account {
         contract
             .call("new")
             .args_json(json!({
-                "owner": owner.into().unwrap_or(self.id().clone()),
+                "owner": owner.unwrap_or_else(|| self.id().clone()),
             }))
             .max_gas()
             .transact()
@@ -50,13 +50,13 @@ impl AccountShardExt for near_workspaces::Account {
     async fn create_account(
         &self,
         account_shard_id: &AccountId,
-        derivation_path: impl AsRef<str>,
-        owner: impl Into<Option<AccountId>>,
+        derivation_path: &str,
+        owner: Option<AccountId>,
     ) -> anyhow::Result<()> {
         self.call(account_shard_id, "create_account")
             .args_json(json!({
-                "derivation_path": derivation_path.as_ref(),
-                "owner": owner.into(),
+                "derivation_path": derivation_path,
+                "owner": owner,
             }))
             .deposit(NearToken::from_millinear(2))
             .max_gas()

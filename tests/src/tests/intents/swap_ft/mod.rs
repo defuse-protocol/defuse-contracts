@@ -14,17 +14,11 @@ lazy_static! {
 }
 
 pub trait SwapFtIntentShard {
-    async fn deploy_swap_ft_intent_shard(
-        &self,
-        swap_ft_intent_shard_id: impl AsRef<str>,
-    ) -> Contract;
+    async fn deploy_swap_ft_intent_shard(&self, swap_ft_intent_shard_id: &str) -> Contract;
 }
 
 impl SwapFtIntentShard for near_workspaces::Account {
-    async fn deploy_swap_ft_intent_shard(
-        &self,
-        swap_ft_intent_shard_id: impl AsRef<str>,
-    ) -> Contract {
+    async fn deploy_swap_ft_intent_shard(&self, swap_ft_intent_shard_id: &str) -> Contract {
         let contract = self
             .deploy_contract(swap_ft_intent_shard_id, &SWAP_FT_INTENT_WASM)
             .await

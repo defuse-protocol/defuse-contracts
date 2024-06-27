@@ -19,7 +19,7 @@ impl NonFungibleTokenCore for AccountContractImpl {
         memo: Option<String>,
     ) {
         self.accounts
-            .nft_transfer(receiver_id, token_id, approval_id, memo)
+            .nft_transfer(receiver_id, token_id, approval_id, memo);
     }
 
     #[payable]

@@ -1,7 +1,7 @@
 use defuse_contracts::{
     intents::swap::{
-        Asset, CreateSwapIntentAction, FtAmount, FulfillSwapIntentAction, IntentId, NftItem,
-        SwapIntent, SwapIntentAction,
+        Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, FtAmount, IntentId, NftItem,
+        SwapIntentAction, SwapIntentStatus,
     },
     utils::Mutex,
 };
@@ -19,7 +19,7 @@ lazy_static! {
 pub trait SwapIntentShard {
     async fn deploy_swap_intent_shard(
         &self,
-        swap_intent_shard_id: impl AsRef<str>,
+        swap_intent_shard_id: &str,
     ) -> anyhow::Result<Contract>;
 
     async fn create_swap_intent(
@@ -29,13 +29,16 @@ pub trait SwapIntentShard {
         create: CreateSwapIntentAction,
     ) -> anyhow::Result<bool>;
 
-    async fn get_swap_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>>;
+    async fn get_swap_intent(
+        &self,
+        id: &IntentId,
+    ) -> anyhow::Result<Option<Mutex<SwapIntentStatus>>>;
 
     async fn fulfill_swap_intent(
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
-        fulfill: FulfillSwapIntentAction,
+        fulfill: ExecuteSwapIntentAction,
     ) -> anyhow::Result<bool>;
 
     async fn rollback_intent(
@@ -50,7 +53,7 @@ pub trait SwapIntentShard {
 impl SwapIntentShard for near_workspaces::Account {
     async fn deploy_swap_intent_shard(
         &self,
-        swap_intent_shard_id: impl AsRef<str>,
+        swap_intent_shard_id: &str,
     ) -> anyhow::Result<Contract> {
         let contract = self
             .deploy_contract(swap_intent_shard_id, &SWAP_INTENT_WASM)
@@ -91,7 +94,7 @@ impl SwapIntentShard for near_workspaces::Account {
                     swap_intent_id,
                     amount,
                     None,
-                    serde_json::to_string(&SwapIntentAction::Create(create)).unwrap(),
+                    &serde_json::to_string(&SwapIntentAction::Create(create)).unwrap(),
                 )
                 .await?
                 == amount),
@@ -111,7 +114,10 @@ impl SwapIntentShard for near_workspaces::Account {
         }
     }
 
-    async fn get_swap_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
+    async fn get_swap_intent(
+        &self,
+        id: &IntentId,
+    ) -> anyhow::Result<Option<Mutex<SwapIntentStatus>>> {
         self.view(self.id(), "get_swap_intent")
             .args_json(json!({
                 "id": id,
@@ -125,13 +131,13 @@ impl SwapIntentShard for near_workspaces::Account {
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
-        fulfill: FulfillSwapIntentAction,
+        fulfill: ExecuteSwapIntentAction,
     ) -> anyhow::Result<bool> {
         match asset_in {
             Asset::Native(amount) => self
                 .call(swap_intent_id, "native_action")
                 .args_json(json!({
-                    "action": SwapIntentAction::Fulfill(fulfill),
+                    "action": SwapIntentAction::Execute(fulfill),
                 }))
                 .deposit(amount)
                 .max_gas()
@@ -146,7 +152,7 @@ impl SwapIntentShard for near_workspaces::Account {
                     swap_intent_id,
                     amount,
                     None,
-                    serde_json::to_string(&SwapIntentAction::Fulfill(fulfill)).unwrap(),
+                    &serde_json::to_string(&SwapIntentAction::Execute(fulfill)).unwrap(),
                 )
                 .await?
                 == amount),
@@ -159,7 +165,7 @@ impl SwapIntentShard for near_workspaces::Account {
                     swap_intent_id,
                     token_id,
                     None,
-                    serde_json::to_string(&SwapIntentAction::Fulfill(fulfill)).unwrap(),
+                    serde_json::to_string(&SwapIntentAction::Execute(fulfill)).unwrap(),
                 )
                 .await
             }

@@ -27,8 +27,8 @@ impl SwapIntentContractImpl {
                 self.create_intent(sender, received, create)?;
                 PromiseOrValue::Value(true)
             }
-            SwapIntentAction::Fulfill(fulfill) => {
-                self.fulfill_intent(sender, received, fulfill)?.into()
+            SwapIntentAction::Execute(execute) => {
+                self.execute_intent(sender, received, execute)?.into()
             }
         })
     }

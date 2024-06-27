@@ -1,4 +1,4 @@
-use defuse_contracts::intents::swap::{IntentId, Lost, LostFound, SwapError};
+use defuse_contracts::intents::swap::{IntentId, LostAsset, LostFound, SwapError};
 use near_sdk::{env, near, NearToken, Promise, PromiseError};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
@@ -14,11 +14,11 @@ impl LostFound for SwapIntentContractImpl {
 
 impl SwapIntentContractImpl {
     fn internal_lost_found(&mut self, id: &IntentId) -> Result<Promise, SwapError> {
-        let Lost { asset, recipient } = self
+        let LostAsset { asset, recipient } = self
             .intents
             .get_mut(id)
             .ok_or_else(|| SwapError::NotFound(id.clone()))?
-            .lock_mut()
+            .lock()
             .ok_or(SwapError::Locked)?
             .as_lost()
             .ok_or(SwapError::WrongStatus)?;
@@ -37,26 +37,29 @@ impl SwapIntentContractImpl {
     pub fn resolve_lost_found(
         &mut self,
         id: &IntentId,
-        #[callback_result] transfer: Result<(), PromiseError>,
+        #[callback_result] transfer: &Result<(), PromiseError>,
     ) -> bool {
-        let intent = self
-            .intents
+        self.internal_resolve_lost_found(id, transfer).unwrap()
+    }
+}
+
+impl SwapIntentContractImpl {
+    fn internal_resolve_lost_found(
+        &mut self,
+        id: &IntentId,
+        transfer: &Result<(), PromiseError>,
+    ) -> Result<bool, SwapError> {
+        self.intents
             .get_mut(id)
-            .ok_or_else(|| SwapError::NotFound(id.clone()))
-            .unwrap();
-        intent
-            .unlock_mut()
-            .ok_or(SwapError::Unlocked)
-            .unwrap()
+            .ok_or_else(|| SwapError::NotFound(id.clone()))?
+            .unlock()
+            .ok_or(SwapError::Unlocked)?
             .as_lost()
-            .ok_or(SwapError::WrongStatus)
-            .unwrap();
+            .ok_or(SwapError::WrongStatus)?;
 
         if transfer.is_ok() {
             self.intents.remove(id);
-            return true;
         }
-
-        false
+        Ok(transfer.is_ok())
     }
 }

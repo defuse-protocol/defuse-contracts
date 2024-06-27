@@ -1,7 +1,7 @@
 use std::time::{Duration, SystemTime};
 
 use defuse_contracts::intents::swap::{
-    Asset, CreateSwapIntentAction, Deadline, FtAmount, FulfillSwapIntentAction, NftItem,
+    Asset, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction, FtAmount, NftItem,
 };
 
 use near_sdk::NearToken;
@@ -63,7 +63,7 @@ async fn test_swap_native_to_native() {
         .fulfill_swap_intent(
             swap_intent_shard.id(),
             Asset::Native(NearToken::from_near(5)),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: "1".to_string(),
                 recipient: None,
             },
@@ -160,7 +160,7 @@ async fn test_swap_native_to_ft() {
                 token: ft_token.id().clone(),
                 amount: 500,
             }),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: "1".to_string(),
                 recipient: None,
             },
@@ -281,7 +281,7 @@ async fn test_swap_native_to_ft_no_deposit() {
                 token: ft_token.id().clone(),
                 amount: 500,
             }),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: None,
             },
@@ -295,9 +295,9 @@ async fn test_swap_native_to_ft_no_deposit() {
         .await
         .unwrap()
         .unwrap()
-        .get_unlocked()
+        .as_unlocked()
         .unwrap()
-        .as_swap()
+        .as_available()
         .is_some());
 
     assert_eq!(
@@ -387,7 +387,7 @@ async fn test_swap_native_to_nft() {
                 collection: account_shard.id().clone(),
                 token_id: derivation_path.clone(),
             }),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: "1".to_string(),
                 recipient: None,
             },
@@ -506,7 +506,7 @@ async fn test_swap_ft_to_native() {
         .fulfill_swap_intent(
             swap_intent_shard.id(),
             Asset::Native(NearToken::from_near(5)),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: "1".to_string(),
                 recipient: None,
             },
@@ -693,7 +693,7 @@ async fn test_swap_ft_to_ft() {
                 token: ft_token_b.id().clone(),
                 amount: 2000,
             }),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: "1".to_string(),
                 recipient: None,
             },
@@ -864,7 +864,7 @@ async fn test_swap_ft_to_nft() {
                 collection: account_shard.id().clone(),
                 token_id: derivation_path.clone(),
             }),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: "1".to_string(),
                 recipient: None,
             },
@@ -973,7 +973,7 @@ async fn test_swap_nft_to_native() {
         .fulfill_swap_intent(
             swap_intent_shard.id(),
             Asset::Native(NearToken::from_near(5)),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: "1".to_string(),
                 recipient: None,
             },
@@ -1070,7 +1070,7 @@ async fn test_swap_nft_to_nft() {
                 collection: account_shard.id().clone(),
                 token_id: derivation_path_2.clone(),
             }),
-            FulfillSwapIntentAction {
+            ExecuteSwapIntentAction {
                 id: "1".to_string(),
                 recipient: None,
             },

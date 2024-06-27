@@ -8,7 +8,7 @@ pub trait NftExt {
         collection: &AccountId,
         receiver_id: &AccountId,
         token_id: TokenId,
-        memo: impl Into<Option<String>>,
+        memo: Option<String>,
     ) -> anyhow::Result<()>;
 
     async fn nft_transfer_call(
@@ -16,7 +16,7 @@ pub trait NftExt {
         collection: &AccountId,
         receiver_id: &AccountId,
         token_id: TokenId,
-        memo: impl Into<Option<String>>,
+        memo: Option<String>,
         msg: String,
     ) -> anyhow::Result<bool>;
 
@@ -29,13 +29,13 @@ impl NftExt for near_workspaces::Account {
         collection: &AccountId,
         receiver_id: &AccountId,
         token_id: TokenId,
-        memo: impl Into<Option<String>>,
+        memo: Option<String>,
     ) -> anyhow::Result<()> {
-        self.call(&collection, "nft_transfer")
+        self.call(collection, "nft_transfer")
             .args_json(json!({
                 "receiver_id": receiver_id,
                 "token_id": token_id,
-                "memo": memo.into()
+                "memo": memo,
             }))
             .deposit(NearToken::from_yoctonear(1))
             .max_gas()
@@ -50,14 +50,14 @@ impl NftExt for near_workspaces::Account {
         collection: &AccountId,
         receiver_id: &AccountId,
         token_id: TokenId,
-        memo: impl Into<Option<String>>,
+        memo: Option<String>,
         msg: String,
     ) -> anyhow::Result<bool> {
-        self.call(&collection, "nft_transfer_call")
+        self.call(collection, "nft_transfer_call")
             .args_json(json!({
                 "receiver_id": receiver_id,
                 "token_id": token_id,
-                "memo": memo.into(),
+                "memo": memo,
                 "msg": msg,
             }))
             .deposit(NearToken::from_yoctonear(1))

@@ -12,16 +12,16 @@ lazy_static! {
 pub trait ControllerExt {
     async fn deploy_controller(
         &self,
-        controller_id: impl AsRef<str>,
-        owner: impl Into<Option<AccountId>>,
+        controller_id: &str,
+        owner: Option<AccountId>,
     ) -> anyhow::Result<Contract>;
 }
 
 impl ControllerExt for near_workspaces::Account {
     async fn deploy_controller(
         &self,
-        controller_id: impl AsRef<str>,
-        owner: impl Into<Option<AccountId>>,
+        controller_id: &str,
+        owner: Option<AccountId>,
     ) -> anyhow::Result<Contract> {
         let contract = self
             .deploy_contract(controller_id, &CONTROLLER_WASM)
@@ -29,7 +29,7 @@ impl ControllerExt for near_workspaces::Account {
         contract
             .call("new")
             .args_json(json!({
-                "owner_id": owner.into().unwrap_or(self.id().clone()),
+                "owner_id": owner.unwrap_or_else(|| self.id().clone()),
             }))
             .max_gas()
             .transact()

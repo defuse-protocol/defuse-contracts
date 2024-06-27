@@ -26,9 +26,9 @@ impl SwapIntentContractImpl {
         &mut self,
         sender_id: AccountId,
         amount: U128,
-        msg: String,
+        msg: impl AsRef<str>,
     ) -> Result<PromiseOrValue<U128>, SwapError> {
-        let action = serde_json::from_str(&msg).map_err(SwapError::JSON)?;
+        let action = serde_json::from_str(msg.as_ref()).map_err(SwapError::JSON)?;
 
         let received = Asset::Ft(FtAmount {
             token: env::predecessor_account_id(),
@@ -41,8 +41,8 @@ impl SwapIntentContractImpl {
                 // intent was successfully created, do not refund
                 PromiseOrValue::Value(0.into())
             }
-            SwapIntentAction::Fulfill(fulfill) => {
-                self.fulfill_intent(sender_id, received, fulfill)?.into()
+            SwapIntentAction::Execute(execute) => {
+                self.execute_intent(sender_id, received, execute)?.into()
             }
         })
     }

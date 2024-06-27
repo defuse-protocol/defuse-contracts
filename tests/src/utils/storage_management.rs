@@ -6,13 +6,13 @@ pub trait StorageManagementExt {
     async fn storage_deposit(
         &self,
         contract_id: &AccountId,
-        account_id: impl Into<Option<AccountId>>,
+        account_id: Option<AccountId>,
         deposit: NearToken,
     ) -> anyhow::Result<StorageBalance>;
     async fn storage_unregister(
         &self,
         contract_id: &AccountId,
-        force: impl Into<Option<bool>>,
+        force: Option<bool>,
     ) -> anyhow::Result<bool>;
 }
 
@@ -20,12 +20,12 @@ impl StorageManagementExt for near_workspaces::Account {
     async fn storage_deposit(
         &self,
         contract_id: &AccountId,
-        account_id: impl Into<Option<AccountId>>,
+        account_id: Option<AccountId>,
         deposit: NearToken,
     ) -> anyhow::Result<StorageBalance> {
         self.call(contract_id, "storage_deposit")
             .args_json(json!({
-                "account_id": account_id.into().unwrap_or(self.id().clone())
+                "account_id": account_id.unwrap_or_else(|| self.id().clone())
             }))
             .deposit(deposit)
             .max_gas()
@@ -39,11 +39,11 @@ impl StorageManagementExt for near_workspaces::Account {
     async fn storage_unregister(
         &self,
         contract_id: &AccountId,
-        force: impl Into<Option<bool>>,
+        force: Option<bool>,
     ) -> anyhow::Result<bool> {
         self.call(contract_id, "storage_unregister")
             .args_json(json!({
-                "force": force.into(),
+                "force": force,
             }))
             .deposit(NearToken::from_yoctonear(1))
             .max_gas()

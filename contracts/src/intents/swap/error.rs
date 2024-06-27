@@ -4,6 +4,7 @@ use thiserror::Error as ThisError;
 use super::IntentId;
 
 #[derive(Debug, ThisError)]
+// TODO: rename
 pub enum SwapError {
     #[error("JSON: {0}")]
     JSON(serde_json::Error),

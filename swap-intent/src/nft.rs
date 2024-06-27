@@ -14,11 +14,11 @@ impl NonFungibleTokenReceiver for SwapIntentContractImpl {
     fn nft_on_transfer(
         &mut self,
         sender_id: AccountId,
-        #[allow(unused_variables)] previous_owner_id: AccountId,
+        previous_owner_id: AccountId,
         token_id: TokenId,
         msg: String,
     ) -> PromiseOrValue<bool> {
-        self.internal_nft_on_transfer(sender_id, previous_owner_id, token_id, msg)
+        self.internal_nft_on_transfer(sender_id, &previous_owner_id, token_id, msg)
             .unwrap()
     }
 }
@@ -27,11 +27,11 @@ impl SwapIntentContractImpl {
     fn internal_nft_on_transfer(
         &mut self,
         sender_id: AccountId,
-        #[allow(unused_variables)] previous_owner_id: AccountId,
+        #[allow(unused_variables)] previous_owner_id: &AccountId,
         token_id: TokenId,
-        msg: String,
+        msg: impl AsRef<str>,
     ) -> Result<PromiseOrValue<bool>, SwapError> {
-        let action = serde_json::from_str(&msg).map_err(SwapError::JSON)?;
+        let action = serde_json::from_str(msg.as_ref()).map_err(SwapError::JSON)?;
 
         let received = Asset::Nft(NftItem {
             collection: env::predecessor_account_id(),
@@ -44,8 +44,8 @@ impl SwapIntentContractImpl {
                 // intent was successfully created, do not refund
                 PromiseOrValue::Value(false)
             }
-            SwapIntentAction::Fulfill(fulfill) => {
-                self.fulfill_intent(sender_id, received, fulfill)?.into()
+            SwapIntentAction::Execute(execute) => {
+                self.execute_intent(sender_id, received, execute)?.into()
             }
         })
     }

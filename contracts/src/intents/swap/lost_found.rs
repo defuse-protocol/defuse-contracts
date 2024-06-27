@@ -1,6 +1,6 @@
-use near_sdk::{ext_contract, Promise};
+use near_sdk::{ext_contract, near, AccountId, Promise};
 
-use super::IntentId;
+use super::{Asset, IntentId};
 
 #[ext_contract(ext_lost_found)]
 pub trait LostFound {
@@ -10,4 +10,11 @@ pub trait LostFound {
     ///
     /// Returns `bool` indicating whether the asset was transferred successfully
     fn lost_found(&mut self, id: &IntentId) -> Promise;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[near(serializers = [borsh, json])]
+pub struct LostAsset {
+    pub asset: Asset,
+    pub recipient: AccountId,
 }

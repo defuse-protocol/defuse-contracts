@@ -19,15 +19,7 @@ impl<T> Mutex<T> {
     }
 
     #[inline]
-    pub const fn get_unlocked(&self) -> Option<&T> {
-        if self.locked {
-            return None;
-        }
-        Some(&self.value)
-    }
-
-    #[inline]
-    pub const fn get_locked(&self) -> Option<&T> {
+    pub const fn as_locked(&self) -> Option<&T> {
         if !self.locked {
             return None;
         }
@@ -35,15 +27,7 @@ impl<T> Mutex<T> {
     }
 
     #[inline]
-    pub fn get_unlocked_mut(&mut self) -> Option<&mut T> {
-        if self.locked {
-            return None;
-        }
-        Some(&mut self.value)
-    }
-
-    #[inline]
-    pub fn get_locked_mut(&mut self) -> Option<&mut T> {
+    pub fn as_locked_mut(&mut self) -> Option<&mut T> {
         if !self.locked {
             return None;
         }
@@ -51,26 +35,7 @@ impl<T> Mutex<T> {
     }
 
     #[inline]
-    pub const unsafe fn get_unchecked(&self) -> &T {
-        &self.value
-    }
-
-    #[inline]
-    pub unsafe fn get_unchecked_mut(&mut self) -> &mut T {
-        &mut self.value
-    }
-
-    #[inline]
-    pub fn lock(&mut self) -> Option<&T> {
-        if self.locked {
-            return None;
-        }
-        self.locked = true;
-        Some(&self.value)
-    }
-
-    #[inline]
-    pub fn lock_mut(&mut self) -> Option<&mut T> {
+    pub fn lock(&mut self) -> Option<&mut T> {
         if self.locked {
             return None;
         }
@@ -79,16 +44,23 @@ impl<T> Mutex<T> {
     }
 
     #[inline]
-    pub fn unlock(&mut self) -> Option<&T> {
-        if !self.locked {
+    pub const fn as_unlocked(&self) -> Option<&T> {
+        if self.locked {
             return None;
         }
-        self.locked = false;
         Some(&self.value)
     }
 
     #[inline]
-    pub fn unlock_mut(&mut self) -> Option<&mut T> {
+    pub fn as_unlocked_mut(&mut self) -> Option<&mut T> {
+        if self.locked {
+            return None;
+        }
+        Some(&mut self.value)
+    }
+
+    #[inline]
+    pub fn unlock(&mut self) -> Option<&mut T> {
         if !self.locked {
             return None;
         }

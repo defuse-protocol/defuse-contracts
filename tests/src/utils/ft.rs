@@ -18,27 +18,27 @@ lazy_static! {
 }
 
 pub trait FtExt: StorageManagementExt {
-    async fn deploy_ft_token(&self, token: impl AsRef<str>) -> anyhow::Result<Contract>;
+    async fn deploy_ft_token(&self, token: &str) -> anyhow::Result<Contract>;
     async fn ft_balance_of(&self, token_id: &AccountId) -> anyhow::Result<u128>;
     async fn ft_transfer(
         &self,
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-        memo: impl Into<Option<String>>,
+        memo: Option<String>,
     ) -> anyhow::Result<()>;
     async fn ft_transfer_call(
         &self,
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-        memo: impl Into<Option<String>>,
-        msg: impl AsRef<str>,
+        memo: Option<String>,
+        msg: &str,
     ) -> anyhow::Result<u128>;
     async fn ft_storage_deposit(
         &self,
         token_id: &AccountId,
-        account_id: impl Into<Option<AccountId>>,
+        account_id: Option<AccountId>,
     ) -> anyhow::Result<StorageBalance> {
         self.storage_deposit(token_id, account_id, STORAGE_DEPOSIT)
             .await
@@ -46,9 +46,7 @@ pub trait FtExt: StorageManagementExt {
 }
 
 impl FtExt for Account {
-    async fn deploy_ft_token(&self, token: impl AsRef<str>) -> anyhow::Result<Contract> {
-        let token = token.as_ref();
-
+    async fn deploy_ft_token(&self, token: &str) -> anyhow::Result<Contract> {
         let contract = self.deploy_contract(token, &FUNGIBLE_TOKEN_WASM).await?;
         contract
             .call("new")
@@ -86,13 +84,13 @@ impl FtExt for Account {
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-        memo: impl Into<Option<String>>,
+        memo: Option<String>,
     ) -> anyhow::Result<()> {
         self.call(token_id, "ft_transfer")
             .args_json(json!({
                 "receiver_id": receiver_id,
                 "amount": U128(amount),
-                "memo": memo.into(),
+                "memo": memo,
             }))
             .deposit(NearToken::from_yoctonear(1))
             .max_gas()
@@ -107,15 +105,15 @@ impl FtExt for Account {
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-        memo: impl Into<Option<String>>,
-        msg: impl AsRef<str>,
+        memo: Option<String>,
+        msg: &str,
     ) -> anyhow::Result<u128> {
         self.call(token_id, "ft_transfer_call")
             .args_json(json!({
                 "receiver_id": receiver_id,
                 "amount": U128(amount),
-                "memo": memo.into(),
-                "msg": msg.as_ref(),
+                "memo": memo,
+                "msg": msg,
             }))
             .deposit(NearToken::from_yoctonear(1))
             .max_gas()
