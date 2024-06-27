@@ -1,5 +1,5 @@
 use defuse_contracts::{
-    intents::swap::{events::Dep2Event, IntentId, LostAsset, LostFound, SwapError},
+    intents::swap::{events::Dep2Event, IntentId, LostAsset, LostFound, SwapIntentError},
     utils::JsonLog,
 };
 use near_sdk::{env, near, NearToken, Promise, PromiseError};
@@ -16,15 +16,14 @@ impl LostFound for SwapIntentContractImpl {
 }
 
 impl SwapIntentContractImpl {
-    fn internal_lost_found(&mut self, id: &IntentId) -> Result<Promise, SwapError> {
+    fn internal_lost_found(&mut self, id: &IntentId) -> Result<Promise, SwapIntentError> {
         let LostAsset { asset, recipient } = self
             .intents
             .get_mut(id)
-            .ok_or_else(|| SwapError::NotFound(id.clone()))?
+            .ok_or(SwapIntentError::NotFound)?
             .lock()
-            .ok_or(SwapError::Locked)?
-            .as_lost()
-            .ok_or(SwapError::WrongStatus)?;
+            .and_then(|status| status.as_lost())
+            .ok_or(SwapIntentError::WrongStatus)?;
 
         Ok(Self::transfer(id, asset.clone(), recipient.clone()).then(
             Self::ext(env::current_account_id())
@@ -51,18 +50,19 @@ impl SwapIntentContractImpl {
         &mut self,
         id: &IntentId,
         transfer: &Result<(), PromiseError>,
-    ) -> Result<bool, SwapError> {
+    ) -> Result<bool, SwapIntentError> {
         self.intents
             .get_mut(id)
-            .ok_or_else(|| SwapError::NotFound(id.clone()))?
+            .ok_or(SwapIntentError::NotFound)?
             .unlock()
-            .ok_or(SwapError::Unlocked)?
-            .as_lost()
-            .ok_or(SwapError::WrongStatus)?;
+            .and_then(|status| status.as_lost())
+            .ok_or(SwapIntentError::WrongStatus)?;
 
         if transfer.is_ok() {
             self.intents.remove(id);
-            Dep2Event::Found(id).log_json().map_err(SwapError::JSON)?;
+            Dep2Event::Found(id)
+                .log_json()
+                .map_err(SwapIntentError::JSON)?;
         }
         Ok(transfer.is_ok())
     }

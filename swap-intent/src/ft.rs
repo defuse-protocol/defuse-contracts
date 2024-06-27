@@ -1,5 +1,5 @@
 use defuse_contracts::intents::swap::{
-    Asset, FtAmount, SwapError, SwapIntentAction, GAS_FOR_FT_TRANSFER,
+    Asset, FtAmount, SwapIntentAction, SwapIntentError, GAS_FOR_FT_TRANSFER,
 };
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
 use near_sdk::{
@@ -27,8 +27,8 @@ impl SwapIntentContractImpl {
         sender_id: AccountId,
         amount: U128,
         msg: impl AsRef<str>,
-    ) -> Result<PromiseOrValue<U128>, SwapError> {
-        let action = serde_json::from_str(msg.as_ref()).map_err(SwapError::JSON)?;
+    ) -> Result<PromiseOrValue<U128>, SwapIntentError> {
+        let action = serde_json::from_str(msg.as_ref()).map_err(SwapIntentError::JSON)?;
 
         let received = Asset::Ft(FtAmount {
             token: env::predecessor_account_id(),

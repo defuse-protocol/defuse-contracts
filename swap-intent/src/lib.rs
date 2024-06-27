@@ -1,7 +1,7 @@
 use defuse_contracts::{
     intents::swap::{
         events::Dep2Event, Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, FtAmount,
-        IntentId, LostAsset, SwapError, SwapIntent, SwapIntentContract, SwapIntentStatus,
+        IntentId, LostAsset, SwapIntent, SwapIntentContract, SwapIntentError, SwapIntentStatus,
     },
     utils::{JsonLog, Mutex},
 };
@@ -11,7 +11,7 @@ use near_sdk::{
     json_types::U128,
     near,
     serde_json::{self, json},
-    store::lookup_map::{Entry, LookupMap},
+    store::lookup_map::LookupMap,
     AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise, PromiseError, PromiseOrValue,
 };
 
@@ -60,9 +60,9 @@ impl SwapIntentContractImpl {
         sender: AccountId,
         asset_in: Asset,
         create: CreateSwapIntentAction,
-    ) -> Result<(), SwapError> {
+    ) -> Result<(), SwapIntentError> {
         if create.deadline.has_expired() {
-            return Err(SwapError::Expired);
+            return Err(SwapIntentError::Expired);
         }
 
         // TODO: storage management suggestions:
@@ -73,24 +73,26 @@ impl SwapIntentContractImpl {
         //   * to create an intent from an asset that is not whitelisted,
         //     users must call storage_deposit as in Storage Management (NEP-145)
 
-        match self.intents.entry(create.id) {
-            Entry::Occupied(entry) => {
-                return Err(SwapError::AlreadyExists(entry.key().clone()));
-            }
-            Entry::Vacant(entry) => {
-                let intent = SwapIntent {
-                    initiator: sender,
-                    asset_in,
-                    asset_out: create.asset_out,
-                    recipient: create.recipient,
-                    deadline: create.deadline,
-                };
-                Dep2Event::Created(&intent)
-                    .log_json()
-                    .map_err(SwapError::JSON)?;
-                entry.insert(SwapIntentStatus::Available(intent).into());
-            }
+        let intent = SwapIntent {
+            initiator: sender,
+            asset_in,
+            asset_out: create.asset_out,
+            recipient: create.recipient,
+            deadline: create.deadline,
+        };
+
+        Dep2Event::Created(&intent)
+            .log_json()
+            .map_err(SwapIntentError::JSON)?;
+
+        if self
+            .intents
+            .insert(create.id, SwapIntentStatus::Available(intent).into())
+            .is_some()
+        {
+            return Err(SwapIntentError::AlreadyExists);
         }
+
         Ok(())
     }
 
@@ -99,37 +101,35 @@ impl SwapIntentContractImpl {
         sender: AccountId,
         received: Asset,
         execute: ExecuteSwapIntentAction,
-    ) -> Result<Promise, SwapError> {
+    ) -> Result<Promise, SwapIntentError> {
         // we remove asset here since there is no need to process
         let intent = self
             .intents
             .get_mut(&execute.id)
-            .ok_or_else(|| SwapError::NotFound(execute.id.clone()))?
+            .ok_or(SwapIntentError::NotFound)?
             .lock()
-            .ok_or(SwapError::Locked)?
-            .as_available()
-            .ok_or(SwapError::WrongStatus)?;
+            .and_then(|status| status.as_available())
+            .ok_or(SwapIntentError::WrongStatus)?;
 
         if intent.has_expired() {
-            return Err(SwapError::Expired);
+            return Err(SwapIntentError::Expired);
         }
         if received != intent.asset_out {
-            return Err(SwapError::WrongAsset);
+            return Err(SwapIntentError::WrongAsset);
         }
 
         // ensure that we have enough gas to transfer both assets
         // TODO: maybe we can omit this check and specify static gas manually,
         // so that the current tx would revert and promises would not be created
-        if env::prepaid_gas().saturating_sub(env::used_gas())
-            < intent
-                .asset_in
-                .gas_for_transfer()
-                .saturating_add(intent.asset_out.gas_for_transfer())
-                // TODO: reserve gas for multiple stages
-                .saturating_add(GAS_FOR_RESOLVE_SWAP)
-        {
-            return Err(SwapError::InsufficientGas);
-        }
+        assert!(
+            env::prepaid_gas().saturating_sub(env::used_gas())
+                >= intent
+                    .asset_in
+                    .gas_for_transfer()
+                    .saturating_add(intent.asset_out.gas_for_transfer())
+                    // TODO: reserve gas for multiple stages
+                    .saturating_add(GAS_FOR_RESOLVE_SWAP)
+        );
 
         Ok(Self::transfer(
             &execute.id,
@@ -187,18 +187,14 @@ impl SwapIntentContractImpl {
         asset_out_sender: AccountId,
         transfer_asset_out_succeeded: bool,
         asset_in_recipient: Option<AccountId>,
-    ) -> Result<PromiseOrValue<serde_json::Value>, SwapError> {
-        let intent = self
-            .intents
-            .get_mut(id)
-            .ok_or_else(|| SwapError::NotFound(id.clone()))?;
+    ) -> Result<PromiseOrValue<serde_json::Value>, SwapIntentError> {
+        let intent = self.intents.get_mut(id).ok_or(SwapIntentError::NotFound)?;
 
         if !transfer_asset_out_succeeded {
             let intent = intent
                 .unlock()
-                .ok_or(SwapError::Unlocked)?
-                .as_available()
-                .ok_or(SwapError::WrongStatus)?;
+                .and_then(|status| status.as_available())
+                .ok_or(SwapIntentError::WrongStatus)?;
             return Ok(match intent.asset_out {
                 Asset::Native(_) => {
                     // Native transfer can fail only if we don't have enough NEAR.
@@ -221,9 +217,8 @@ impl SwapIntentContractImpl {
 
         let intent = intent
             .as_locked()
-            .ok_or(SwapError::Unlocked)?
-            .as_available()
-            .ok_or(SwapError::WrongStatus)?;
+            .and_then(|status| status.as_available())
+            .ok_or(SwapIntentError::WrongStatus)?;
         let asset_in_recipient = asset_in_recipient.unwrap_or(asset_out_sender);
 
         Ok(
@@ -257,15 +252,15 @@ impl SwapIntentContractImpl {
         id: &IntentId,
         transfer_asset_in_succeeded: bool,
         asset_in_recipient: AccountId,
-    ) -> Result<serde_json::Value, SwapError> {
+    ) -> Result<serde_json::Value, SwapIntentError> {
         let intent = self
             .intents
             .get_mut(id)
-            .ok_or_else(|| SwapError::NotFound(id.clone()))?
+            .ok_or(SwapIntentError::NotFound)?
             .unlock()
-            .ok_or(SwapError::Unlocked)?;
+            .ok_or(SwapIntentError::WrongStatus)?;
 
-        let swap = intent.as_available().ok_or(SwapError::WrongStatus)?;
+        let swap = intent.as_available().ok_or(SwapIntentError::WrongStatus)?;
         let asset_out = swap.asset_out.clone();
 
         if transfer_asset_in_succeeded {
@@ -280,13 +275,13 @@ impl SwapIntentContractImpl {
                 asset: &lost,
             }
             .log_json()
-            .map_err(SwapError::JSON)?;
+            .map_err(SwapIntentError::JSON)?;
             *intent = SwapIntentStatus::Lost(lost);
         }
 
         Dep2Event::Executed(id)
             .log_json()
-            .map_err(SwapError::JSON)?;
+            .map_err(SwapIntentError::JSON)?;
 
         Ok(match asset_out {
             // native_action(asset_out)

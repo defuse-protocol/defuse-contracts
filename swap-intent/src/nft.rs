@@ -1,5 +1,5 @@
 use defuse_contracts::intents::swap::{
-    Asset, NftItem, SwapError, SwapIntentAction, GAS_FOR_NFT_TRANSFER,
+    Asset, NftItem, SwapIntentAction, SwapIntentError, GAS_FOR_NFT_TRANSFER,
 };
 use near_contract_standards::non_fungible_token::{
     core::{ext_nft_core, NonFungibleTokenReceiver},
@@ -30,8 +30,8 @@ impl SwapIntentContractImpl {
         #[allow(unused_variables)] previous_owner_id: &AccountId,
         token_id: TokenId,
         msg: impl AsRef<str>,
-    ) -> Result<PromiseOrValue<bool>, SwapError> {
-        let action = serde_json::from_str(msg.as_ref()).map_err(SwapError::JSON)?;
+    ) -> Result<PromiseOrValue<bool>, SwapIntentError> {
+        let action = serde_json::from_str(msg.as_ref()).map_err(SwapIntentError::JSON)?;
 
         let received = Asset::Nft(NftItem {
             collection: env::predecessor_account_id(),

@@ -1,4 +1,4 @@
-use defuse_contracts::intents::swap::{Asset, NativeAction, SwapError, SwapIntentAction};
+use defuse_contracts::intents::swap::{Asset, NativeAction, SwapIntentError, SwapIntentAction};
 use near_sdk::{env, near, AccountId, NearToken, Promise, PromiseOrValue};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
@@ -15,10 +15,10 @@ impl SwapIntentContractImpl {
     fn internal_native_action(
         &mut self,
         action: SwapIntentAction,
-    ) -> Result<PromiseOrValue<bool>, SwapError> {
+    ) -> Result<PromiseOrValue<bool>, SwapIntentError> {
         let amount = env::attached_deposit();
         if amount.is_zero() {
-            return Err(SwapError::ZeroAmount);
+            return Err(SwapIntentError::ZeroAmount);
         }
         let sender = env::predecessor_account_id();
         let received = Asset::Native(amount);

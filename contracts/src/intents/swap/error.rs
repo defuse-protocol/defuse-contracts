@@ -1,30 +1,22 @@
 use near_sdk::serde_json;
 use thiserror::Error as ThisError;
 
-use super::IntentId;
-
 #[derive(Debug, ThisError)]
-// TODO: rename
-pub enum SwapError {
+pub enum SwapIntentError {
     #[error("JSON: {0}")]
     JSON(serde_json::Error),
-    #[error("intent '{0}' not found")]
-    NotFound(IntentId),
-    #[error("intent '{0}' already exists")]
-    AlreadyExists(IntentId),
-    #[error("wrong asset")]
-    // TODO: add expected/got
-    WrongAsset,
-    #[error("insufficient gas")]
-    InsufficientGas,
-    #[error("expired")]
+    #[error("intent with given ID not found")]
+    NotFound,
+    #[error("intent with given ID already exists")]
+    AlreadyExists,
+    #[error("intent has expired")]
     Expired,
-    #[error("locked")]
-    Locked,
-    #[error("unlocked")]
-    Unlocked,
+    #[error("wrong asset")]
+    WrongAsset,
     #[error("wrong status")]
     WrongStatus,
+    #[error("unauthorized")]
+    Unauthorized,
     #[error("zero amount")]
     ZeroAmount,
 }
