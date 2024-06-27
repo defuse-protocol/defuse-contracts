@@ -1,4 +1,4 @@
-use defuse_contracts::intents::swap::{Asset, NativeAction, SwapIntentError, SwapIntentAction};
+use defuse_contracts::intents::swap::{Asset, NativeAction, SwapIntentAction, SwapIntentError};
 use near_sdk::{env, near, AccountId, NearToken, Promise, PromiseOrValue};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
