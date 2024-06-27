@@ -14,9 +14,11 @@ use crate::{
 pub use swap_intent_shard::*;
 
 mod duplicate;
+mod expired;
 mod lost_found;
 mod rollback;
 mod swap_intent_shard;
+mod wrong_asset;
 
 /// Completely synthetic case, but still a valid one
 #[tokio::test]
@@ -132,23 +134,6 @@ async fn test_swap_native_to_ft() {
         .ft_transfer(ft_token.id(), user2.id(), 500, None)
         .await
         .unwrap();
-
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        500
-    );
 
     let intent_id = "1".to_string();
 

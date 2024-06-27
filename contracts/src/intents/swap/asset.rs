@@ -34,6 +34,7 @@ impl Asset {
 #[serde_as]
 #[near(serializers = [json, borsh])]
 pub struct FtAmount {
+    /// Token account
     pub token: AccountId,
     #[serde_as(as = "DisplayFromStr")]
     pub amount: u128,
@@ -42,6 +43,8 @@ pub struct FtAmount {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[near(serializers = [json, borsh])]
 pub struct NftItem {
+    /// Collection account
     pub collection: AccountId,
+    /// Token ID
     pub token_id: TokenId,
 }

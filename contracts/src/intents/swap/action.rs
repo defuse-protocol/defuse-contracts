@@ -15,16 +15,17 @@ pub enum SwapIntentAction {
 #[serde_as]
 #[near(serializers = [json, borsh])]
 pub struct CreateSwapIntentAction {
-    /// This should not exist before
+    /// Unique ID of intent.  
+    /// NOTE: This MUST not exist before.
     pub id: IntentId,
-    /// Desired asset as an output
+    /// Desired asset as an output.
     pub asset_out: Asset,
-    /// Where to send asset_out.
-    /// By default: back to sender
+    /// Where to send asset_out. By default: back to initiator.
     #[serde(default)]
     #[serde_as(as = "DefaultOnNull")]
     pub recipient: Option<AccountId>,
-    /// After deadline can not be executed and can be rollbacked
+    /// Deadline to execute the swap.  
+    /// NOTE: intent can still be rollbacked at any time.
     pub deadline: Deadline,
 }
 
@@ -32,8 +33,10 @@ pub struct CreateSwapIntentAction {
 #[serde_as]
 #[near(serializers = [json, borsh])]
 pub struct ExecuteSwapIntentAction {
+    /// Unique ID of the intent.  
+    /// NOTE: This MUST exist.
     pub id: IntentId,
-    /// By default: back to sender
+    /// Where to send asset_in. By default: back to executor.
     #[serde(default)]
     #[serde_as(as = "DefaultOnNull")]
     pub recipient: Option<AccountId>,

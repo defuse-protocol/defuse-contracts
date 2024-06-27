@@ -16,6 +16,8 @@ pub trait LostFound {
 #[near(serializers = [borsh, json])]
 pub struct LostAsset {
     #[serde(flatten)]
+    /// The asset that was lost while execute/rollback.
     pub asset: Asset,
+    /// Where to send the lost asset
     pub recipient: AccountId,
 }

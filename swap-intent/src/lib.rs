@@ -69,7 +69,8 @@ impl SwapIntentContractImpl {
         //     from locking their funds in created intents by having an
         //     incentive to withdraw them back and free allocated storage
         //   * to create an intent from an asset that is not whitelisted,
-        //     users must call storage_deposit as in Storage Management (NEP-145)
+        //     users must call storage_deposit according to
+        //     Storage Management standard (NEP-145)
 
         let intent = SwapIntent {
             initiator: sender,

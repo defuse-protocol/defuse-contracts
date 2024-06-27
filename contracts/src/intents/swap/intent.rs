@@ -11,8 +11,12 @@ pub type IntentId = String;
 pub enum SwapIntentStatus {
     /// Available for execution.
     Available(SwapIntent),
-    /// The intent has already been executed or rollbacked
-    /// but we failed to transfer an asset to recipient.
+    /// The intent has already been executed/rollbacked
+    /// but we failed to transfer an asset to recipient/initiator.  
+    /// This can happen due to recipient/initiator is not registered
+    /// on the target asset contract or does not have enough storage
+    /// deposited according to Storage Management standard (NEP-145).
+    /// Anyone can call `lost_found(intent_id)` to retry the transfer.
     Lost(LostAsset),
 }
 
@@ -72,8 +76,11 @@ impl SwapIntentStatus {
 #[serde_as]
 #[near(serializers = [borsh, json])]
 pub struct SwapIntent {
+    /// Initiator who created the intent.
     pub initiator: AccountId,
+    /// Provided asset as an input.
     pub asset_in: Asset,
+    /// Desired asset as an output.
     // TODO: in case of NFT, this only allows for simple "barter",
     // while in case of Defuse, the user doesn't know in advance which
     // account solver will use for this swap. Possible solutions for this issue:
@@ -87,12 +94,12 @@ pub struct SwapIntent {
     //   accept the best one or chose between them.
     //   So, it will become 3-stage process. We need to thing about it properly
     pub asset_out: Asset,
-    /// By default, sender
+    /// Where to send asset_out. By default: back to initiator.
     #[serde(default)]
     #[serde_as(as = "DefaultOnNull")]
     pub recipient: Option<AccountId>,
-    // TODO: prolong() method
-    // TODO: add tests for expired deadline
+    /// Deadline to execute the swap.  
+    /// NOTE: intent can still be rollbacked at any time.
     pub deadline: Deadline,
 }
 
