@@ -1,4 +1,9 @@
-use defuse_contracts::intents::swap::{IntentId, LostAsset, Rollback, SwapError, SwapIntentStatus};
+use defuse_contracts::{
+    intents::swap::{
+        events::Dep2Event, IntentId, LostAsset, Rollback, SwapError, SwapIntentStatus,
+    },
+    utils::JsonLog,
+};
 use near_sdk::{env, near, NearToken, PromiseError, PromiseOrValue};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
@@ -32,8 +37,6 @@ impl SwapIntentContractImpl {
             env::prepaid_gas().saturating_sub(env::used_gas())
                 >= intent.asset_in.gas_for_transfer()
         );
-
-        // TODO: emit log
 
         Ok(
             Self::transfer(id, intent.asset_in.clone(), intent.initiator.clone())
@@ -72,13 +75,22 @@ impl SwapIntentContractImpl {
         let swap = intent.as_available().ok_or(SwapError::WrongStatus)?.clone();
 
         if transfer_asset_in.is_ok() {
+            Dep2Event::Rollbacked(id)
+                .log_json()
+                .map_err(SwapError::JSON)?;
             self.intents.remove(id);
         } else {
-            // TODO: log
-            *intent = SwapIntentStatus::Lost(LostAsset {
+            let lost = LostAsset {
                 asset: swap.asset_in,
                 recipient: swap.initiator,
-            });
+            };
+            Dep2Event::Lost {
+                intent_id: id,
+                asset: &lost,
+            }
+            .log_json()
+            .map_err(SwapError::JSON)?;
+            *intent = SwapIntentStatus::Lost(lost);
         }
         Ok(transfer_asset_in.is_ok())
     }

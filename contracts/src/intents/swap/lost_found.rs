@@ -15,6 +15,7 @@ pub trait LostFound {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
 pub struct LostAsset {
+    #[serde(flatten)]
     pub asset: Asset,
     pub recipient: AccountId,
 }

@@ -11,6 +11,7 @@ pub use self::{action::*, asset::*, error::*, intent::*, lost_found::*, native::
 mod action;
 mod asset;
 mod error;
+pub mod events;
 mod intent;
 mod lost_found;
 mod native;

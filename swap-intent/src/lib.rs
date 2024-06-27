@@ -1,16 +1,15 @@
 use defuse_contracts::{
     intents::swap::{
-        Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, FtAmount, IntentId, LostAsset,
-        SwapError, SwapIntent, SwapIntentContract, SwapIntentStatus,
+        events::Dep2Event, Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, FtAmount,
+        IntentId, LostAsset, SwapError, SwapIntent, SwapIntentContract, SwapIntentStatus,
     },
-    utils::Mutex,
+    utils::{JsonLog, Mutex},
 };
 
 use near_sdk::{
     env,
     json_types::U128,
-    log, near,
-    serde::Serialize,
+    near,
     serde_json::{self, json},
     store::lookup_map::{Entry, LookupMap},
     AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise, PromiseError, PromiseOrValue,
@@ -65,21 +64,31 @@ impl SwapIntentContractImpl {
         if create.deadline.has_expired() {
             return Err(SwapError::Expired);
         }
+
+        // TODO: storage management suggestions:
+        //   * allow creating intents **starting** from only whitelisted assets
+        //     which must have a non-zero price. This would prevent initiators
+        //     from locking their funds in created intents by having an
+        //     incentive to withdraw them back and free allocated storage
+        //   * to create an intent from an asset that is not whitelisted,
+        //     users must call storage_deposit as in Storage Management (NEP-145)
+
         match self.intents.entry(create.id) {
             Entry::Occupied(entry) => {
                 return Err(SwapError::AlreadyExists(entry.key().clone()));
             }
             Entry::Vacant(entry) => {
-                entry.insert(
-                    SwapIntentStatus::Available(SwapIntent {
-                        initiator: sender,
-                        asset_in,
-                        asset_out: create.asset_out,
-                        recipient: create.recipient,
-                        deadline: create.deadline,
-                    })
-                    .into(),
-                );
+                let intent = SwapIntent {
+                    initiator: sender,
+                    asset_in,
+                    asset_out: create.asset_out,
+                    recipient: create.recipient,
+                    deadline: create.deadline,
+                };
+                Dep2Event::Created(&intent)
+                    .log_json()
+                    .map_err(SwapError::JSON)?;
+                entry.insert(SwapIntentStatus::Available(intent).into());
             }
         }
         Ok(())
@@ -121,9 +130,6 @@ impl SwapIntentContractImpl {
         {
             return Err(SwapError::InsufficientGas);
         }
-
-        // TODO: structured JSON logs
-        log!("Intent '{}' fulfilled successfully", execute.id);
 
         Ok(Self::transfer(
             &execute.id,
@@ -194,18 +200,20 @@ impl SwapIntentContractImpl {
                 .as_available()
                 .ok_or(SwapError::WrongStatus)?;
             return Ok(match intent.asset_out {
-                Asset::Native(amount) => {
-                    // TODO: what if it fails?
-                    // refund manually
-                    Self::transfer_native(amount, asset_out_sender).into()
-                    // TODO: return promise that returns bool
+                Asset::Native(_) => {
+                    // Native transfer can fail only if we don't have enough NEAR.
+                    // Since we create native intents with the exact amount
+                    // of attached NEAR, this situation can only happen if
+                    // we run out of NEAR due to incorrect storage management
+                    // while creating new intents.
+                    unreachable!()
                 }
                 Asset::Ft(FtAmount { amount, .. }) => {
-                    // return back to sender
+                    // return back to sender: ft_on_transfer(asset_out)
                     PromiseOrValue::Value(json!(U128(amount)))
                 }
                 Asset::Nft(_) => {
-                    // return back to sender
+                    // return back to sender: nft_on_transfer(asset_out)
                     PromiseOrValue::Value(json!(true))
                 }
             });
@@ -231,7 +239,6 @@ impl SwapIntentContractImpl {
 
 #[near]
 impl SwapIntentContractImpl {
-    // TODO: return enum AssetOnTransferOutput
     #[private]
     pub fn resolve_transfer_asset_in(
         &mut self,
@@ -264,19 +271,29 @@ impl SwapIntentContractImpl {
         if transfer_asset_in_succeeded {
             self.intents.remove(id);
         } else {
-            // TODO: log
-            *intent = SwapIntentStatus::Lost(LostAsset {
+            let lost = LostAsset {
                 asset: swap.asset_in.clone(),
                 recipient: asset_in_recipient,
-            });
+            };
+            Dep2Event::Lost {
+                intent_id: id,
+                asset: &lost,
+            }
+            .log_json()
+            .map_err(SwapError::JSON)?;
+            *intent = SwapIntentStatus::Lost(lost);
         }
 
+        Dep2Event::Executed(id)
+            .log_json()
+            .map_err(SwapError::JSON)?;
+
         Ok(match asset_out {
-            // close self.native_action(asset_out)
+            // native_action(asset_out)
             Asset::Native(_) => json!(true),
-            // close ft_on_transfer(asset_out)
+            // ft_on_transfer(asset_out)
             Asset::Ft(_) => json!(U128(0)),
-            // close nft_on_transfer(asset_out)
+            // nft_on_transfer(asset_out)
             Asset::Nft(_) => json!(false),
         })
     }

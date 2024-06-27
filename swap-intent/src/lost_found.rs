@@ -1,4 +1,7 @@
-use defuse_contracts::intents::swap::{IntentId, LostAsset, LostFound, SwapError};
+use defuse_contracts::{
+    intents::swap::{events::Dep2Event, IntentId, LostAsset, LostFound, SwapError},
+    utils::JsonLog,
+};
 use near_sdk::{env, near, NearToken, Promise, PromiseError};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
@@ -59,6 +62,7 @@ impl SwapIntentContractImpl {
 
         if transfer.is_ok() {
             self.intents.remove(id);
+            Dep2Event::Found(id).log_json().map_err(SwapError::JSON)?;
         }
         Ok(transfer.is_ok())
     }
