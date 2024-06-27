@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::Path;
 
-use lazy_static::lazy_static;
 use near_workspaces::{types::NearToken, Account, Network, Worker};
 
 pub fn read_wasm(name: impl AsRef<Path>) -> Vec<u8> {
@@ -11,11 +10,6 @@ pub fn read_wasm(name: impl AsRef<Path>) -> Vec<u8> {
         .with_extension("wasm");
     fs::read(filename).unwrap()
 }
-lazy_static! {
-    static ref CONTROLLER_WASM: Vec<u8> = read_wasm("defuse-controller-contract");
-    static ref MPC_INTENT_WASM: Vec<u8> = read_wasm("defuse-mpc-intent-contract");
-}
-
 pub struct Sandbox {
     worker: Worker<near_workspaces::network::Sandbox>,
     root_account: Account,

@@ -14,18 +14,18 @@ pub enum Asset {
     Nft(NftItem),
 }
 
-const GAS_FOR_NATIVE_TRANSFER: Gas = Gas::from_ggas(450);
-// TODO: more accurate numbers
-pub const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(20);
-pub const GAS_FOR_NFT_TRANSFER: Gas = Gas::from_tgas(20);
-
 impl Asset {
+    const GAS_FOR_NATIVE_TRANSFER: Gas = Gas::from_ggas(450);
+    // TODO: more accurate numbers
+    pub const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(20);
+    pub const GAS_FOR_NFT_TRANSFER: Gas = Gas::from_tgas(20);
+
     #[must_use]
     pub const fn gas_for_transfer(&self) -> Gas {
         match self {
-            Self::Native(_) => GAS_FOR_NATIVE_TRANSFER,
-            Self::Ft(_) => GAS_FOR_FT_TRANSFER,
-            Self::Nft(_) => GAS_FOR_NFT_TRANSFER,
+            Self::Native(_) => Self::GAS_FOR_NATIVE_TRANSFER,
+            Self::Ft(_) => Self::GAS_FOR_FT_TRANSFER,
+            Self::Nft(_) => Self::GAS_FOR_NFT_TRANSFER,
         }
     }
 }

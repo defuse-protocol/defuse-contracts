@@ -21,8 +21,6 @@ mod native;
 mod nft;
 mod rollback;
 
-const GAS_FOR_RESOLVE_SWAP: Gas = Gas::from_tgas(5);
-
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct SwapIntentContractImpl {
@@ -102,7 +100,6 @@ impl SwapIntentContractImpl {
         received: Asset,
         execute: ExecuteSwapIntentAction,
     ) -> Result<Promise, SwapIntentError> {
-        // we remove asset here since there is no need to process
         let intent = self
             .intents
             .get_mut(&execute.id)
@@ -112,24 +109,12 @@ impl SwapIntentContractImpl {
             .ok_or(SwapIntentError::WrongStatus)?;
 
         if intent.has_expired() {
+            // TODO: auto-rollback?
             return Err(SwapIntentError::Expired);
         }
         if received != intent.asset_out {
             return Err(SwapIntentError::WrongAsset);
         }
-
-        // ensure that we have enough gas to transfer both assets
-        // TODO: maybe we can omit this check and specify static gas manually,
-        // so that the current tx would revert and promises would not be created
-        assert!(
-            env::prepaid_gas().saturating_sub(env::used_gas())
-                >= intent
-                    .asset_in
-                    .gas_for_transfer()
-                    .saturating_add(intent.asset_out.gas_for_transfer())
-                    // TODO: reserve gas for multiple stages
-                    .saturating_add(GAS_FOR_RESOLVE_SWAP)
-        );
 
         Ok(Self::transfer(
             &execute.id,
@@ -142,16 +127,19 @@ impl SwapIntentContractImpl {
                 .clone(),
         )
         .then(
-            Self::ext(env::current_account_id()).resolve_transfer_asset_out(
-                &execute.id,
-                sender.clone(),
-                execute.recipient,
-            ),
+            Self::ext(env::current_account_id())
+                .with_static_gas(
+                    Self::GAS_FOR_RESOLVE_TRANSFER_ASSET_OUT
+                        .saturating_add(intent.asset_in.gas_for_transfer())
+                        .saturating_add(Self::GAS_FOR_RESOLVE_TRANSFER_ASSET_IN),
+                )
+                .resolve_transfer_asset_out(&execute.id, sender, execute.recipient),
         ))
     }
 
+    /// Transfer asset to recipient (with static gas)
     #[inline]
-    fn transfer(id: &IntentId, asset: Asset, recipient: AccountId) -> Promise {
+    pub(crate) fn transfer(id: &IntentId, asset: Asset, recipient: AccountId) -> Promise {
         match asset {
             Asset::Native(amount) => Self::transfer_native(amount, recipient),
             Asset::Ft(ft) => Self::transfer_ft(ft, recipient, format!("Swap Intent '{id}'")),
@@ -162,12 +150,15 @@ impl SwapIntentContractImpl {
 
 #[near]
 impl SwapIntentContractImpl {
+    // TODO: more accurate value
+    const GAS_FOR_RESOLVE_TRANSFER_ASSET_OUT: Gas = Gas::from_tgas(5);
+
     #[private]
     pub fn resolve_transfer_asset_out(
         &mut self,
         id: &IntentId,
         asset_out_sender: AccountId,
-        #[callback_result] transfer_asset_out: Result<(), PromiseError>,
+        #[callback_result] transfer_asset_out: &Result<(), PromiseError>,
         asset_in_recipient: Option<AccountId>,
     ) -> PromiseOrValue<serde_json::Value> {
         self.internal_resolve_transfer_asset_out(
@@ -234,11 +225,14 @@ impl SwapIntentContractImpl {
 
 #[near]
 impl SwapIntentContractImpl {
+    // TODO: more accurate value
+    const GAS_FOR_RESOLVE_TRANSFER_ASSET_IN: Gas = Gas::from_tgas(5);
+
     #[private]
     pub fn resolve_transfer_asset_in(
         &mut self,
         id: &IntentId,
-        #[callback_result] transfer_asset_in: Result<(), PromiseError>,
+        #[callback_result] transfer_asset_in: &Result<(), PromiseError>,
         asset_in_recipient: AccountId,
     ) -> serde_json::Value {
         self.internal_resolve_transfer_asset_in(id, transfer_asset_in.is_ok(), asset_in_recipient)

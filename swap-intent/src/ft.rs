@@ -1,6 +1,4 @@
-use defuse_contracts::intents::swap::{
-    Asset, FtAmount, SwapIntentAction, SwapIntentError, GAS_FOR_FT_TRANSFER,
-};
+use defuse_contracts::intents::swap::{Asset, FtAmount, SwapIntentAction, SwapIntentError};
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
 use near_sdk::{
     env, json_types::U128, near, serde_json, AccountId, NearToken, Promise, PromiseOrValue,
@@ -28,6 +26,9 @@ impl SwapIntentContractImpl {
         amount: U128,
         msg: impl AsRef<str>,
     ) -> Result<PromiseOrValue<U128>, SwapIntentError> {
+        if amount.0 == 0 {
+            return Err(SwapIntentError::ZeroAmount);
+        }
         let action = serde_json::from_str(msg.as_ref()).map_err(SwapIntentError::JSON)?;
 
         let received = Asset::Ft(FtAmount {
@@ -58,7 +59,7 @@ impl SwapIntentContractImpl {
         // protocols
         ext_ft_core::ext(token)
             .with_attached_deposit(NearToken::from_yoctonear(1))
-            .with_static_gas(GAS_FOR_FT_TRANSFER)
+            .with_static_gas(Asset::GAS_FOR_FT_TRANSFER)
             .ft_transfer(recipient, amount.into(), memo.into())
     }
 }

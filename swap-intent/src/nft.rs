@@ -1,6 +1,4 @@
-use defuse_contracts::intents::swap::{
-    Asset, NftItem, SwapIntentAction, SwapIntentError, GAS_FOR_NFT_TRANSFER,
-};
+use defuse_contracts::intents::swap::{Asset, NftItem, SwapIntentAction, SwapIntentError};
 use near_contract_standards::non_fungible_token::{
     core::{ext_nft_core, NonFungibleTokenReceiver},
     TokenId,
@@ -64,7 +62,7 @@ impl SwapIntentContractImpl {
         // protocols
         ext_nft_core::ext(collection)
             .with_attached_deposit(NearToken::from_yoctonear(1))
-            .with_static_gas(GAS_FOR_NFT_TRANSFER)
+            .with_static_gas(Asset::GAS_FOR_NFT_TRANSFER)
             .nft_transfer(recipient, token_id, None, memo.into())
     }
 }

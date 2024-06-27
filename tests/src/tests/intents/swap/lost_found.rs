@@ -301,7 +301,7 @@ async fn test_fulfill_lost_found_ft() {
     );
 
     assert!(user2
-        .fulfill_swap_intent(
+        .execute_swap_intent(
             swap_intent_shard.id(),
             Asset::Native(NearToken::from_near(5)),
             ExecuteSwapIntentAction {

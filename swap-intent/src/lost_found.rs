@@ -2,7 +2,7 @@ use defuse_contracts::{
     intents::swap::{events::Dep2Event, IntentId, LostAsset, LostFound, SwapIntentError},
     utils::JsonLog,
 };
-use near_sdk::{env, near, NearToken, Promise, PromiseError};
+use near_sdk::{env, near, Gas, NearToken, Promise, PromiseError};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 
@@ -27,7 +27,7 @@ impl SwapIntentContractImpl {
 
         Ok(Self::transfer(id, asset.clone(), recipient.clone()).then(
             Self::ext(env::current_account_id())
-                // TODO: check if enough gas
+                .with_static_gas(Self::GAS_FOR_RESOLVE_LOST_FOUND)
                 .resolve_lost_found(id),
         ))
     }
@@ -35,13 +35,16 @@ impl SwapIntentContractImpl {
 
 #[near]
 impl SwapIntentContractImpl {
+    const GAS_FOR_RESOLVE_LOST_FOUND: Gas = Gas::from_tgas(1);
+
     #[private]
     pub fn resolve_lost_found(
         &mut self,
         id: &IntentId,
         #[callback_result] transfer: &Result<(), PromiseError>,
     ) -> bool {
-        self.internal_resolve_lost_found(id, transfer).unwrap()
+        self.internal_resolve_lost_found(id, transfer.is_ok())
+            .unwrap()
     }
 }
 
@@ -49,7 +52,7 @@ impl SwapIntentContractImpl {
     fn internal_resolve_lost_found(
         &mut self,
         id: &IntentId,
-        transfer: &Result<(), PromiseError>,
+        transfer_succeeded: bool,
     ) -> Result<bool, SwapIntentError> {
         self.intents
             .get_mut(id)
@@ -58,12 +61,13 @@ impl SwapIntentContractImpl {
             .and_then(|status| status.as_lost())
             .ok_or(SwapIntentError::WrongStatus)?;
 
-        if transfer.is_ok() {
+        if transfer_succeeded {
             self.intents.remove(id);
             Dep2Event::Found(id)
                 .log_json()
                 .map_err(SwapIntentError::JSON)?;
         }
-        Ok(transfer.is_ok())
+
+        Ok(transfer_succeeded)
     }
 }

@@ -34,7 +34,7 @@ pub trait SwapIntentShard {
         id: &IntentId,
     ) -> anyhow::Result<Option<Mutex<SwapIntentStatus>>>;
 
-    async fn fulfill_swap_intent(
+    async fn execute_swap_intent(
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
@@ -127,17 +127,17 @@ impl SwapIntentShard for near_workspaces::Account {
             .map_err(Into::into)
     }
 
-    async fn fulfill_swap_intent(
+    async fn execute_swap_intent(
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
-        fulfill: ExecuteSwapIntentAction,
+        execute: ExecuteSwapIntentAction,
     ) -> anyhow::Result<bool> {
         match asset_in {
             Asset::Native(amount) => self
                 .call(swap_intent_id, "native_action")
                 .args_json(json!({
-                    "action": SwapIntentAction::Execute(fulfill),
+                    "action": SwapIntentAction::Execute(execute),
                 }))
                 .deposit(amount)
                 .max_gas()
@@ -152,7 +152,7 @@ impl SwapIntentShard for near_workspaces::Account {
                     swap_intent_id,
                     amount,
                     None,
-                    &serde_json::to_string(&SwapIntentAction::Execute(fulfill)).unwrap(),
+                    &serde_json::to_string(&SwapIntentAction::Execute(execute)).unwrap(),
                 )
                 .await?
                 == amount),
@@ -165,7 +165,7 @@ impl SwapIntentShard for near_workspaces::Account {
                     swap_intent_id,
                     token_id,
                     None,
-                    serde_json::to_string(&SwapIntentAction::Execute(fulfill)).unwrap(),
+                    serde_json::to_string(&SwapIntentAction::Execute(execute)).unwrap(),
                 )
                 .await
             }
