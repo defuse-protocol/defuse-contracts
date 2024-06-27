@@ -6,7 +6,7 @@ use defuse_contracts::{
     utils::Mutex,
 };
 use lazy_static::lazy_static;
-use near_sdk::AccountId;
+use near_sdk::{AccountId, NearToken};
 use near_workspaces::Contract;
 use serde_json::json;
 
@@ -175,6 +175,7 @@ impl SwapIntentShard for near_workspaces::Account {
             .args_json(json!({
                 "id": id,
             }))
+            .deposit(NearToken::from_yoctonear(1))
             .max_gas()
             .transact()
             .await?
@@ -188,6 +189,7 @@ impl SwapIntentShard for near_workspaces::Account {
             .args_json(json!({
                 "id": id,
             }))
+            .deposit(NearToken::from_yoctonear(1))
             .max_gas()
             .transact()
             .await?

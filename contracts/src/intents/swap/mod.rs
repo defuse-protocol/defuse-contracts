@@ -2,29 +2,25 @@ use near_contract_standards::{
     fungible_token::receiver::FungibleTokenReceiver,
     non_fungible_token::{core::NonFungibleTokenReceiver, TokenId},
 };
-use near_sdk::{env, ext_contract, near, AccountId, Gas, NearToken, Promise, PromiseOrValue};
+use near_sdk::{env, ext_contract, near, AccountId, Gas, NearToken};
 use serde_with::{serde_as, DefaultOnNull, DisplayFromStr};
 
 use crate::utils::Mutex;
 
-pub use self::error::*;
+pub use self::{error::*, lost_found::*, native::*, rollback::*};
 
 mod error;
+mod lost_found;
+mod native;
+mod rollback;
 
 pub type IntentId = String;
 
 #[ext_contract(ext_swap_intent)]
-pub trait SwapIntentContract: FungibleTokenReceiver + NonFungibleTokenReceiver {
+pub trait SwapIntentContract:
+    NativeAction + FungibleTokenReceiver + NonFungibleTokenReceiver + Rollback + LostFound
+{
     fn get_swap_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntent>>;
-
-    // TODO: separate native_create_swap_intent() and
-    // native_create_fulfill_intent()
-    fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<bool>;
-
-    // TODO: return bool?
-    fn rollback_intent(&mut self, id: IntentId) -> PromiseOrValue<bool>;
-
-    fn lost_found(&mut self, id: &IntentId) -> Promise;
 }
 
 #[derive(Debug, Clone)]
@@ -141,7 +137,7 @@ impl Swap {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[serde_as]
 #[near(serializers = [borsh, json])]
-pub struct LostFound {
+pub struct Lost {
     pub asset: Asset,
     pub recipient: AccountId,
 }
@@ -152,7 +148,7 @@ pub struct LostFound {
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum SwapIntent {
     Swap(Swap),
-    LostFound(LostFound),
+    Lost(Lost),
 }
 
 impl SwapIntent {
@@ -163,7 +159,7 @@ impl SwapIntent {
 
     #[inline]
     pub fn is_lost_found(&self) -> bool {
-        matches!(self, Self::LostFound(_))
+        matches!(self, Self::Lost(_))
     }
 
     #[inline]
@@ -183,17 +179,17 @@ impl SwapIntent {
     }
 
     #[inline]
-    pub fn as_lost_found(&self) -> Option<&LostFound> {
+    pub fn as_lost(&self) -> Option<&Lost> {
         match self {
-            Self::LostFound(lost_found) => Some(lost_found),
+            Self::Lost(lost_found) => Some(lost_found),
             _ => None,
         }
     }
 
     #[inline]
-    pub fn as_lost_found_mut(&mut self) -> Option<&mut LostFound> {
+    pub fn as_lost_mut(&mut self) -> Option<&mut Lost> {
         match self {
-            Self::LostFound(lost_found) => Some(lost_found),
+            Self::Lost(lost_found) => Some(lost_found),
             _ => None,
         }
     }

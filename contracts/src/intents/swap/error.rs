@@ -24,4 +24,6 @@ pub enum SwapError {
     Unlocked,
     #[error("wrong status")]
     WrongStatus,
+    #[error("zero amount")]
+    ZeroAmount,
 }

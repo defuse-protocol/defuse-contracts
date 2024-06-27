@@ -1,4 +1,6 @@
-use defuse_contracts::intents::swap::{Asset, FtAmount, GAS_FOR_FT_TRANSFER};
+use defuse_contracts::intents::swap::{
+    Asset, FtAmount, SwapError, SwapIntentAction, GAS_FOR_FT_TRANSFER,
+};
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
 use near_sdk::{
     env, json_types::U128, near, serde_json, AccountId, NearToken, Promise, PromiseOrValue,
@@ -14,28 +16,37 @@ impl FungibleTokenReceiver for SwapIntentContractImpl {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
-        let action = serde_json::from_str(&msg).expect("JSON");
-
-        match self
-            .handle_action(
-                sender_id,
-                Asset::Ft(FtAmount {
-                    token: env::predecessor_account_id(),
-                    amount: amount.0,
-                }),
-                action,
-            )
+        self.internal_ft_on_transfer(sender_id, amount, msg)
             .unwrap()
-        {
-            // TODO: separate callback
-            PromiseOrValue::Value(true) => PromiseOrValue::Value(0.into()),
-            PromiseOrValue::Value(false) => PromiseOrValue::Value(amount),
-            PromiseOrValue::Promise(promise) => PromiseOrValue::Promise(promise),
-        }
     }
 }
 
 impl SwapIntentContractImpl {
+    fn internal_ft_on_transfer(
+        &mut self,
+        sender_id: AccountId,
+        amount: U128,
+        msg: String,
+    ) -> Result<PromiseOrValue<U128>, SwapError> {
+        let action = serde_json::from_str(&msg).map_err(SwapError::JSON)?;
+
+        let received = Asset::Ft(FtAmount {
+            token: env::predecessor_account_id(),
+            amount: amount.0,
+        });
+
+        Ok(match action {
+            SwapIntentAction::Create(create) => {
+                self.create_intent(sender_id, received, create)?;
+                // intent was successfully created, do not refund
+                PromiseOrValue::Value(0.into())
+            }
+            SwapIntentAction::Fulfill(fulfill) => {
+                self.fulfill_intent(sender_id, received, fulfill)?.into()
+            }
+        })
+    }
+
     #[inline]
     pub(crate) fn transfer_ft(
         FtAmount { token, amount }: FtAmount,
