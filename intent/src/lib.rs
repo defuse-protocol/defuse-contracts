@@ -3,7 +3,7 @@ use defuse_contracts::intent::{
 };
 
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
-use near_contract_standards::storage_management::StorageBalance;
+use near_contract_standards::storage_management::{ext_storage_management, StorageBalance};
 use near_gas::NearGas;
 use near_sdk::{
     env, ext_contract,
@@ -77,10 +77,7 @@ impl IntentContract for IntentContractImpl {
         );
 
         require!(
-            env::prepaid_gas()
-                .checked_sub(env::used_gas())
-                .unwrap_or_default()
-                >= ROLLBACK_INTENT_GAS,
+            env::prepaid_gas().saturating_sub(env::used_gas()) >= ROLLBACK_INTENT_GAS,
             "Not enough gas to rollback the intent"
         );
 
@@ -388,10 +385,4 @@ impl IntentContractImpl {
 
         Ok(promise)
     }
-}
-
-// Could be removed after merging https://github.com/near/near-sdk-rs/pull/1208
-#[ext_contract(ext_storage_management)]
-pub trait StorageManagement {
-    fn storage_balance_of(&self, account_id: AccountId) -> Option<StorageBalance>;
 }
