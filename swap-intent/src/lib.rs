@@ -63,6 +63,18 @@ impl SwapIntentContractImpl {
             return Err(SwapIntentError::Expired);
         }
 
+        // prevent from swapping to zero amount
+        if match create.asset_out {
+            Asset::Native(amount) => amount.is_zero(),
+            Asset::Ft(FtAmount { amount, .. }) => amount == 0,
+            Asset::Nft(_) => {
+                // we can't know price of NFT
+                false
+            }
+        } {
+            return Err(SwapIntentError::ZeroAmount);
+        }
+
         // TODO: storage management suggestions:
         //   * allow creating intents **starting** from only whitelisted assets
         //     which must have a non-zero price. This would prevent initiators

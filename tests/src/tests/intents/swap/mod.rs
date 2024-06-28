@@ -19,6 +19,7 @@ mod lost_found;
 mod rollback;
 mod swap_intent_shard;
 mod wrong_asset;
+mod zero_amount;
 
 /// Completely synthetic case, but still a valid one
 #[tokio::test]
