@@ -8,7 +8,7 @@ mod nft;
 #[near(serializers=[borsh])]
 enum Prefix {
     OwnerById,
-    Metatada,
+    Metadata,
     Enumeration,
     Approvals,
 }
