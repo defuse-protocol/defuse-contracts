@@ -240,10 +240,9 @@ impl IntentContractImpl {
         #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
     ) -> PromiseOrValue<U128> {
         match result {
-            Ok(Some(_)) => match self.execute_intent(id, amount) {
-                Ok(promise) => promise,
-                Err(e) => env::panic_str(&e.to_string()),
-            },
+            Ok(Some(_)) => self
+                .execute_intent(id, amount)
+                .unwrap_or_else(|e| env::panic_str(&e.to_string())),
             Ok(None) => env::panic_str(&format!("No storage deposit for: {solver_id}")),
             Err(e) => env::panic_str(&format!("Error getting storage deposit: {e:?}")),
         }
