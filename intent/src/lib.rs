@@ -142,7 +142,7 @@ impl FungibleTokenReceiver for IntentContractImpl {
                 );
                 let detailed_intent = self
                     .intents
-                    .get_mut(&id)
+                    .get(&id)
                     .ok_or_else(|| IntentError::NotFound(id.clone()))
                     .unwrap();
 
