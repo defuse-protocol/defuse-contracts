@@ -274,7 +274,7 @@ async fn test_intent_without_solver_storage_deposit() {
 
     // Check that the balances haven't been changed.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 11000);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
     assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
 
     assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
@@ -361,6 +361,71 @@ async fn test_intent_with_lack_of_gas_for_execution() {
         "{:?}",
         result.status()
     );
+}
+
+#[tokio::test]
+async fn test_concurrent_solvers() {
+    let env = EnvBuilder::new()
+        .with_storage_deposit()
+        .with_concurrent_solver()
+        .build()
+        .await;
+
+    // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
+    env.token_a.ft_transfer(env.user_id(), 1000).await;
+    env.token_b.ft_transfer(env.solver_id(), 2000).await;
+    env.token_b.ft_transfer(env.solver2_id(), 2000).await;
+
+    // Check that the user doesn't have TokenB and the solver TokenA.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver2_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver2_id()).await, 2000);
+
+    // User creates intent for swapping 1000 TokenA to 2000 TokenB.
+    create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
+
+    // Check that intent contract owns user's TokenA.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+
+    // The solver is happy with such intent and executes it.
+    let result1 = env
+        .solver
+        .execute_intent_async(env.token_b.id(), env.intent.id(), "1", 2000.into())
+        .await;
+    env.sandbox.skip_blocks(1).await;
+    // The solver2 is happy with such intent and executes it too.
+    let result2 = env
+        .solver2
+        .as_ref()
+        .unwrap()
+        .execute_intent_async(env.token_b.id(), env.intent.id(), "1", 2000.into())
+        .await;
+
+    assert!(result1.await.unwrap().is_success());
+    assert!(result2.await.unwrap().is_success());
+
+    // Check balances after intent execution.
+    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 2000);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 1000);
+    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 0);
+
+    assert_eq!(env.token_a.ft_balance_of(env.solver2_id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.solver2_id()).await, 2000);
+
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 0);
+    assert_eq!(env.token_b.ft_balance_of(env.intent.id()).await, 0);
+
+    // Check that intent has been removed form the state.
+    let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
+    assert!(matches!(intent.status(), Status::Completed));
 }
 
 async fn test_expired_intent(past: Expiration, future: Expiration) {

@@ -2,6 +2,7 @@ use defuse_contracts::intent::{Action, DetailedIntent, Intent};
 use near_gas::NearGas;
 
 use near_sdk::json_types::U128;
+use near_workspaces::operations::TransactionStatus;
 use near_workspaces::{result::ExecutionFinalResult, types::NearToken, Account, AccountId};
 use serde_json::json;
 
@@ -28,6 +29,13 @@ pub trait Intending {
         id: &str,
         amount: U128,
     );
+    async fn execute_intent_async(
+        &self,
+        contract_id: &AccountId,
+        intent_account_id: &AccountId,
+        id: &str,
+        amount: U128,
+    ) -> TransactionStatus;
     async fn execute_intent_with_gas(
         &self,
         contract_id: &AccountId,
@@ -134,6 +142,31 @@ impl Intending for Account {
             .await
             .unwrap();
         assert!(result.is_success(), "execution intent error: {result:#?}");
+    }
+
+    async fn execute_intent_async(
+        &self,
+        contract_id: &AccountId,
+        intent_account_id: &AccountId,
+        id: &str,
+        amount: U128,
+    ) -> TransactionStatus {
+        let intent = Action::ExecuteIntent(id.to_string());
+        let msg = intent.encode().expect("encode Action");
+        let args = json!({
+            "receiver_id": intent_account_id,
+            "amount": amount,
+            "memo": "Execute intent: NEP-141 to NEP-141",
+            "msg": msg
+        });
+
+        self.call(contract_id, "ft_transfer_call")
+            .args_json(args)
+            .deposit(NearToken::from_yoctonear(1))
+            .max_gas()
+            .transact_async()
+            .await
+            .unwrap()
     }
 
     async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> ExecutionFinalResult {

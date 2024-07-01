@@ -5,24 +5,18 @@ use thiserror::Error as ThisError;
 pub enum IntentError {
     #[error("Borsh")]
     Borsh,
-    #[error("base64: {0}")]
+    #[error("Base64: {0}")]
     Base64(#[from] base64::DecodeError),
-    #[error("intent '{0}' was not found")]
-    NotFound(
-        /// ID
-        String,
-    ),
-    #[error("intent '{0}' already exists")]
-    AlreadyExists(
-        /// ID
-        String,
-    ),
-    #[error("intent has been already expired")]
+    #[error("Intent '{0}' was not found")]
+    NotFound(String), // id
+    #[error("Intent '{0}' already exists")]
+    AlreadyExists(String), // id
+    #[error("Intent is already expired")]
     Expired,
-    #[error("intent is in progress")]
+    #[error("Intent is in progress")]
     InProgress,
-    #[error("wrong status")]
+    #[error("Wrong intent status")]
     WrongStatus,
-    #[error("amount mismatch")]
+    #[error("Amount mismatch")]
     AmountMismatch,
 }
