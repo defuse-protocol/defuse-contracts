@@ -3,7 +3,7 @@ use near_workspaces::{Account, AccountId, Contract};
 use serde_json::json;
 use std::str::FromStr;
 
-const STORAGE_DEPOSIT: NearToken = NearToken::from_yoctonear(2_350_000_000_000_000_000_000);
+const STORAGE_DEPOSIT: NearToken = NearToken::from_yoctonear(1_250_000_000_000_000_000_000);
 
 pub trait Token {
     async fn ft_balance_of(&self, account_id: &AccountId) -> u128;

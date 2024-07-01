@@ -1,4 +1,5 @@
 use defuse_contracts::intent::{Action, DetailedIntent, Intent};
+use near_gas::NearGas;
 
 use near_sdk::json_types::U128;
 use near_workspaces::{result::ExecutionFinalResult, types::NearToken, Account, AccountId};
@@ -12,12 +13,28 @@ pub trait Intending {
         id: &str,
         intent: Intent,
     );
+    async fn create_intent_with_gas(
+        &self,
+        contract_id: &AccountId,
+        intent_account_id: &AccountId,
+        id: &str,
+        intent: Intent,
+        gas: NearGas,
+    );
     async fn execute_intent(
         &self,
         contract_id: &AccountId,
         intent_account_id: &AccountId,
         id: &str,
         amount: U128,
+    );
+    async fn execute_intent_with_gas(
+        &self,
+        contract_id: &AccountId,
+        intent_account_id: &AccountId,
+        id: &str,
+        amount: U128,
+        gas: NearGas,
     );
     async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> ExecutionFinalResult;
     async fn add_solver(&self, contract_id: &AccountId, solver_id: &AccountId);
@@ -35,6 +52,24 @@ impl Intending for Account {
         id: &str,
         intent: Intent,
     ) {
+        self.create_intent_with_gas(
+            contract_id,
+            intent_account_id,
+            id,
+            intent,
+            NearGas::from_tgas(50),
+        )
+        .await;
+    }
+
+    async fn create_intent_with_gas(
+        &self,
+        contract_id: &AccountId,
+        intent_account_id: &AccountId,
+        id: &str,
+        intent: Intent,
+        gas: NearGas,
+    ) {
         let amount = intent.send.amount;
         let intent = Action::CreateIntent(id.to_string(), intent);
         let msg = intent.encode().expect("encode Action");
@@ -49,7 +84,7 @@ impl Intending for Account {
             .call(contract_id, "ft_transfer_call")
             .args_json(args)
             .deposit(NearToken::from_yoctonear(1))
-            .max_gas()
+            .gas(gas)
             .transact()
             .await
             .unwrap();
@@ -62,6 +97,24 @@ impl Intending for Account {
         intent_account_id: &AccountId,
         id: &str,
         amount: U128,
+    ) {
+        self.execute_intent_with_gas(
+            contract_id,
+            intent_account_id,
+            id,
+            amount,
+            NearGas::from_tgas(65),
+        )
+        .await;
+    }
+
+    async fn execute_intent_with_gas(
+        &self,
+        contract_id: &AccountId,
+        intent_account_id: &AccountId,
+        id: &str,
+        amount: U128,
+        gas: NearGas,
     ) {
         let intent = Action::ExecuteIntent(id.to_string());
         let msg = intent.encode().expect("encode Action");
@@ -76,7 +129,7 @@ impl Intending for Account {
             .call(contract_id, "ft_transfer_call")
             .args_json(args)
             .deposit(NearToken::from_yoctonear(1))
-            .max_gas()
+            .gas(gas)
             .transact()
             .await
             .unwrap();
@@ -88,7 +141,7 @@ impl Intending for Account {
             .args_json(json!({
                 "id": id
             }))
-            .max_gas()
+            .gas(NearGas::from_tgas(15))
             .transact()
             .await
             .unwrap()

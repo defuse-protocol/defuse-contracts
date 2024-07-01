@@ -7,19 +7,24 @@ default-members = ["contracts"]
 edition = "2021"
 
 [workspace.dependencies]
-defuse-account-contract.path = "./account"
-defuse-contracts = { path = "./contracts", default-features = false }
-defuse-controller-contract.path = "./controller"
-defuse-intent-contract.path = "./intent"
+defuse-account-contract.path = "account"
+defuse-contracts = { path = "contracts", default-features = false }
+defuse-controller-contract.path = "controller"
+defuse-intent-contract.path = "intent"
 
 anyhow = "1"
 lazy_static = "1.4"
-near-contract-standards = "5.1.0"
+near-contract-standards = "5.1"
+near-gas = "0.2"
 near-sdk = "5.1"
 near-workspaces = "0.10"
 serde_json = "1"
 thiserror = "1"
 tokio = { version = "1.38", default-features = false }
+
+[patch.crates-io]
+near-sdk = { git = "https://github.com/near/near-sdk-rs", rev = "c843e9a" }
+near-contract-standards = { git = "https://github.com/near/near-sdk-rs", rev = "c843e9a" }
 
 [workspace.lints.clippy]
 all = "deny"
