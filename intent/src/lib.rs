@@ -59,7 +59,7 @@ impl IntentContract for IntentContractImpl {
         if !detailed_intent.could_be_rollbacked() {
             env::panic_str("Too early to roll back the intent");
         }
-        assert!(
+        require!(
             matches!(detailed_intent.status(), Status::Available),
             "Only intents with created status could be rolled back"
         );
@@ -68,7 +68,7 @@ impl IntentContract for IntentContractImpl {
         let predecessor_id = env::predecessor_account_id();
         let intent = detailed_intent.intent();
 
-        assert!(
+        require!(
             predecessor_id == intent.initiator
                 || predecessor_id == self.owner_id
                 || predecessor_id == env::current_account_id(),
@@ -191,7 +191,7 @@ impl IntentContractImpl {
         intent_id: &String,
         status: Status,
         amount: U128,
-    ) -> U128 {
+    ) -> PromiseOrValue<U128> {
         log!(
             "Changing status of the intent with id: {} to {status:?} status",
             intent_id
@@ -203,7 +203,7 @@ impl IntentContractImpl {
             .unwrap();
 
         intent_with_status.set_status(status);
-        amount
+        PromiseOrValue::Value(amount)
     }
 
     /// Callback which finishes creating an intent.
@@ -218,7 +218,7 @@ impl IntentContractImpl {
         amount: U128,
         intent: Intent,
         #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
-    ) -> U128 {
+    ) -> PromiseOrValue<U128> {
         match result {
             Ok(Some(_)) => self.create_intent(id, amount, intent).unwrap(),
             Ok(None) => env::panic_str(&format!("No storage deposit for: {}", &intent.initiator)),
@@ -239,7 +239,7 @@ impl IntentContractImpl {
         detailed_intent: &mut DetailedIntent,
         solver_id: &AccountId,
         #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
-    ) -> Promise {
+    ) -> PromiseOrValue<U128> {
         match result {
             Ok(Some(_)) => self.execute_intent(id, amount, detailed_intent).unwrap(),
             Ok(None) => env::panic_str(&format!("No storage deposit for: {solver_id}")),
@@ -269,7 +269,7 @@ impl IntentContractImpl {
     pub fn set_min_intent_ttl(&mut self, min_ttl: u64) {
         self.assert_owner();
         // Check for too long value of TTL
-        assert!(min_ttl.checked_mul(1000).is_some(), "TTL is too long");
+        require!(min_ttl.checked_mul(1000).is_some(), "TTL is too long");
         self.min_intent_ttl = min_ttl;
     }
 
@@ -279,16 +279,15 @@ impl IntentContractImpl {
     }
 
     fn assert_owner(&self) {
-        assert_eq!(
-            self.owner_id,
-            env::predecessor_account_id(),
+        require!(
+            self.owner_id == env::predecessor_account_id(),
             "Only owner is allowed to add a new solver"
         );
     }
 
     #[inline]
     fn assert_solver(&self, solver_id: &AccountId) {
-        assert!(
+        require!(
             self.allowed_solvers.contains(solver_id),
             "The solver is not allowed"
         );
@@ -297,7 +296,7 @@ impl IntentContractImpl {
     #[allow(dead_code)]
     #[inline]
     fn assert_token(&self, token_id: &AccountId) {
-        assert!(
+        require!(
             self.supported_tokens.contains(token_id.as_str()),
             "Unsupported token"
         );
@@ -308,7 +307,7 @@ impl IntentContractImpl {
         id: String,
         amount: U128,
         intent: Intent,
-    ) -> Result<U128, IntentError> {
+    ) -> Result<PromiseOrValue<U128>, IntentError> {
         if amount != intent.send.amount {
             return Err(IntentError::AmountMismatch);
         }
@@ -319,7 +318,7 @@ impl IntentContractImpl {
                 let detailed_intent = DetailedIntent::new(intent, self.min_intent_ttl);
                 entry.insert(detailed_intent);
 
-                Ok(0.into())
+                Ok(PromiseOrValue::Value(0.into()))
             }
         }
     }
@@ -329,7 +328,7 @@ impl IntentContractImpl {
         id: &String,
         amount: U128,
         detailed_intent: &mut DetailedIntent,
-    ) -> Result<Promise, IntentError> {
+    ) -> Result<PromiseOrValue<U128>, IntentError> {
         let solver_id = env::signer_account_id();
 
         log!(
@@ -370,6 +369,6 @@ impl IntentContractImpl {
                 .then(Self::ext(current_id).change_intent_status(id, Status::Completed, 0.into()))
         };
 
-        Ok(promise)
+        Ok(PromiseOrValue::Promise(promise))
     }
 }
