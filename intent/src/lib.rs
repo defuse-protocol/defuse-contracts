@@ -6,7 +6,7 @@ use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::Fungi
 use near_contract_standards::storage_management::{ext_storage_management, StorageBalance};
 use near_gas::NearGas;
 use near_sdk::{
-    env, ext_contract,
+    env,
     json_types::U128,
     log, near, require,
     store::{
@@ -17,7 +17,6 @@ use near_sdk::{
 };
 
 const DEFAULT_MIN_TTL: u64 = 60; // 1 minute
-const MIN_STORAGE_DEPOSIT: NearToken = NearToken::from_yoctonear(1_250_000_000_000_000_000_000);
 
 // Gas
 const FINISH_CREATING_GAS: NearGas = NearGas::from_tgas(5);
@@ -221,13 +220,7 @@ impl IntentContractImpl {
         #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
     ) -> U128 {
         match result {
-            Ok(Some(balance)) => {
-                assert!(
-                    balance.total >= MIN_STORAGE_DEPOSIT,
-                    "Too low storage deposit"
-                );
-                self.create_intent(id, amount, intent).unwrap()
-            }
+            Ok(Some(_)) => self.create_intent(id, amount, intent).unwrap(),
             Ok(None) => env::panic_str(&format!("No storage deposit for: {}", &intent.initiator)),
             Err(e) => env::panic_str(&format!("Error getting storage deposit: {e:?}")),
         }
@@ -248,13 +241,7 @@ impl IntentContractImpl {
         #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
     ) -> Promise {
         match result {
-            Ok(Some(balance)) => {
-                assert!(
-                    balance.total >= MIN_STORAGE_DEPOSIT,
-                    "Too low storage deposit"
-                );
-                self.execute_intent(id, amount, detailed_intent).unwrap()
-            }
+            Ok(Some(_)) => self.execute_intent(id, amount, detailed_intent).unwrap(),
             Ok(None) => env::panic_str(&format!("No storage deposit for: {solver_id}")),
             Err(e) => env::panic_str(&format!("Error getting storage deposit: {e:?}")),
         }

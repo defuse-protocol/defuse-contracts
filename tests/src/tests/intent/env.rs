@@ -64,13 +64,16 @@ impl EnvBuilder {
             .await;
 
         if self.with_storage_deposit {
-            token_a
-                .register_accounts(&[&user, &solver, intent.as_account()])
-                .await;
-            token_b
-                .register_accounts(&[&user, &solver, intent.as_account()])
-                .await;
+            token_a.register_accounts(&[&user, &solver]).await;
+            token_b.register_accounts(&[&user, &solver]).await;
         }
+
+        // Transfer tokens to the intent contract to have possibility to refund in case of error in
+        // the ft_on_transfer callback.
+        token_a.storage_deposit(intent.id()).await;
+        token_b.storage_deposit(intent.id()).await;
+        token_a.ft_transfer(intent.id(), 10_000).await;
+        token_b.ft_transfer(intent.id(), 10_000).await;
 
         Env {
             sandbox,

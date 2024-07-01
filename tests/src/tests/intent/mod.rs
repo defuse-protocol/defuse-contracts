@@ -28,7 +28,7 @@ async fn test_generic_successful_flow() {
 
     // Check that intent contract owns user's TokenA.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 11000);
 
     // The solver is happy with such intent and executes it.
     env.solver
@@ -67,7 +67,7 @@ async fn test_successful_flow_partly() {
 
     // Check that intent contract owns user's TokenA.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 500);
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 500);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 10500);
 
     // The solver is happy with such intent and executes it.
     env.solver
@@ -129,7 +129,7 @@ async fn test_rollback_intent() {
 
     // Check that intent contract owns user's TokenA now.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 11000);
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
     assert!(matches!(intent.status(), Status::Available));
@@ -169,7 +169,7 @@ async fn test_rollback_intent_too_early() {
 
     // Check that intent contract owns user's TokenA now.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 11000);
 
     let intent = env.user.get_intent(env.intent.id(), "1").await;
     assert!(intent.is_some());
@@ -186,7 +186,7 @@ async fn test_rollback_intent_too_early() {
     assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
 
     // User's tokens should be still locked in the intent contract.
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 11000);
 
     assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
     assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await, 2000);
@@ -215,8 +215,6 @@ async fn test_intent_without_initiator_storage_deposit() {
     env.token_a.storage_deposit(env.user_id()).await;
     env.token_a.storage_deposit(env.solver_id()).await;
     env.token_b.storage_deposit(env.solver_id()).await;
-    env.token_a.storage_deposit(env.intent.id()).await;
-    env.token_b.storage_deposit(env.intent.id()).await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
     env.token_a.ft_transfer(env.user_id(), 1000).await;
@@ -251,8 +249,6 @@ async fn test_intent_without_solver_storage_deposit() {
     env.token_a.storage_deposit(env.user_id()).await;
     env.token_b.storage_deposit(env.user_id()).await;
     env.token_b.storage_deposit(env.solver_id()).await;
-    env.token_a.storage_deposit(env.intent.id()).await;
-    env.token_b.storage_deposit(env.intent.id()).await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
     env.token_a.ft_transfer(env.user_id(), 1000).await;
@@ -278,7 +274,7 @@ async fn test_intent_without_solver_storage_deposit() {
 
     // Check that the balances haven't been changed.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 11000);
     assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
 
     assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
@@ -353,7 +349,7 @@ async fn test_intent_with_lack_of_gas_for_execution() {
 
     // Check that the balances haven't been changed.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 11000);
     assert_eq!(env.token_b.ft_balance_of(env.user_id()).await, 0);
 
     assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await, 0);
@@ -386,7 +382,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
 
     // Check that intent contract owns user's TokenA now.
     assert_eq!(env.token_a.ft_balance_of(env.user_id()).await, 0);
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 1000);
+    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await, 11000);
 
     let intent = env.user.get_intent(env.intent.id(), "1").await;
     assert!(intent.is_some());
