@@ -209,7 +209,7 @@ impl SwapIntentShard for Contract {
     async fn deploy_swap_intent_shard(
         &self,
         swap_intent_shard_id: &str,
-    ) -> anyhow::Result<Contract> {
+    ) -> anyhow::Result<Self> {
         self.as_account()
             .deploy_swap_intent_shard(swap_intent_shard_id)
             .await
