@@ -133,7 +133,7 @@ impl FtExt for Account {
 }
 
 impl FtExt for Contract {
-    async fn deploy_ft_token(&self, token: &str) -> anyhow::Result<Contract> {
+    async fn deploy_ft_token(&self, token: &str) -> anyhow::Result<Self> {
         self.as_account().deploy_ft_token(token).await
     }
 

@@ -242,7 +242,7 @@ impl SwapFtIntentExt for Account {
 }
 
 impl SwapFtIntentExt for Contract {
-    async fn deploy_swap_ft_intent_contract(&self) -> anyhow::Result<Contract> {
+    async fn deploy_swap_ft_intent_contract(&self) -> anyhow::Result<Self> {
         self.as_account().deploy_swap_ft_intent_contract().await
     }
 
@@ -255,7 +255,7 @@ impl SwapFtIntentExt for Contract {
     ) {
         self.as_account()
             .create_intent(contract_id, intent_account_id, id, intent)
-            .await
+            .await;
     }
 
     async fn create_intent_with_gas(
@@ -268,7 +268,7 @@ impl SwapFtIntentExt for Contract {
     ) {
         self.as_account()
             .create_intent_with_gas(contract_id, intent_account_id, id, intent, gas)
-            .await
+            .await;
     }
 
     async fn execute_intent(
@@ -280,7 +280,7 @@ impl SwapFtIntentExt for Contract {
     ) {
         self.as_account()
             .execute_intent(contract_id, intent_account_id, id, amount)
-            .await
+            .await;
     }
 
     async fn execute_intent_async(
@@ -305,7 +305,7 @@ impl SwapFtIntentExt for Contract {
     ) {
         self.as_account()
             .execute_intent_with_gas(contract_id, intent_account_id, id, amount, gas)
-            .await
+            .await;
     }
 
     async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> ExecutionFinalResult {
@@ -313,11 +313,11 @@ impl SwapFtIntentExt for Contract {
     }
 
     async fn add_solver(&self, contract_id: &AccountId, solver_id: &AccountId) {
-        self.as_account().add_solver(contract_id, solver_id).await
+        self.as_account().add_solver(contract_id, solver_id).await;
     }
 
     async fn set_min_ttl(&self, contract_id: &AccountId, min_ttl: u64) {
-        self.as_account().set_min_ttl(contract_id, min_ttl).await
+        self.as_account().set_min_ttl(contract_id, min_ttl).await;
     }
 
     async fn get_intent(&self, intent_contract_id: &AccountId, id: &str) -> Option<DetailedIntent> {
