@@ -4,8 +4,8 @@ members = [
     "account",
     "contracts",
     "controller",
-    "swap-intent",
-    "swap-ft-intent",
+    "intents/swap",
+    "intents/swap-ft",
     "tests",
 ]
 default-members = ["contracts"]
@@ -17,8 +17,8 @@ edition = "2021"
 defuse-account-contract.path = "account"
 defuse-contracts = { path = "contracts", default-features = false }
 defuse-controller-contract.path = "controller"
-defuse-swap-intent-contract.path = "swap-intent"
-defuse-swap-ft-intent-contract.path = "swap-ft-intent"
+defuse-swap-intent-contract.path = "intents/swap"
+defuse-swap-ft-intent-contract.path = "intents/swap-ft"
 
 anyhow = "1"
 lazy_static = "1.4"
