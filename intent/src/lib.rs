@@ -142,7 +142,7 @@ impl FungibleTokenReceiver for IntentContractImpl {
                 );
                 let detailed_intent = self
                     .intents
-                    .get_mut(&id)
+                    .get(&id)
                     .ok_or_else(|| IntentError::NotFound(id.clone()))
                     .unwrap();
 
@@ -152,7 +152,7 @@ impl FungibleTokenReceiver for IntentContractImpl {
                     .then(
                         Self::ext(env::current_account_id())
                             .with_static_gas(FINISH_EXECUTING_GAS)
-                            .finish_executing_intent(&id, amount, detailed_intent, &sender_id),
+                            .finish_executing_intent(&id, amount, &sender_id),
                     )
             }
         };
@@ -236,12 +236,13 @@ impl IntentContractImpl {
         &mut self,
         id: &String,
         amount: U128,
-        detailed_intent: &mut DetailedIntent,
         solver_id: &AccountId,
         #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
     ) -> PromiseOrValue<U128> {
         match result {
-            Ok(Some(_)) => self.execute_intent(id, amount, detailed_intent).unwrap(),
+            Ok(Some(_)) => self
+                .execute_intent(id, amount)
+                .unwrap_or_else(|e| env::panic_str(&e.to_string())),
             Ok(None) => env::panic_str(&format!("No storage deposit for: {solver_id}")),
             Err(e) => env::panic_str(&format!("Error getting storage deposit: {e:?}")),
         }
@@ -327,7 +328,6 @@ impl IntentContractImpl {
         &mut self,
         id: &String,
         amount: U128,
-        detailed_intent: &mut DetailedIntent,
     ) -> Result<PromiseOrValue<U128>, IntentError> {
         let solver_id = env::signer_account_id();
 
@@ -338,6 +338,12 @@ impl IntentContractImpl {
         );
 
         self.assert_solver(&solver_id);
+
+        let detailed_intent = self
+            .intents
+            .get_mut(id)
+            .ok_or_else(|| IntentError::NotFound(id.clone()))
+            .unwrap();
 
         if !matches!(detailed_intent.status(), Status::Available) {
             return Err(IntentError::WrongStatus);

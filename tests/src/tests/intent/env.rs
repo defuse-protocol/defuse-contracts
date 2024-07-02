@@ -10,11 +10,16 @@ pub struct Env {
     pub intent: Contract,
     pub user: Account,
     pub solver: Account,
+    pub solver2: Option<Account>,
 }
 
 impl Env {
     pub async fn create() -> Self {
-        EnvBuilder::new().with_storage_deposit().build().await
+        EnvBuilder::new()
+            .with_storage_deposit()
+            .with_fund_intent()
+            .build()
+            .await
     }
 
     pub fn user_id(&self) -> &AccountId {
@@ -23,6 +28,13 @@ impl Env {
 
     pub fn solver_id(&self) -> &AccountId {
         self.solver.id()
+    }
+
+    pub fn solver2_id(&self) -> &AccountId {
+        self.solver2
+            .as_ref()
+            .map(Account::id)
+            .expect("Solver2 was not set")
     }
 
     pub async fn set_min_ttl(&self, min_ttl: u64) {
@@ -34,18 +46,32 @@ impl Env {
 }
 
 pub struct EnvBuilder {
-    with_storage_deposit: bool,
+    storage_deposit: bool,
+    concurrent_solvers: bool,
+    fund_intent: bool,
 }
 
 impl EnvBuilder {
     pub const fn new() -> Self {
         Self {
-            with_storage_deposit: false,
+            storage_deposit: false,
+            concurrent_solvers: false,
+            fund_intent: false,
         }
     }
 
     pub const fn with_storage_deposit(mut self) -> Self {
-        self.with_storage_deposit = true;
+        self.storage_deposit = true;
+        self
+    }
+
+    pub const fn with_concurrent_solver(mut self) -> Self {
+        self.concurrent_solvers = true;
+        self
+    }
+
+    pub const fn with_fund_intent(mut self) -> Self {
+        self.fund_intent = true;
         self
     }
 
@@ -63,7 +89,24 @@ impl EnvBuilder {
             .add_solver(intent.id(), solver.id())
             .await;
 
-        if self.with_storage_deposit {
+        let solver2 = if self.concurrent_solvers {
+            let solver2 = sandbox.create_account("solver2").await;
+            intent
+                .as_account()
+                .add_solver(intent.id(), solver2.id())
+                .await;
+
+            if self.storage_deposit {
+                token_a.storage_deposit(solver2.id()).await;
+                token_b.storage_deposit(solver2.id()).await;
+            }
+
+            Some(solver2)
+        } else {
+            None
+        };
+
+        if self.storage_deposit {
             token_a.register_accounts(&[&user, &solver]).await;
             token_b.register_accounts(&[&user, &solver]).await;
         }
@@ -72,8 +115,11 @@ impl EnvBuilder {
         // the ft_on_transfer callback.
         token_a.storage_deposit(intent.id()).await;
         token_b.storage_deposit(intent.id()).await;
-        token_a.ft_transfer(intent.id(), 10_000).await;
-        token_b.ft_transfer(intent.id(), 10_000).await;
+
+        if self.fund_intent {
+            token_a.ft_transfer(intent.id(), 10_000).await;
+            token_b.ft_transfer(intent.id(), 10_000).await;
+        }
 
         Env {
             sandbox,
@@ -82,6 +128,7 @@ impl EnvBuilder {
             intent,
             user,
             solver,
+            solver2,
         }
     }
 }

@@ -50,18 +50,18 @@ impl Action {
     /// # Errors
     ///
     /// `IntentError::Base64`
-    /// `IntentError::Borsh`
+    /// `IntentError::BorshDeserialize`
     pub fn decode(msg: impl AsRef<[u8]>) -> Result<Self, IntentError> {
-        Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| IntentError::Borsh)
+        Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| IntentError::BorshDeserialize)
     }
 
     /// Encode the action into a string message.
     ///
     /// # Errors
     ///
-    /// `IntentError::Borsh`
+    /// `IntentError::BorshSerialize`
     pub fn encode(&self) -> Result<String, IntentError> {
-        Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| IntentError::Borsh)?))
+        Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| IntentError::BorshSerialize)?))
     }
 }
 

@@ -37,6 +37,10 @@ impl Sandbox {
         })
     }
 
+    pub async fn skip_blocks(&self, num_blocks: u64) {
+        self.worker.fast_forward(num_blocks).await.unwrap();
+    }
+
     pub async fn create_subaccount(
         &self,
         name: &str,
