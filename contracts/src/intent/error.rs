@@ -3,20 +3,22 @@ use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]
 pub enum IntentError {
-    #[error("Borsh")]
-    Borsh,
-    #[error("Base64: {0}")]
+    #[error("borsh deserialize error")]
+    BorshDeserialize,
+    #[error("borsh serialize error")]
+    BorshSerialize,
+    #[error("base64: {0}")]
     Base64(#[from] base64::DecodeError),
-    #[error("Intent '{0}' was not found")]
+    #[error("intent '{0}' was not found")]
     NotFound(String), // id
-    #[error("Intent '{0}' already exists")]
+    #[error("intent '{0}' already exists")]
     AlreadyExists(String), // id
-    #[error("Intent is already expired")]
+    #[error("intent is already expired")]
     Expired,
-    #[error("Intent is in progress")]
+    #[error("intent is in progress")]
     InProgress,
-    #[error("Wrong intent status")]
+    #[error("wrong intent status")]
     WrongStatus,
-    #[error("Amount mismatch")]
+    #[error("amount mismatch")]
     AmountMismatch,
 }
