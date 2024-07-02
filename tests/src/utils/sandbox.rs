@@ -27,6 +27,10 @@ impl Sandbox {
         })
     }
 
+    pub async fn skip_blocks(&self, num_blocks: u64) {
+        self.worker.fast_forward(num_blocks).await.unwrap();
+    }
+
     pub const fn worker(&self) -> &Worker<impl Network> {
         &self.worker
     }

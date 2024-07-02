@@ -38,11 +38,13 @@ pub trait FtExt: StorageManagementExt {
     async fn ft_storage_deposit(
         &self,
         token_id: &AccountId,
-        account_id: Option<AccountId>,
+        account_id: Option<&AccountId>,
     ) -> anyhow::Result<StorageBalance> {
         self.storage_deposit(token_id, account_id, STORAGE_DEPOSIT)
             .await
     }
+
+    async fn ft_mint(&self, account_id: &AccountId, amount: u128) -> anyhow::Result<()>;
 }
 
 impl FtExt for Account {
@@ -123,5 +125,48 @@ impl FtExt for Account {
             .json::<String>()?
             .parse()
             .map_err(Into::into)
+    }
+
+    async fn ft_mint(&self, account_id: &AccountId, amount: u128) -> anyhow::Result<()> {
+        self.ft_transfer(self.id(), account_id, amount, None).await
+    }
+}
+
+impl FtExt for Contract {
+    async fn deploy_ft_token(&self, token: &str) -> anyhow::Result<Contract> {
+        self.as_account().deploy_ft_token(token).await
+    }
+
+    async fn ft_balance_of(&self, token_id: &AccountId) -> anyhow::Result<u128> {
+        self.as_account().ft_balance_of(token_id).await
+    }
+
+    async fn ft_transfer(
+        &self,
+        token_id: &AccountId,
+        receiver_id: &AccountId,
+        amount: u128,
+        memo: Option<String>,
+    ) -> anyhow::Result<()> {
+        self.as_account()
+            .ft_transfer(token_id, receiver_id, amount, memo)
+            .await
+    }
+
+    async fn ft_transfer_call(
+        &self,
+        token_id: &AccountId,
+        receiver_id: &AccountId,
+        amount: u128,
+        memo: Option<String>,
+        msg: &str,
+    ) -> anyhow::Result<u128> {
+        self.as_account()
+            .ft_transfer_call(token_id, receiver_id, amount, memo, msg)
+            .await
+    }
+
+    async fn ft_mint(&self, account_id: &AccountId, amount: u128) -> anyhow::Result<()> {
+        self.as_account().ft_mint(account_id, amount).await
     }
 }

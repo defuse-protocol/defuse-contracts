@@ -3,10 +3,12 @@ use defuse_contracts::intents::swap_ft::{
 };
 
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
+use near_contract_standards::storage_management::{ext_storage_management, StorageBalance};
+use near_sdk::Gas;
 use near_sdk::{
     env,
     json_types::U128,
-    log, near,
+    log, near, require,
     store::{
         lookup_map::{Entry, LookupMap},
         LookupSet,
@@ -15,6 +17,11 @@ use near_sdk::{
 };
 
 const DEFAULT_MIN_TTL: u64 = 60; // 1 minute
+
+// Gas
+const FINISH_CREATING_GAS: Gas = Gas::from_tgas(5);
+const FINISH_EXECUTING_GAS: Gas = Gas::from_tgas(20);
+const ROLLBACK_INTENT_GAS: Gas = Gas::from_tgas(10);
 
 #[derive(BorshStorageKey)]
 #[near(serializers=[borsh])]
@@ -52,7 +59,7 @@ impl FtIntentContract for FtIntentContractImpl {
         if !detailed_intent.could_be_rollbacked() {
             env::panic_str("Too early to roll back the intent");
         }
-        assert!(
+        require!(
             matches!(detailed_intent.status(), Status::Available),
             "Only intents with created status could be rolled back"
         );
@@ -61,19 +68,26 @@ impl FtIntentContract for FtIntentContractImpl {
         let predecessor_id = env::predecessor_account_id();
         let intent = detailed_intent.intent();
 
-        assert!(
+        require!(
             predecessor_id == intent.initiator
                 || predecessor_id == self.owner_id
                 || predecessor_id == env::current_account_id(),
             "Only initiator, self or owner can roll back the intent"
         );
 
+        require!(
+            env::prepaid_gas().saturating_sub(env::used_gas()) >= ROLLBACK_INTENT_GAS,
+            "Not enough gas to rollback the intent"
+        );
+
         ext_ft_core::ext(intent.send.token_id.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .ft_transfer(intent.initiator.clone(), intent.send.amount, None)
-            .then(
-                Self::ext(env::current_account_id()).change_intent_status(&id, Status::RolledBack),
-            )
+            .then(Self::ext(env::current_account_id()).change_intent_status(
+                &id,
+                Status::RolledBack,
+                0.into(),
+            ))
     }
 
     fn get_intent(&self, id: String) -> Option<&DetailedIntent> {
@@ -103,16 +117,47 @@ impl FungibleTokenReceiver for FtIntentContractImpl {
         // self.assert_token(&sender_id); // TODO: Check if we need tokens validation.
         let action = Action::decode(msg).expect("decode Action");
 
-        match action {
+        let promise = match action {
             Action::CreateIntent(id, intent) => {
                 log!(
                     "Creating the intent with id: {id} by: {sender_id}, amount: {}",
                     amount.0
                 );
-                self.create_intent(id, amount, intent).unwrap()
+
+                require!(id.len() <= 128, "ID is too long");
+
+                // First check that initiator has storage deposit on token he wants to get.
+                ext_storage_management::ext(intent.receive.token_id.clone())
+                    .storage_balance_of(sender_id)
+                    .then(
+                        Self::ext(env::current_account_id())
+                            .with_static_gas(FINISH_CREATING_GAS)
+                            .finish_creating_intent(id, amount, intent),
+                    )
             }
-            Action::ExecuteIntent(id) => self.execute_intent(&id, amount).unwrap(),
-        }
+            Action::ExecuteIntent(id) => {
+                log!(
+                    "Executing the intent with id: {id} by: {sender_id}, amount: {}",
+                    amount.0
+                );
+                let detailed_intent = self
+                    .intents
+                    .get(&id)
+                    .ok_or_else(|| FtIntentError::NotFound(id.clone()))
+                    .unwrap();
+
+                // First check that the solver has storage deposit on token he wants to get.
+                ext_storage_management::ext(detailed_intent.intent().send.token_id.clone())
+                    .storage_balance_of(sender_id.clone())
+                    .then(
+                        Self::ext(env::current_account_id())
+                            .with_static_gas(FINISH_EXECUTING_GAS)
+                            .finish_executing_intent(&id, amount, &sender_id),
+                    )
+            }
+        };
+
+        PromiseOrValue::Promise(promise)
     }
 }
 
@@ -132,13 +177,25 @@ impl FtIntentContractImpl {
         }
     }
 
-    /// Callback which changes a status of the intent.
+    /// Callback which changes a status of the intent. The `amount` arg makes sense in case of
+    /// calling this transaction by `ft_transfer_call`. In case if the intent is expired the amount
+    /// should be the same as the solver send to return the funds back. In successful execution the
+    /// amount should be 0 to prevent refund funds in the `ft_resolve_transfer` callback to the solver.
     ///
     /// # Panics
     ///
     /// Panics if intent with given ID doesn't exist.
     #[private]
-    pub fn change_intent_status(&mut self, intent_id: &String, status: Status) {
+    pub fn change_intent_status(
+        &mut self,
+        intent_id: &String,
+        status: Status,
+        amount: U128,
+    ) -> PromiseOrValue<U128> {
+        log!(
+            "Changing status of the intent with id: {} to {status:?} status",
+            intent_id
+        );
         let intent_with_status = self
             .intents
             .get_mut(intent_id)
@@ -146,6 +203,49 @@ impl FtIntentContractImpl {
             .unwrap();
 
         intent_with_status.set_status(status);
+        PromiseOrValue::Value(amount)
+    }
+
+    /// Callback which finishes creating an intent.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the storage deposit is too low or there is no storage deposit for the initiator.
+    #[private]
+    pub fn finish_creating_intent(
+        &mut self,
+        id: String,
+        amount: U128,
+        intent: Intent,
+        #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
+    ) -> PromiseOrValue<U128> {
+        match result {
+            Ok(Some(_)) => self.create_intent(id, amount, intent).unwrap(),
+            Ok(None) => env::panic_str(&format!("No storage deposit for: {}", &intent.initiator)),
+            Err(e) => env::panic_str(&format!("Error getting storage deposit: {e:?}")),
+        }
+    }
+
+    /// Callback which finishes executing an intent.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the storage deposit is too low or there is no storage deposit for the solver.
+    #[private]
+    pub fn finish_executing_intent(
+        &mut self,
+        id: &String,
+        amount: U128,
+        solver_id: &AccountId,
+        #[callback_result] result: Result<Option<StorageBalance>, near_sdk::PromiseError>,
+    ) -> PromiseOrValue<U128> {
+        match result {
+            Ok(Some(_)) => self
+                .execute_intent(id, amount)
+                .unwrap_or_else(|e| env::panic_str(&e.to_string())),
+            Ok(None) => env::panic_str(&format!("No storage deposit for: {solver_id}")),
+            Err(e) => env::panic_str(&format!("Error getting storage deposit: {e:?}")),
+        }
     }
 
     /// Set a new owner of the contract.
@@ -170,7 +270,7 @@ impl FtIntentContractImpl {
     pub fn set_min_intent_ttl(&mut self, min_ttl: u64) {
         self.assert_owner();
         // Check for too long value of TTL
-        assert!(min_ttl.checked_mul(1000).is_some(), "TTL is too long");
+        require!(min_ttl.checked_mul(1000).is_some(), "TTL is too long");
         self.min_intent_ttl = min_ttl;
     }
 
@@ -180,16 +280,15 @@ impl FtIntentContractImpl {
     }
 
     fn assert_owner(&self) {
-        assert_eq!(
-            self.owner_id,
-            env::predecessor_account_id(),
+        require!(
+            self.owner_id == env::predecessor_account_id(),
             "Only owner is allowed to add a new solver"
         );
     }
 
     #[inline]
     fn assert_solver(&self, solver_id: &AccountId) {
-        assert!(
+        require!(
             self.allowed_solvers.contains(solver_id),
             "The solver is not allowed"
         );
@@ -198,7 +297,7 @@ impl FtIntentContractImpl {
     #[allow(dead_code)]
     #[inline]
     fn assert_token(&self, token_id: &AccountId) {
-        assert!(
+        require!(
             self.supported_tokens.contains(token_id.as_str()),
             "Unsupported token"
         );
@@ -258,7 +357,7 @@ impl FtIntentContractImpl {
             ext_ft_core::ext(intent.send.token_id.clone())
                 .with_attached_deposit(NearToken::from_yoctonear(1))
                 .ft_transfer(intent.initiator.clone(), intent.send.amount, None)
-                .then(Self::ext(current_id).change_intent_status(id, Status::Expired))
+                .then(Self::ext(current_id).change_intent_status(id, Status::Expired, amount))
         } else {
             if amount != intent.receive.amount {
                 return Err(FtIntentError::AmountMismatch);
@@ -267,12 +366,12 @@ impl FtIntentContractImpl {
             ext_ft_core::ext(intent.send.token_id.clone())
                 .with_attached_deposit(NearToken::from_yoctonear(1))
                 .ft_transfer(solver_id, intent.send.amount, None)
-                .then(
+                .and(
                     ext_ft_core::ext(intent.receive.token_id.clone())
                         .with_attached_deposit(NearToken::from_yoctonear(1))
                         .ft_transfer(intent.initiator.clone(), intent.receive.amount, None),
                 )
-                .then(Self::ext(current_id).change_intent_status(id, Status::Completed))
+                .then(Self::ext(current_id).change_intent_status(id, Status::Completed, 0.into()))
         };
 
         Ok(PromiseOrValue::Promise(promise))

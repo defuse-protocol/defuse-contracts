@@ -50,18 +50,18 @@ impl Action {
     /// # Errors
     ///
     /// `IntentError::Base64`
-    /// `IntentError::Borsh`
+    /// `IntentError::BorshDeserialize`
     pub fn decode(msg: impl AsRef<[u8]>) -> Result<Self, FtIntentError> {
-        Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| FtIntentError::Borsh)
+        Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| FtIntentError::BorshDeserialize)
     }
 
     /// Encode the action into a string message.
     ///
     /// # Errors
     ///
-    /// `IntentError::Borch`
+    /// `IntentError::BorshSerialize`
     pub fn encode(&self) -> Result<String, FtIntentError> {
-        Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| FtIntentError::Borsh)?))
+        Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| FtIntentError::BorshSerialize)?))
     }
 }
 
@@ -161,7 +161,9 @@ pub enum Expiration {
 #[derive(Debug, Clone)]
 #[near(serializers=[borsh, json])]
 pub struct TokenAmount {
+    /// Account id of the token
     pub token_id: AccountId,
+    /// Amount of tokens
     pub amount: U128,
 }
 
