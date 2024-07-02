@@ -83,7 +83,7 @@ impl SwapIntentContractImpl {
 
         if transfer_asset_in_succeeded {
             Dep2Event::Rollbacked(id)
-                .log_json()
+                .emit()
                 .map_err(SwapIntentError::JSON)?;
             self.intents.remove(id);
         } else {
@@ -95,7 +95,7 @@ impl SwapIntentContractImpl {
                 intent_id: id,
                 asset: &lost,
             }
-            .log_json()
+            .emit()
             .map_err(SwapIntentError::JSON)?;
             *intent = SwapIntentStatus::Lost(lost);
         }

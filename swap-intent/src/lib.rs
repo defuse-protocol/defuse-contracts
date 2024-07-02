@@ -93,7 +93,7 @@ impl SwapIntentContractImpl {
         };
 
         Dep2Event::Created(&intent)
-            .log_json()
+            .emit()
             .map_err(SwapIntentError::JSON)?;
 
         if self
@@ -281,13 +281,13 @@ impl SwapIntentContractImpl {
                 intent_id: id,
                 asset: &lost,
             }
-            .log_json()
+            .emit()
             .map_err(SwapIntentError::JSON)?;
             *intent = SwapIntentStatus::Lost(lost);
         }
 
         Dep2Event::Executed(id)
-            .log_json()
+            .emit()
             .map_err(SwapIntentError::JSON)?;
 
         Ok(match asset_out {

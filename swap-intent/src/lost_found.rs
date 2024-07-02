@@ -63,9 +63,7 @@ impl SwapIntentContractImpl {
 
         if transfer_succeeded {
             self.intents.remove(id);
-            Dep2Event::Found(id)
-                .log_json()
-                .map_err(SwapIntentError::JSON)?;
+            Dep2Event::Found(id).emit().map_err(SwapIntentError::JSON)?;
         }
 
         Ok(transfer_succeeded)
