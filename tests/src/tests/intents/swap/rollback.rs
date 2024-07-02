@@ -52,7 +52,6 @@ async fn test_rollback_native_intent() {
 
     assert_eq!(
         swap_intent_shard
-            .as_account()
             .get_swap_intent(&"1".to_string())
             .await
             .unwrap(),
@@ -81,24 +80,12 @@ async fn test_rollback_ft_intent() {
 
     user.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token.id(), None)
         .await
         .unwrap();
 
-    ft_token
-        .as_account()
-        .ft_transfer(ft_token.id(), user.id(), 1000, None)
-        .await
-        .unwrap();
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user.id())
-            .await
-            .unwrap(),
-        1000
-    );
+    ft_token.ft_mint(user.id(), 1000).await.unwrap();
+    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 1000);
 
     assert!(user
         .create_swap_intent(
@@ -123,17 +110,9 @@ async fn test_rollback_ft_intent() {
         .await
         .unwrap());
 
+    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 0);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -145,17 +124,9 @@ async fn test_rollback_ft_intent() {
         .await
         .unwrap());
 
+    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 1000);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user.id())
-            .await
-            .unwrap(),
-        1000
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -210,7 +181,6 @@ async fn test_rollback_nft_intent() {
 
     assert_eq!(
         &account_shard
-            .as_account()
             .nft_token(&derivation_path)
             .await
             .unwrap()
@@ -226,7 +196,6 @@ async fn test_rollback_nft_intent() {
 
     assert_eq!(
         &account_shard
-            .as_account()
             .nft_token(&derivation_path)
             .await
             .unwrap()

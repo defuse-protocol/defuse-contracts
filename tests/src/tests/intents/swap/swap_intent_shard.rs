@@ -204,3 +204,55 @@ impl SwapIntentShard for near_workspaces::Account {
             .map_err(Into::into)
     }
 }
+
+impl SwapIntentShard for Contract {
+    async fn deploy_swap_intent_shard(
+        &self,
+        swap_intent_shard_id: &str,
+    ) -> anyhow::Result<Contract> {
+        self.as_account()
+            .deploy_swap_intent_shard(swap_intent_shard_id)
+            .await
+    }
+
+    async fn create_swap_intent(
+        &self,
+        swap_intent_id: &AccountId,
+        asset_in: Asset,
+        create: CreateSwapIntentAction,
+    ) -> anyhow::Result<bool> {
+        self.as_account()
+            .create_swap_intent(swap_intent_id, asset_in, create)
+            .await
+    }
+
+    async fn get_swap_intent(
+        &self,
+        id: &IntentId,
+    ) -> anyhow::Result<Option<Mutex<SwapIntentStatus>>> {
+        self.as_account().get_swap_intent(id).await
+    }
+
+    async fn execute_swap_intent(
+        &self,
+        swap_intent_id: &AccountId,
+        asset_in: Asset,
+        fulfill: ExecuteSwapIntentAction,
+    ) -> anyhow::Result<bool> {
+        self.as_account()
+            .execute_swap_intent(swap_intent_id, asset_in, fulfill)
+            .await
+    }
+
+    async fn rollback_intent(
+        &self,
+        swap_intent_id: &AccountId,
+        id: &IntentId,
+    ) -> anyhow::Result<bool> {
+        self.as_account().rollback_intent(swap_intent_id, id).await
+    }
+
+    async fn lost_found(&self, swap_intent_id: &AccountId, id: &IntentId) -> anyhow::Result<bool> {
+        self.as_account().lost_found(swap_intent_id, id).await
+    }
+}

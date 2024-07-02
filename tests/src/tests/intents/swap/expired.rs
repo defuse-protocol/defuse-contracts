@@ -50,7 +50,6 @@ async fn test_execute_expired() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -76,7 +75,6 @@ async fn test_execute_expired() {
         .is_err());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -92,7 +90,6 @@ async fn test_execute_expired() {
 
     assert_eq!(
         swap_intent_shard
-            .as_account()
             .get_swap_intent(&"1".to_string())
             .await
             .unwrap(),

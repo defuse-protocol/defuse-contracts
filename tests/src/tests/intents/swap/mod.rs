@@ -87,11 +87,7 @@ async fn test_swap_native_to_native() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
@@ -125,16 +121,11 @@ async fn test_swap_native_to_ft() {
     user1.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     user2.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token.id(), None)
         .await
         .unwrap();
 
-    ft_token
-        .as_account()
-        .ft_transfer(ft_token.id(), user2.id(), 500, None)
-        .await
-        .unwrap();
+    ft_token.ft_mint(user2.id(), 500).await.unwrap();
 
     let intent_id = "1".to_string();
 
@@ -161,7 +152,6 @@ async fn test_swap_native_to_ft() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -188,35 +178,16 @@ async fn test_swap_native_to_ft() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        500
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        0
-    );
+    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 500);
+    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 0);
     assert!(user2.view_account().await.unwrap().balance > NearToken::from_near(14));
 
     assert_eq!(
         ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -249,16 +220,11 @@ async fn test_swap_native_to_ft_no_deposit() {
 
     user2.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token.id(), None)
         .await
         .unwrap();
 
-    ft_token
-        .as_account()
-        .ft_transfer(ft_token.id(), user2.id(), 500, None)
-        .await
-        .unwrap();
+    ft_token.ft_mint(user2.id(), 500).await.unwrap();
 
     let intent_id = "1".to_string();
     assert!(user1
@@ -284,7 +250,6 @@ async fn test_swap_native_to_ft_no_deposit() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -311,7 +276,6 @@ async fn test_swap_native_to_ft_no_deposit() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -320,30 +284,15 @@ async fn test_swap_native_to_ft_no_deposit() {
         .unwrap()
         .is_available());
 
+    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 500);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        500
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
         0,
     );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        0
-    );
+    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 0);
 
     assert!(user2.view_account().await.unwrap().balance < NearToken::from_near(10));
 }
@@ -401,7 +350,6 @@ async fn test_swap_native_to_nft() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -428,11 +376,7 @@ async fn test_swap_native_to_nft() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
@@ -440,7 +384,6 @@ async fn test_swap_native_to_nft() {
     assert!(user2.view_account().await.unwrap().balance >= NearToken::from_near(14));
     assert_eq!(
         &account_shard
-            .as_account()
             .nft_token(&derivation_path)
             .await
             .unwrap()
@@ -476,16 +419,11 @@ async fn test_swap_ft_to_native() {
     user1.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     user2.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token.id(), None)
         .await
         .unwrap();
 
-    ft_token
-        .as_account()
-        .ft_transfer(ft_token.id(), user1.id(), 500, None)
-        .await
-        .unwrap();
+    ft_token.ft_mint(user1.id(), 500).await.unwrap();
 
     let intent_id = "1".to_string();
 
@@ -521,17 +459,9 @@ async fn test_swap_ft_to_native() {
         .unwrap()
         .is_available());
 
+    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 0);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -551,36 +481,17 @@ async fn test_swap_ft_to_native() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        500
-    );
+    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 0);
+    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 500);
     assert!(user1.view_account().await.unwrap().balance > NearToken::from_near(14));
     assert!(user2.view_account().await.unwrap().balance <= NearToken::from_near(5));
 
     assert_eq!(
         ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -634,26 +545,16 @@ async fn test_swap_ft_to_ft() {
         .await
         .unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token_a.id(), None)
         .await
         .unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token_b.id(), None)
         .await
         .unwrap();
 
-    ft_token_a
-        .as_account()
-        .ft_transfer(ft_token_a.id(), user1.id(), 1000, None)
-        .await
-        .unwrap();
-    ft_token_b
-        .as_account()
-        .ft_transfer(ft_token_b.id(), user2.id(), 2000, None)
-        .await
-        .unwrap();
+    ft_token_a.ft_mint(user1.id(), 1000).await.unwrap();
+    ft_token_b.ft_mint(user2.id(), 2000).await.unwrap();
 
     let intent_id = "1".to_string();
 
@@ -684,7 +585,6 @@ async fn test_swap_ft_to_ft() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -693,17 +593,9 @@ async fn test_swap_ft_to_ft() {
         .unwrap()
         .is_available());
 
+    assert_eq!(ft_token_a.ft_balance_of(user1.id()).await.unwrap(), 0);
     assert_eq!(
         ft_token_a
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token_a
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -726,50 +618,17 @@ async fn test_swap_ft_to_ft() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
-    assert_eq!(
-        ft_token_a
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token_b
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        2000
-    );
-    assert_eq!(
-        ft_token_a
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        1000
-    );
-    assert_eq!(
-        ft_token_b
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        0
-    );
+    assert_eq!(ft_token_a.ft_balance_of(user1.id()).await.unwrap(), 0);
+    assert_eq!(ft_token_b.ft_balance_of(user1.id()).await.unwrap(), 2000);
+    assert_eq!(ft_token_a.ft_balance_of(user2.id()).await.unwrap(), 1000);
+    assert_eq!(ft_token_b.ft_balance_of(user2.id()).await.unwrap(), 0);
 
     assert_eq!(
         ft_token_a
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -777,7 +636,6 @@ async fn test_swap_ft_to_ft() {
     );
     assert_eq!(
         ft_token_b
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -815,16 +673,11 @@ async fn test_swap_ft_to_nft() {
     user1.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     user2.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token.id(), None)
         .await
         .unwrap();
 
-    ft_token
-        .as_account()
-        .ft_transfer(ft_token.id(), user1.id(), 1000, None)
-        .await
-        .unwrap();
+    ft_token.ft_mint(user1.id(), 1000).await.unwrap();
 
     let derivation_path = "user2-owned".to_string();
     user2
@@ -860,7 +713,6 @@ async fn test_swap_ft_to_nft() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -869,17 +721,9 @@ async fn test_swap_ft_to_nft() {
         .unwrap()
         .is_available());
 
+    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 0);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -902,41 +746,15 @@ async fn test_swap_ft_to_nft() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        1000
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(account_shard.id())
-            .await
-            .unwrap(),
-        0
-    );
+    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 0);
+    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 1000);
+    assert_eq!(ft_token.ft_balance_of(account_shard.id()).await.unwrap(), 0);
     assert_eq!(
         &account_shard
-            .as_account()
             .nft_token(&derivation_path)
             .await
             .unwrap()
@@ -999,7 +817,6 @@ async fn test_swap_nft_to_native() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -1010,7 +827,6 @@ async fn test_swap_nft_to_native() {
 
     assert_eq!(
         &account_shard
-            .as_account()
             .nft_token(&derivation_path)
             .await
             .unwrap()
@@ -1032,17 +848,12 @@ async fn test_swap_nft_to_native() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
     assert_eq!(
         &account_shard
-            .as_account()
             .nft_token(&derivation_path)
             .await
             .unwrap()
@@ -1114,7 +925,6 @@ async fn test_swap_nft_to_nft() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -1125,7 +935,6 @@ async fn test_swap_nft_to_nft() {
 
     assert_eq!(
         &account_shard
-            .as_account()
             .nft_token(&derivation_path_1)
             .await
             .unwrap()
@@ -1150,17 +959,12 @@ async fn test_swap_nft_to_nft() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
     assert_eq!(
         &account_shard
-            .as_account()
             .nft_token(&derivation_path_1)
             .await
             .unwrap()
@@ -1170,7 +974,6 @@ async fn test_swap_nft_to_nft() {
     );
     assert_eq!(
         &account_shard
-            .as_account()
             .nft_token(&derivation_path_2)
             .await
             .unwrap()

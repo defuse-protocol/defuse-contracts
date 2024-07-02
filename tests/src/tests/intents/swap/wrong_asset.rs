@@ -50,27 +50,16 @@ async fn test_execute_wrong_asset() {
         .await
         .unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token1.id(), None)
         .await
         .unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token2.id(), None)
         .await
         .unwrap();
 
-    ft_token1
-        .as_account()
-        .ft_transfer(ft_token1.id(), user2.id(), 500, None)
-        .await
-        .unwrap();
-
-    ft_token2
-        .as_account()
-        .ft_transfer(ft_token2.id(), user2.id(), 500, None)
-        .await
-        .unwrap();
+    ft_token1.ft_mint(user2.id(), 500).await.unwrap();
+    ft_token2.ft_mint(user2.id(), 500).await.unwrap();
 
     let intent_id = "1".to_string();
 
@@ -97,7 +86,6 @@ async fn test_execute_wrong_asset() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -124,7 +112,6 @@ async fn test_execute_wrong_asset() {
         .unwrap());
 
     assert!(swap_intent_shard
-        .as_account()
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -133,12 +120,5 @@ async fn test_execute_wrong_asset() {
         .unwrap()
         .is_available());
 
-    assert_eq!(
-        ft_token2
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        500
-    );
+    assert_eq!(ft_token2.ft_balance_of(user2.id()).await.unwrap(), 500);
 }

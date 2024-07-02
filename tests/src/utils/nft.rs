@@ -1,5 +1,6 @@
 use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_sdk::{AccountId, NearToken};
+use near_workspaces::Contract;
 use serde_json::json;
 
 pub trait NftExt {
@@ -77,5 +78,36 @@ impl NftExt for near_workspaces::Account {
             .await?
             .json()
             .map_err(Into::into)
+    }
+}
+
+impl NftExt for Contract {
+    async fn nft_transfer(
+        &self,
+        collection: &AccountId,
+        receiver_id: &AccountId,
+        token_id: TokenId,
+        memo: Option<String>,
+    ) -> anyhow::Result<()> {
+        self.as_account()
+            .nft_transfer(collection, receiver_id, token_id, memo)
+            .await
+    }
+
+    async fn nft_transfer_call(
+        &self,
+        collection: &AccountId,
+        receiver_id: &AccountId,
+        token_id: TokenId,
+        memo: Option<String>,
+        msg: String,
+    ) -> anyhow::Result<bool> {
+        self.as_account()
+            .nft_transfer_call(collection, receiver_id, token_id, memo, msg)
+            .await
+    }
+
+    async fn nft_token(&self, token_id: &TokenId) -> anyhow::Result<Option<Token>> {
+        self.as_account().nft_token(token_id).await
     }
 }

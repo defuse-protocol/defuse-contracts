@@ -30,24 +30,11 @@ async fn test_rollback_lost_found_ft() {
 
     user.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token.id(), None)
         .await
         .unwrap();
 
-    ft_token
-        .as_account()
-        .ft_transfer(ft_token.id(), user.id(), 1000, None)
-        .await
-        .unwrap();
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user.id())
-            .await
-            .unwrap(),
-        1000
-    );
+    ft_token.ft_mint(user.id(), 1000).await.unwrap();
 
     let intent_id = "1".to_string();
 
@@ -74,17 +61,9 @@ async fn test_rollback_lost_found_ft() {
         .await
         .unwrap());
 
+    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 0);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -99,7 +78,6 @@ async fn test_rollback_lost_found_ft() {
         .unwrap());
     assert_eq!(
         swap_intent_shard
-            .as_account()
             .get_swap_intent(&intent_id)
             .await
             .unwrap()
@@ -115,17 +93,9 @@ async fn test_rollback_lost_found_ft() {
             recipient: user.id().clone(),
         })
     );
+    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 0);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -139,7 +109,6 @@ async fn test_rollback_lost_found_ft() {
         .unwrap());
     assert_eq!(
         swap_intent_shard
-            .as_account()
             .get_swap_intent(&intent_id)
             .await
             .unwrap()
@@ -155,17 +124,9 @@ async fn test_rollback_lost_found_ft() {
             recipient: user.id().clone(),
         })
     );
+    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 0);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -179,25 +140,13 @@ async fn test_rollback_lost_found_ft() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
+    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 1000);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user.id())
-            .await
-            .unwrap(),
-        1000
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -232,33 +181,14 @@ async fn test_fulfill_lost_found_ft() {
 
     user1.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     swap_intent_shard
-        .as_account()
         .ft_storage_deposit(ft_token.id(), None)
         .await
         .unwrap();
 
-    ft_token
-        .as_account()
-        .ft_transfer(ft_token.id(), user1.id(), 500, None)
-        .await
-        .unwrap();
+    ft_token.ft_mint(user1.id(), 500).await.unwrap();
 
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        500
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        0
-    );
+    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 500);
+    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 0);
 
     let intent_id = "1".to_string();
     assert!(user1
@@ -283,17 +213,9 @@ async fn test_fulfill_lost_found_ft() {
         .await
         .unwrap());
 
+    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 0);
     assert_eq!(
         ft_token
-            .as_account()
-            .ft_balance_of(user1.id())
-            .await
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
@@ -314,7 +236,6 @@ async fn test_fulfill_lost_found_ft() {
 
     assert_eq!(
         swap_intent_shard
-            .as_account()
             .get_swap_intent(&intent_id)
             .await
             .unwrap()
@@ -331,20 +252,12 @@ async fn test_fulfill_lost_found_ft() {
     assert!(user1.view_account().await.unwrap().balance > NearToken::from_near(14));
     assert_eq!(
         ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
         500
     );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        0
-    );
+    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 0);
     assert!(user2.view_account().await.unwrap().balance <= NearToken::from_near(5));
 
     // no storage_deposit yet
@@ -354,20 +267,12 @@ async fn test_fulfill_lost_found_ft() {
         .unwrap());
     assert_eq!(
         ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
         500
     );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        0
-    );
+    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 0);
 
     user2.ft_storage_deposit(ft_token.id(), None).await.unwrap();
     assert!(user2
@@ -377,27 +282,15 @@ async fn test_fulfill_lost_found_ft() {
 
     assert_eq!(
         ft_token
-            .as_account()
             .ft_balance_of(swap_intent_shard.id())
             .await
             .unwrap(),
         0
     );
-    assert_eq!(
-        ft_token
-            .as_account()
-            .ft_balance_of(user2.id())
-            .await
-            .unwrap(),
-        500
-    );
+    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 500);
 
     assert_eq!(
-        swap_intent_shard
-            .as_account()
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap(),
+        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 }
