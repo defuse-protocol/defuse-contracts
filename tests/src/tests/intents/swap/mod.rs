@@ -155,83 +155,6 @@ async fn test_swap_native_to_ft() {
 }
 
 #[tokio::test]
-async fn test_swap_native_to_ft_no_deposit() {
-    let env = Env::new().await.unwrap();
-    env.root_account()
-        .ft_storage_deposit_many(env.ft1.id(), &[env.user2.id(), env.swap_intent.id()])
-        .await
-        .unwrap();
-
-    env.ft1.ft_mint(env.user2.id(), 500).await.unwrap();
-
-    let intent_id = "1".to_string();
-    assert!(env
-        .user1
-        .create_swap_intent(
-            env.swap_intent.id(),
-            Asset::Native(NearToken::from_near(5)),
-            CreateSwapIntentAction {
-                id: intent_id.clone(),
-                asset_out: Asset::Ft(FtAmount {
-                    token: env.ft1.id().clone(),
-                    amount: 500,
-                }),
-                recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
-            },
-        )
-        .await
-        .unwrap());
-
-    assert!(env
-        .swap_intent
-        .get_swap_intent(&intent_id)
-        .await
-        .unwrap()
-        .unwrap()
-        .as_unlocked()
-        .unwrap()
-        .is_available());
-
-    assert!(env.user1.view_account().await.unwrap().balance <= NearToken::from_near(5));
-
-    assert!(!env
-        .user2
-        .execute_swap_intent(
-            env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 500,
-            }),
-            ExecuteSwapIntentAction {
-                id: intent_id.clone(),
-                recipient: None,
-            },
-        )
-        .await
-        .unwrap());
-
-    assert!(env
-        .swap_intent
-        .get_swap_intent(&intent_id)
-        .await
-        .unwrap()
-        .unwrap()
-        .as_unlocked()
-        .unwrap()
-        .is_available());
-
-    assert_eq!(env.ft1.ft_balance_of(env.user2.id()).await.unwrap(), 500);
-    assert_eq!(
-        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
-        0,
-    );
-    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 0);
-
-    assert!(env.user2.view_account().await.unwrap().balance < NearToken::from_near(10));
-}
-
-#[tokio::test]
 async fn test_swap_native_to_nft() {
     let env = Env::new().await.unwrap();
 
@@ -424,7 +347,6 @@ async fn test_swap_ft_to_ft() {
                     amount: 2000,
                 }),
                 recipient: None,
-                // TODO
                 deadline: Deadline::timeout(Duration::from_secs(60)),
             },
         )

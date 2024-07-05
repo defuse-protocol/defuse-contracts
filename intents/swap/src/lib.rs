@@ -126,10 +126,15 @@ impl SwapIntentContractImpl {
             return Err(SwapIntentError::Expired);
         }
         if received != intent.asset_out {
-            return Err(SwapIntentError::WrongAsset);
+            return Err(SwapIntentError::WrongAssetOrAmount);
         }
 
         Ok(Self::transfer(
+            &execute.id,
+            intent.asset_in.clone(),
+            execute.recipient.as_ref().unwrap_or(&sender).clone(),
+        )
+        .and(Self::transfer(
             &execute.id,
             // asset_out
             received,
@@ -138,15 +143,20 @@ impl SwapIntentContractImpl {
                 .as_ref()
                 .unwrap_or(&intent.initiator)
                 .clone(),
-        )
+        ))
         .then(
             Self::ext(env::current_account_id())
-                .with_static_gas(
-                    Self::GAS_FOR_RESOLVE_TRANSFER_ASSET_OUT
-                        .saturating_add(intent.asset_in.gas_for_transfer())
-                        .saturating_add(Self::GAS_FOR_RESOLVE_TRANSFER_ASSET_IN),
-                )
-                .resolve_transfer_asset_out(&execute.id, sender, execute.recipient),
+                .with_static_gas(Self::GAR_FOR_RESOLVE_EXECUTE_TRANSFERS.saturating_add(
+                    if intent.asset_out.is_native() {
+                        // native asset we need to refund manualy
+                        Asset::GAS_FOR_NATIVE_TRANSFER
+                    } else {
+                        // other assets have already reserved some gas
+                        // for *_resolve_transfer() stage
+                        Gas::from_gas(0)
+                    },
+                ))
+                .resolve_execute_transfers(&execute.id, sender, execute.recipient),
         ))
     }
 
@@ -163,103 +173,38 @@ impl SwapIntentContractImpl {
 
 #[near]
 impl SwapIntentContractImpl {
-    // TODO: more accurate value
-    const GAS_FOR_RESOLVE_TRANSFER_ASSET_OUT: Gas = Gas::from_tgas(5);
+    // TODO: more accurate values
+    const GAR_FOR_RESOLVE_EXECUTE_TRANSFERS: Gas = Gas::from_tgas(10);
 
     #[private]
-    pub fn resolve_transfer_asset_out(
+    pub fn resolve_execute_transfers(
         &mut self,
         id: &IntentId,
         asset_out_sender: AccountId,
-        #[callback_result] transfer_asset_out: &Result<(), PromiseError>,
         asset_in_recipient: Option<AccountId>,
+        #[callback_result] transfer_asset_in: &Result<(), PromiseError>,
+        #[callback_result] transfer_asset_out: &Result<(), PromiseError>,
     ) -> PromiseOrValue<serde_json::Value> {
-        self.internal_resolve_transfer_asset_out(
+        self.internal_resolve_execute_transfers(
             id,
             asset_out_sender,
-            transfer_asset_out.is_ok(),
             asset_in_recipient,
+            transfer_asset_in.is_ok(),
+            transfer_asset_out.is_ok(),
         )
         .unwrap()
     }
 }
 
 impl SwapIntentContractImpl {
-    fn internal_resolve_transfer_asset_out(
+    fn internal_resolve_execute_transfers(
         &mut self,
         id: &IntentId,
         asset_out_sender: AccountId,
-        transfer_asset_out_succeeded: bool,
         asset_in_recipient: Option<AccountId>,
-    ) -> Result<PromiseOrValue<serde_json::Value>, SwapIntentError> {
-        let intent = self.intents.get_mut(id).ok_or(SwapIntentError::NotFound)?;
-
-        if !transfer_asset_out_succeeded {
-            let intent = intent
-                .unlock()
-                .and_then(|status| status.as_available())
-                .ok_or(SwapIntentError::WrongStatus)?;
-            return Ok(match intent.asset_out {
-                Asset::Native(_) => {
-                    // Native transfer can fail only if we don't have enough NEAR.
-                    // Since we create native intents with the exact amount
-                    // of attached NEAR, this situation can only happen if
-                    // we run out of NEAR due to incorrect storage management
-                    // while creating new intents.
-                    unreachable!()
-                }
-                Asset::Ft(FtAmount { amount, .. }) => {
-                    // return back to sender: ft_on_transfer(asset_out)
-                    PromiseOrValue::Value(json!(U128(amount)))
-                }
-                Asset::Nft(_) => {
-                    // return back to sender: nft_on_transfer(asset_out)
-                    PromiseOrValue::Value(json!(true))
-                }
-            });
-        }
-
-        let intent = intent
-            .as_locked()
-            .and_then(|status| status.as_available())
-            .ok_or(SwapIntentError::WrongStatus)?;
-        let asset_in_recipient = asset_in_recipient.unwrap_or(asset_out_sender);
-
-        Ok(
-            Self::transfer(id, intent.asset_in.clone(), asset_in_recipient.clone())
-                .then(
-                    Self::ext(env::current_account_id())
-                        .resolve_transfer_asset_in(id, asset_in_recipient),
-                )
-                .into(),
-        )
-    }
-}
-
-#[near]
-impl SwapIntentContractImpl {
-    // TODO: more accurate value
-    const GAS_FOR_RESOLVE_TRANSFER_ASSET_IN: Gas = Gas::from_tgas(5);
-
-    #[private]
-    pub fn resolve_transfer_asset_in(
-        &mut self,
-        id: &IntentId,
-        #[callback_result] transfer_asset_in: &Result<(), PromiseError>,
-        asset_in_recipient: AccountId,
-    ) -> serde_json::Value {
-        self.internal_resolve_transfer_asset_in(id, transfer_asset_in.is_ok(), asset_in_recipient)
-            .unwrap()
-    }
-}
-
-impl SwapIntentContractImpl {
-    fn internal_resolve_transfer_asset_in(
-        &mut self,
-        id: &IntentId,
         transfer_asset_in_succeeded: bool,
-        asset_in_recipient: AccountId,
-    ) -> Result<serde_json::Value, SwapIntentError> {
+        transfer_asset_out_succeeded: bool,
+    ) -> Result<PromiseOrValue<serde_json::Value>, SwapIntentError> {
         let intent = self
             .intents
             .get_mut(id)
@@ -270,12 +215,25 @@ impl SwapIntentContractImpl {
         let swap = intent.as_available().ok_or(SwapIntentError::WrongStatus)?;
         let asset_out = swap.asset_out.clone();
 
-        if transfer_asset_in_succeeded {
+        if transfer_asset_in_succeeded && transfer_asset_out_succeeded {
+            // both transfers succeeded
             self.intents.remove(id);
-        } else {
-            let lost = LostAsset {
-                asset: swap.asset_in.clone(),
-                recipient: asset_in_recipient,
+            Dep2Event::Executed(id)
+                .emit()
+                .map_err(SwapIntentError::JSON)?;
+        } else if transfer_asset_in_succeeded ^ transfer_asset_out_succeeded {
+            // exactly one of two transfers succeeded
+            let lost = if transfer_asset_in_succeeded {
+                // transfer_asset_out failed
+                LostAsset {
+                    asset: swap.asset_out.clone(),
+                    recipient: swap.recipient.as_ref().unwrap_or(&swap.initiator).clone(),
+                }
+            } else {
+                LostAsset {
+                    asset: swap.asset_in.clone(),
+                    recipient: asset_in_recipient.unwrap_or_else(|| asset_out_sender.clone()),
+                }
             };
             Dep2Event::Lost {
                 intent_id: id,
@@ -286,17 +244,35 @@ impl SwapIntentContractImpl {
             *intent = SwapIntentStatus::Lost(lost);
         }
 
-        Dep2Event::Executed(id)
-            .emit()
-            .map_err(SwapIntentError::JSON)?;
+        Ok(Self::maybe_refund(
+            &asset_out,
+            // refund only if both transfers failed
+            !(transfer_asset_in_succeeded || transfer_asset_out_succeeded),
+            asset_out_sender,
+        ))
+    }
 
-        Ok(match asset_out {
-            // native_action(asset_out)
-            Asset::Native(_) => json!(true),
-            // ft_on_transfer(asset_out)
-            Asset::Ft(_) => json!(U128(0)),
-            // nft_on_transfer(asset_out)
-            Asset::Nft(_) => json!(false),
-        })
+    #[inline]
+    fn maybe_refund(
+        asset: &Asset,
+        refund: bool,
+        refund_to: AccountId,
+    ) -> PromiseOrValue<serde_json::Value> {
+        match asset {
+            // native_action()
+            Asset::Native(amount) => {
+                if refund {
+                    Promise::new(refund_to).transfer(*amount).into()
+                } else {
+                    PromiseOrValue::Value(json!(true))
+                }
+            }
+            // ft_on_transfer()
+            Asset::Ft(FtAmount { amount, .. }) => {
+                PromiseOrValue::Value(json!(U128(if refund { *amount } else { 0 })))
+            }
+            // nft_on_transfer()
+            Asset::Nft(_) => PromiseOrValue::Value(json!(refund)),
+        }
     }
 }

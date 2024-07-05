@@ -76,20 +76,17 @@ impl SwapIntentContractImpl {
             .unlock()
             .ok_or(SwapIntentError::WrongStatus)?;
 
-        let swap = intent
-            .as_available()
-            .ok_or(SwapIntentError::WrongStatus)?
-            .clone();
+        let swap = intent.as_available().ok_or(SwapIntentError::WrongStatus)?;
 
         if transfer_asset_in_succeeded {
+            self.intents.remove(id);
             Dep2Event::Rollbacked(id)
                 .emit()
                 .map_err(SwapIntentError::JSON)?;
-            self.intents.remove(id);
         } else {
             let lost = LostAsset {
-                asset: swap.asset_in,
-                recipient: swap.initiator,
+                asset: swap.asset_in.clone(),
+                recipient: swap.initiator.clone(),
             };
             Dep2Event::Lost {
                 intent_id: id,

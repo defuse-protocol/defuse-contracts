@@ -11,8 +11,8 @@ pub enum SwapIntentError {
     AlreadyExists,
     #[error("intent has expired")]
     Expired,
-    #[error("wrong asset")]
-    WrongAsset,
+    #[error("wrong asset or amount")]
+    WrongAssetOrAmount,
     #[error("wrong status")]
     WrongStatus,
     #[error("unauthorized")]

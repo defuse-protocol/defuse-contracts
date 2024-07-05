@@ -15,7 +15,7 @@ pub enum Asset {
 }
 
 impl Asset {
-    const GAS_FOR_NATIVE_TRANSFER: Gas = Gas::from_ggas(450);
+    pub const GAS_FOR_NATIVE_TRANSFER: Gas = Gas::from_ggas(450);
     // TODO: more accurate numbers
     pub const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(20);
     pub const GAS_FOR_NFT_TRANSFER: Gas = Gas::from_tgas(20);
@@ -27,6 +27,26 @@ impl Asset {
             Self::Ft(_) => Self::GAS_FOR_FT_TRANSFER,
             Self::Nft(_) => Self::GAS_FOR_NFT_TRANSFER,
         }
+    }
+}
+
+impl Asset {
+    #[must_use]
+    #[inline]
+    pub const fn is_native(&self) -> bool {
+        matches!(self, Self::Native(_))
+    }
+
+    #[must_use]
+    #[inline]
+    pub const fn is_ft(&self) -> bool {
+        matches!(self, Self::Ft(_))
+    }
+
+    #[must_use]
+    #[inline]
+    pub const fn is_nft(&self) -> bool {
+        matches!(self, Self::Nft(_))
     }
 }
 
