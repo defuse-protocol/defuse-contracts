@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 use near_sdk::{env, near, AccountId};
 use serde_with::{serde_as, DefaultOnNull};
 
@@ -131,5 +133,32 @@ impl Deadline {
             }
             Self::BlockNumber(n) => env::block_height() > n,
         }
+    }
+
+    #[cfg(target_family = "wasm")]
+    #[must_use]
+    pub fn in_n_blocks(n: u64) -> Self {
+        Self::BlockNumber(env::block_height().saturating_add(n))
+    }
+
+    #[cfg(target_family = "wasm")]
+    #[must_use]
+    pub fn timeout(timeout: Duration) -> Self {
+        Self::Timestamp(
+            env::block_timestamp_ms()
+                .saturating_add(timeout.as_millis() as u64)
+                .saturating_div(1000),
+        )
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[must_use]
+    pub fn timeout(timeout: Duration) -> Self {
+        Self::Timestamp(
+            (::std::time::SystemTime::now() + timeout)
+                .duration_since(::std::time::SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        )
     }
 }

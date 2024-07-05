@@ -1,124 +1,75 @@
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 use defuse_contracts::intents::swap::{Asset, CreateSwapIntentAction, Deadline, FtAmount};
 use near_sdk::NearToken;
 
-use crate::utils::{ft::FtExt, Sandbox};
-
-use super::SwapIntentShard;
+use super::{Env, SwapIntentShard};
 
 #[tokio::test]
 async fn test_create_zero_amount_in_native() {
-    let sandbox = Sandbox::new().await.unwrap();
-    let dao = sandbox
-        .create_subaccount("dao", NearToken::from_near(100))
-        .await
-        .unwrap();
-    let swap_intent_shard = dao.deploy_swap_intent_shard("swap-intent").await.unwrap();
-    let user = sandbox
-        .create_subaccount("user", NearToken::from_near(10))
-        .await
-        .unwrap();
+    let env = Env::new().await.unwrap();
 
-    assert!(user
+    assert!(env
+        .user1
         .create_swap_intent(
-            swap_intent_shard.id(),
+            env.swap_intent.id(),
             Asset::Native(NearToken::from_near(0)),
             CreateSwapIntentAction {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(1)),
                 recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        + Duration::from_secs(60))
-                    .as_secs(),
-                ),
+                deadline: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
         .is_err());
 
-    assert!(user.view_account().await.unwrap().balance > NearToken::from_near(9));
+    assert!(env.user1.view_account().await.unwrap().balance > NearToken::from_near(9));
 }
 
 #[tokio::test]
 async fn test_create_zero_amount_out_native() {
-    let sandbox = Sandbox::new().await.unwrap();
-    let dao = sandbox
-        .create_subaccount("dao", NearToken::from_near(100))
-        .await
-        .unwrap();
-    let swap_intent_shard = dao.deploy_swap_intent_shard("swap-intent").await.unwrap();
-    let user = sandbox
-        .create_subaccount("user", NearToken::from_near(10))
-        .await
-        .unwrap();
+    let env = Env::new().await.unwrap();
 
-    assert!(user
+    assert!(env
+        .user1
         .create_swap_intent(
-            swap_intent_shard.id(),
+            env.swap_intent.id(),
             Asset::Native(NearToken::from_near(5)),
             CreateSwapIntentAction {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(0)),
                 recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        + Duration::from_secs(60))
-                    .as_secs(),
-                ),
+                deadline: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
         .is_err());
 
-    assert!(user.view_account().await.unwrap().balance > NearToken::from_near(9));
+    assert!(env.user1.view_account().await.unwrap().balance > NearToken::from_near(9));
 }
 
 #[tokio::test]
 async fn test_create_zero_amount_out_ft() {
-    let sandbox = Sandbox::new().await.unwrap();
-    let ft_token = sandbox
-        .root_account()
-        .deploy_ft_token("ft-token")
-        .await
-        .unwrap();
-    let dao = sandbox
-        .create_subaccount("dao", NearToken::from_near(100))
-        .await
-        .unwrap();
-    let swap_intent_shard = dao.deploy_swap_intent_shard("swap-intent").await.unwrap();
-    let user = sandbox
-        .create_subaccount("user", NearToken::from_near(10))
-        .await
-        .unwrap();
+    let env = Env::new().await.unwrap();
 
-    assert!(user
+    assert!(env
+        .user1
         .create_swap_intent(
-            swap_intent_shard.id(),
+            env.swap_intent.id(),
             Asset::Native(NearToken::from_near(5)),
             CreateSwapIntentAction {
                 id: "1".to_string(),
                 asset_out: Asset::Ft(FtAmount {
-                    token: ft_token.id().clone(),
+                    token: env.ft1.id().clone(),
                     amount: 0,
                 }),
                 recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        + Duration::from_secs(60))
-                    .as_secs(),
-                ),
+                deadline: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
         .is_err());
 
-    assert!(user.view_account().await.unwrap().balance > NearToken::from_near(9));
+    assert!(env.user1.view_account().await.unwrap().balance > NearToken::from_near(9));
 }

@@ -43,6 +43,16 @@ pub trait FtExt: StorageManagementExt {
         self.storage_deposit(token_id, account_id, STORAGE_DEPOSIT)
             .await
     }
+    async fn ft_storage_deposit_many(
+        &self,
+        token_id: &AccountId,
+        accounts: &[&AccountId],
+    ) -> anyhow::Result<()> {
+        for account in accounts {
+            self.ft_storage_deposit(token_id, Some(account)).await?;
+        }
+        Ok(())
+    }
 
     async fn ft_mint(&self, account_id: &AccountId, amount: u128) -> anyhow::Result<()>;
 }

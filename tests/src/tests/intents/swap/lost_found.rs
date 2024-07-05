@@ -1,4 +1,4 @@
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 use defuse_contracts::intents::swap::{
     Asset, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction, FtAmount, LostAsset,
@@ -6,78 +6,59 @@ use defuse_contracts::intents::swap::{
 };
 use near_sdk::NearToken;
 
-use crate::utils::{ft::FtExt, storage_management::StorageManagementExt, Sandbox};
+use crate::utils::{ft::FtExt, storage_management::StorageManagementExt};
 
-use super::SwapIntentShard;
+use super::{Env, SwapIntentShard};
 
 #[tokio::test]
 async fn test_rollback_lost_found_ft() {
-    let sandbox = Sandbox::new().await.unwrap();
-    let ft_token = sandbox
-        .root_account()
-        .deploy_ft_token("ft-token")
-        .await
-        .unwrap();
-    let dao = sandbox
-        .create_subaccount("dao", NearToken::from_near(100))
-        .await
-        .unwrap();
-    let swap_intent_shard = dao.deploy_swap_intent_shard("swap-intent").await.unwrap();
-    let user = sandbox
-        .create_subaccount("user", NearToken::from_near(10))
+    let env = Env::new().await.unwrap();
+    env.root_account()
+        .ft_storage_deposit_many(env.ft1.id(), &[env.user1.id(), env.swap_intent.id()])
         .await
         .unwrap();
 
-    user.ft_storage_deposit(ft_token.id(), None).await.unwrap();
-    swap_intent_shard
-        .ft_storage_deposit(ft_token.id(), None)
-        .await
-        .unwrap();
-
-    ft_token.ft_mint(user.id(), 1000).await.unwrap();
+    env.ft1.ft_mint(env.user1.id(), 1000).await.unwrap();
 
     let intent_id = "1".to_string();
 
-    assert!(user
+    assert!(env
+        .user1
         .create_swap_intent(
-            swap_intent_shard.id(),
+            env.swap_intent.id(),
             Asset::Ft(FtAmount {
-                token: ft_token.id().clone(),
+                token: env.ft1.id().clone(),
                 amount: 1000,
             }),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        + Duration::from_secs(60))
-                    .as_secs(),
-                ),
+                deadline: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
         .unwrap());
 
-    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 0);
+    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 0);
     assert_eq!(
-        ft_token
-            .ft_balance_of(swap_intent_shard.id())
-            .await
-            .unwrap(),
+        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
         1000
     );
 
-    assert!(user.storage_unregister(ft_token.id(), None).await.unwrap());
+    assert!(env
+        .user1
+        .storage_unregister(env.ft1.id(), None)
+        .await
+        .unwrap());
 
-    assert!(!user
-        .rollback_intent(swap_intent_shard.id(), &intent_id)
+    assert!(!env
+        .user1
+        .rollback_intent(env.swap_intent.id(), &intent_id)
         .await
         .unwrap());
     assert_eq!(
-        swap_intent_shard
+        env.swap_intent
             .get_swap_intent(&intent_id)
             .await
             .unwrap()
@@ -87,28 +68,26 @@ async fn test_rollback_lost_found_ft() {
             .as_lost(),
         Some(&LostAsset {
             asset: Asset::Ft(FtAmount {
-                token: ft_token.id().clone(),
+                token: env.ft1.id().clone(),
                 amount: 1000
             }),
-            recipient: user.id().clone(),
+            recipient: env.user1.id().clone(),
         })
     );
-    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 0);
+    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 0);
     assert_eq!(
-        ft_token
-            .ft_balance_of(swap_intent_shard.id())
-            .await
-            .unwrap(),
+        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
         1000,
     );
 
     // try to lost_found before storage_deposit
-    assert!(!user
-        .lost_found(swap_intent_shard.id(), &intent_id)
+    assert!(!env
+        .user1
+        .lost_found(env.swap_intent.id(), &intent_id)
         .await
         .unwrap());
     assert_eq!(
-        swap_intent_shard
+        env.swap_intent
             .get_swap_intent(&intent_id)
             .await
             .unwrap()
@@ -118,38 +97,36 @@ async fn test_rollback_lost_found_ft() {
             .as_lost(),
         Some(&LostAsset {
             asset: Asset::Ft(FtAmount {
-                token: ft_token.id().clone(),
+                token: env.ft1.id().clone(),
                 amount: 1000
             }),
-            recipient: user.id().clone(),
+            recipient: env.user1.id().clone(),
         })
     );
-    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 0);
+    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 0);
     assert_eq!(
-        ft_token
-            .ft_balance_of(swap_intent_shard.id())
-            .await
-            .unwrap(),
+        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
         1000,
     );
 
-    user.ft_storage_deposit(ft_token.id(), None).await.unwrap();
-    assert!(user
-        .lost_found(swap_intent_shard.id(), &intent_id)
+    env.user1
+        .ft_storage_deposit(env.ft1.id(), None)
+        .await
+        .unwrap();
+    assert!(env
+        .user1
+        .lost_found(env.swap_intent.id(), &intent_id)
         .await
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
+        env.swap_intent.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 
-    assert_eq!(ft_token.ft_balance_of(user.id()).await.unwrap(), 1000);
+    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 1000);
     assert_eq!(
-        ft_token
-            .ft_balance_of(swap_intent_shard.id())
-            .await
-            .unwrap(),
+        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
         0
     );
 }
@@ -158,73 +135,51 @@ async fn test_rollback_lost_found_ft() {
 
 #[tokio::test]
 async fn test_fulfill_lost_found_ft() {
-    let sandbox = Sandbox::new().await.unwrap();
-    let ft_token = sandbox
-        .root_account()
-        .deploy_ft_token("ft-token")
-        .await
-        .unwrap();
-    let dao = sandbox
-        .create_subaccount("dao", NearToken::from_near(100))
-        .await
-        .unwrap();
-    let swap_intent_shard = dao.deploy_swap_intent_shard("swap-intent").await.unwrap();
+    let env = Env::new().await.unwrap();
 
-    let user1 = sandbox
-        .create_subaccount("user1", NearToken::from_near(10))
+    env.user1
+        .ft_storage_deposit(env.ft1.id(), None)
         .await
         .unwrap();
-    let user2 = sandbox
-        .create_subaccount("user2", NearToken::from_near(10))
+    env.swap_intent
+        .ft_storage_deposit(env.ft1.id(), None)
         .await
         .unwrap();
 
-    user1.ft_storage_deposit(ft_token.id(), None).await.unwrap();
-    swap_intent_shard
-        .ft_storage_deposit(ft_token.id(), None)
-        .await
-        .unwrap();
+    env.ft1.ft_mint(env.user1.id(), 500).await.unwrap();
 
-    ft_token.ft_mint(user1.id(), 500).await.unwrap();
-
-    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 500);
-    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 0);
+    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 500);
+    assert_eq!(env.ft1.ft_balance_of(env.user2.id()).await.unwrap(), 0);
 
     let intent_id = "1".to_string();
-    assert!(user1
+    assert!(env
+        .user1
         .create_swap_intent(
-            swap_intent_shard.id(),
+            env.swap_intent.id(),
             Asset::Ft(FtAmount {
-                token: ft_token.id().clone(),
+                token: env.ft1.id().clone(),
                 amount: 500,
             }),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
+                deadline: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
         .unwrap());
 
-    assert_eq!(ft_token.ft_balance_of(user1.id()).await.unwrap(), 0);
+    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 0);
     assert_eq!(
-        ft_token
-            .ft_balance_of(swap_intent_shard.id())
-            .await
-            .unwrap(),
+        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
         500
     );
 
-    assert!(user2
+    assert!(env
+        .user2
         .execute_swap_intent(
-            swap_intent_shard.id(),
+            env.swap_intent.id(),
             Asset::Native(NearToken::from_near(5)),
             ExecuteSwapIntentAction {
                 id: intent_id.clone(),
@@ -235,7 +190,7 @@ async fn test_fulfill_lost_found_ft() {
         .unwrap());
 
     assert_eq!(
-        swap_intent_shard
+        env.swap_intent
             .get_swap_intent(&intent_id)
             .await
             .unwrap()
@@ -243,54 +198,50 @@ async fn test_fulfill_lost_found_ft() {
             .as_unlocked(),
         Some(&SwapIntentStatus::Lost(LostAsset {
             asset: Asset::Ft(FtAmount {
-                token: ft_token.id().clone(),
+                token: env.ft1.id().clone(),
                 amount: 500,
             }),
-            recipient: user2.id().clone(),
+            recipient: env.user2.id().clone(),
         })),
     );
-    assert!(user1.view_account().await.unwrap().balance > NearToken::from_near(14));
+    assert!(env.user1.view_account().await.unwrap().balance > NearToken::from_near(14));
     assert_eq!(
-        ft_token
-            .ft_balance_of(swap_intent_shard.id())
-            .await
-            .unwrap(),
+        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
         500
     );
-    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 0);
-    assert!(user2.view_account().await.unwrap().balance <= NearToken::from_near(5));
+    assert_eq!(env.ft1.ft_balance_of(env.user2.id()).await.unwrap(), 0);
+    assert!(env.user2.view_account().await.unwrap().balance <= NearToken::from_near(5));
 
     // no storage_deposit yet
-    assert!(!user2
-        .lost_found(swap_intent_shard.id(), &intent_id)
+    assert!(!env
+        .user2
+        .lost_found(env.swap_intent.id(), &intent_id)
         .await
         .unwrap());
     assert_eq!(
-        ft_token
-            .ft_balance_of(swap_intent_shard.id())
-            .await
-            .unwrap(),
+        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
         500
     );
-    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 0);
+    assert_eq!(env.ft1.ft_balance_of(env.user2.id()).await.unwrap(), 0);
 
-    user2.ft_storage_deposit(ft_token.id(), None).await.unwrap();
-    assert!(user2
-        .lost_found(swap_intent_shard.id(), &intent_id)
+    env.user2
+        .ft_storage_deposit(env.ft1.id(), None)
+        .await
+        .unwrap();
+    assert!(env
+        .user2
+        .lost_found(env.swap_intent.id(), &intent_id)
         .await
         .unwrap());
 
     assert_eq!(
-        ft_token
-            .ft_balance_of(swap_intent_shard.id())
-            .await
-            .unwrap(),
+        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
         0
     );
-    assert_eq!(ft_token.ft_balance_of(user2.id()).await.unwrap(), 500);
+    assert_eq!(env.ft1.ft_balance_of(env.user2.id()).await.unwrap(), 500);
 
     assert_eq!(
-        swap_intent_shard.get_swap_intent(&intent_id).await.unwrap(),
+        env.swap_intent.get_swap_intent(&intent_id).await.unwrap(),
         None,
     );
 }

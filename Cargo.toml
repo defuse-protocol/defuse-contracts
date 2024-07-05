@@ -21,9 +21,10 @@ defuse-swap-intent-contract.path = "intents/swap"
 defuse-swap-ft-intent-contract.path = "intents/swap-ft"
 
 anyhow = "1"
+impl-tools = "0.10"
 lazy_static = "1.4"
-near-contract-standards = "5.1"
-near-sdk = "5.1"
+near-contract-standards = "5.2"
+near-sdk = "5.2"
 near-workspaces = "0.10"
 serde_json = "1"
 serde_with = "3.8"
@@ -46,12 +47,3 @@ debug = false
 strip = "symbols"
 panic = "abort"
 overflow-checks = true
-
-# TODO: remove when near-sdk 6.0.0 is released:
-# https://github.com/near/near-sdk-rs/pull/1192
-[patch.crates-io.near-contract-standards]
-git = "https://github.com/near/near-sdk-rs"
-rev = "c843e9a"
-[patch.crates-io.near-sdk]
-git = "https://github.com/near/near-sdk-rs"
-rev = "c843e9a"

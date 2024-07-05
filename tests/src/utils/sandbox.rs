@@ -1,5 +1,4 @@
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 
 use near_workspaces::{types::NearToken, Account, Network, Worker};
 

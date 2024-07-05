@@ -1,91 +1,57 @@
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 use defuse_contracts::intents::swap::{
     Asset, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction, FtAmount,
 };
 use near_sdk::NearToken;
 
-use crate::utils::{ft::FtExt, Sandbox};
+use crate::utils::ft::FtExt;
 
-use super::SwapIntentShard;
+use super::{Env, SwapIntentShard};
 
 #[tokio::test]
 async fn test_execute_wrong_asset() {
-    let sandbox = Sandbox::new().await.unwrap();
-    let ft_token1 = sandbox
-        .root_account()
-        .deploy_ft_token("ft-token-1")
+    let env = Env::new().await.unwrap();
+    env.root_account()
+        .ft_storage_deposit_many(
+            env.ft1.id(),
+            &[env.user1.id(), env.user2.id(), env.swap_intent.id()],
+        )
         .await
         .unwrap();
-    let ft_token2 = sandbox
-        .root_account()
-        .deploy_ft_token("ft-token-2")
-        .await
-        .unwrap();
-    let dao = sandbox
-        .create_subaccount("dao", NearToken::from_near(100))
-        .await
-        .unwrap();
-    let swap_intent_shard = dao.deploy_swap_intent_shard("swap-intent").await.unwrap();
-
-    let user1 = sandbox
-        .create_subaccount("user1", NearToken::from_near(10))
-        .await
-        .unwrap();
-    let user2 = sandbox
-        .create_subaccount("user2", NearToken::from_near(10))
+    env.root_account()
+        .ft_storage_deposit_many(
+            env.ft2.id(),
+            &[env.user1.id(), env.user2.id(), env.swap_intent.id()],
+        )
         .await
         .unwrap();
 
-    user1
-        .ft_storage_deposit(ft_token1.id(), None)
-        .await
-        .unwrap();
-    user2
-        .ft_storage_deposit(ft_token1.id(), None)
-        .await
-        .unwrap();
-    user2
-        .ft_storage_deposit(ft_token2.id(), None)
-        .await
-        .unwrap();
-    swap_intent_shard
-        .ft_storage_deposit(ft_token1.id(), None)
-        .await
-        .unwrap();
-    swap_intent_shard
-        .ft_storage_deposit(ft_token2.id(), None)
-        .await
-        .unwrap();
-
-    ft_token1.ft_mint(user2.id(), 500).await.unwrap();
-    ft_token2.ft_mint(user2.id(), 500).await.unwrap();
+    env.ft1.ft_mint(env.user2.id(), 500).await.unwrap();
+    env.ft2.ft_mint(env.user2.id(), 500).await.unwrap();
 
     let intent_id = "1".to_string();
 
-    assert!(user1
+    assert!(env
+        .user1
         .create_swap_intent(
-            swap_intent_shard.id(),
+            env.swap_intent.id(),
             Asset::Native(NearToken::from_near(5)),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: Asset::Ft(FtAmount {
-                    token: ft_token1.id().clone(),
+                    token: env.ft1.id().clone(),
                     amount: 500,
                 }),
                 recipient: None,
-                deadline: Deadline::Timestamp(
-                    (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs(),
-                ),
+                deadline: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
         .unwrap());
 
-    assert!(swap_intent_shard
+    assert!(env
+        .swap_intent
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -94,13 +60,14 @@ async fn test_execute_wrong_asset() {
         .unwrap()
         .is_available());
 
-    assert!(user1.view_account().await.unwrap().balance <= NearToken::from_near(5));
+    assert!(env.user1.view_account().await.unwrap().balance <= NearToken::from_near(5));
 
-    assert!(!user2
+    assert!(!env
+        .user2
         .execute_swap_intent(
-            swap_intent_shard.id(),
+            env.swap_intent.id(),
             Asset::Ft(FtAmount {
-                token: ft_token2.id().clone(),
+                token: env.ft2.id().clone(),
                 amount: 500,
             }),
             ExecuteSwapIntentAction {
@@ -111,7 +78,8 @@ async fn test_execute_wrong_asset() {
         .await
         .unwrap());
 
-    assert!(swap_intent_shard
+    assert!(env
+        .swap_intent
         .get_swap_intent(&intent_id)
         .await
         .unwrap()
@@ -120,5 +88,5 @@ async fn test_execute_wrong_asset() {
         .unwrap()
         .is_available());
 
-    assert_eq!(ft_token2.ft_balance_of(user2.id()).await.unwrap(), 500);
+    assert_eq!(env.ft2.ft_balance_of(env.user2.id()).await.unwrap(), 500);
 }
