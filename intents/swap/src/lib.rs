@@ -59,7 +59,7 @@ impl SwapIntentContractImpl {
         asset_in: Asset,
         create: CreateSwapIntentAction,
     ) -> Result<(), SwapIntentError> {
-        if create.deadline.has_expired() {
+        if create.expiration.has_expired() {
             return Err(SwapIntentError::Expired);
         }
 
@@ -89,7 +89,7 @@ impl SwapIntentContractImpl {
             asset_in,
             asset_out: create.asset_out,
             recipient: create.recipient,
-            deadline: create.deadline,
+            expiration: create.expiration,
         };
 
         Dep2Event::Created(&intent)

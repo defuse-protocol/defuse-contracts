@@ -42,7 +42,7 @@ async fn text_execute_assets_in_out_ft_no_deposits() {
                     amount: 2000,
                 }),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -158,7 +158,7 @@ async fn test_execute_asset_in_ft_no_deposit() {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -263,7 +263,7 @@ async fn test_execute_asset_out_ft_no_deposit() {
                     amount: 500,
                 }),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -366,7 +366,7 @@ async fn test_rollback_lost_found_ft() {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await

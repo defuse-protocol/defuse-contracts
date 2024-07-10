@@ -25,7 +25,7 @@ pub struct CreateSwapIntentAction {
     pub recipient: Option<AccountId>,
     /// Deadline to execute the swap.  
     /// NOTE: intent can still be rollbacked at any time.
-    pub deadline: Deadline,
+    pub expiration: Deadline,
 }
 
 #[derive(Debug, Clone)]

@@ -44,7 +44,7 @@ async fn test_execute_wrong_asset() {
                     amount: 500,
                 }),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await

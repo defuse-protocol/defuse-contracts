@@ -22,7 +22,7 @@ async fn test_execute_expired() {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(5)),
+                expiration: Deadline::timeout(Duration::from_secs(5)),
             },
         )
         .await

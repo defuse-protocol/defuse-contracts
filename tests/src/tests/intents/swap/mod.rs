@@ -38,7 +38,7 @@ async fn test_swap_native_to_native() {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -105,7 +105,7 @@ async fn test_swap_native_to_ft() {
                     amount: 500,
                 }),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -178,7 +178,7 @@ async fn test_swap_native_to_nft() {
                     token_id: derivation_path.clone(),
                 }),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -257,7 +257,7 @@ async fn test_swap_ft_to_native() {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -347,7 +347,7 @@ async fn test_swap_ft_to_ft() {
                     amount: 2000,
                 }),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -441,7 +441,7 @@ async fn test_swap_ft_to_nft() {
                     token_id: derivation_path.clone(),
                 }),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -528,7 +528,7 @@ async fn test_swap_nft_to_native() {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -616,7 +616,7 @@ async fn test_swap_nft_to_nft() {
                     token_id: derivation_path_2.clone(),
                 }),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await

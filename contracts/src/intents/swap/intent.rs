@@ -101,14 +101,14 @@ pub struct SwapIntent {
     pub recipient: Option<AccountId>,
     /// Deadline to execute the swap.  
     /// NOTE: intent can still be rollbacked at any time.
-    pub deadline: Deadline,
+    pub expiration: Deadline,
 }
 
 impl SwapIntent {
     #[must_use]
     #[inline]
     pub fn has_expired(&self) -> bool {
-        self.deadline.has_expired()
+        self.expiration.has_expired()
     }
 }
 

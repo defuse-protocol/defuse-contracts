@@ -18,7 +18,7 @@ async fn test_create_zero_amount_in_native() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(1)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -40,7 +40,7 @@ async fn test_create_zero_amount_out_native() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(0)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -65,7 +65,7 @@ async fn test_create_zero_amount_out_ft() {
                     amount: 0,
                 }),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await

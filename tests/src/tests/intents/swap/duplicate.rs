@@ -20,7 +20,7 @@ async fn test_create_duplicate_native() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -35,7 +35,7 @@ async fn test_create_duplicate_native() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -55,7 +55,7 @@ async fn test_execute_duplicate_native() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await

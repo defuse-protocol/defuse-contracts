@@ -23,7 +23,7 @@ async fn test_rollback_native_intent() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(1)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -69,7 +69,7 @@ async fn test_rollback_ft_intent() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -116,7 +116,7 @@ async fn test_rollback_nft_intent() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                deadline: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Deadline::timeout(Duration::from_secs(60)),
             },
         )
         .await
