@@ -1,7 +1,6 @@
 use core::time::Duration;
 
 use near_sdk::{env, near, AccountId};
-use serde_with::serde_as;
 
 use super::{Asset, LostAsset};
 
@@ -75,7 +74,6 @@ impl SwapIntentStatus {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[serde_as]
 #[near(serializers = [borsh, json])]
 pub struct SwapIntent {
     /// Initiator who created the intent.

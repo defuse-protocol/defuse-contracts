@@ -1,5 +1,4 @@
 use near_sdk::{near, AccountId};
-use serde_with::serde_as;
 
 use super::{Asset, Deadline, IntentId};
 
@@ -12,7 +11,6 @@ pub enum SwapIntentAction {
 }
 
 #[derive(Debug, Clone)]
-#[serde_as]
 #[near(serializers = [json, borsh])]
 pub struct CreateSwapIntentAction {
     /// Unique ID of intent.  
@@ -29,7 +27,6 @@ pub struct CreateSwapIntentAction {
 }
 
 #[derive(Debug, Clone)]
-#[serde_as]
 #[near(serializers = [json, borsh])]
 pub struct ExecuteSwapIntentAction {
     /// Unique ID of the intent.  
