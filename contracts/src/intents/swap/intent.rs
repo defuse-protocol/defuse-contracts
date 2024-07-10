@@ -1,7 +1,7 @@
 use core::time::Duration;
 
 use near_sdk::{env, near, AccountId};
-use serde_with::{serde_as, DefaultOnNull};
+use serde_with::serde_as;
 
 use super::{Asset, LostAsset};
 
@@ -89,7 +89,7 @@ pub struct SwapIntent {
     // * Accept whatever NFT from only whitelisted solvers
     // * Some kind of auction, where solvers "register" their willingness
     //   to close the intent and compete between each other over given
-    //   set of preperties. These properties of suggested addresses by solvers
+    //   set of properties. These properties of suggested addresses by solvers
     //   can be compared between each other either on-chain (by having
     //   light-client contracts for each chain) or by user front-ends:
     //   this info about offers can be presented to the user and user can
@@ -98,7 +98,6 @@ pub struct SwapIntent {
     pub asset_out: Asset,
     /// Where to send asset_out. By default: back to initiator.
     #[serde(default)]
-    #[serde_as(as = "DefaultOnNull")]
     pub recipient: Option<AccountId>,
     /// Deadline to execute the swap.  
     /// NOTE: intent can still be rollbacked at any time.
@@ -155,8 +154,8 @@ impl Deadline {
     #[must_use]
     pub fn timeout(timeout: Duration) -> Self {
         Self::Timestamp(
-            (::std::time::SystemTime::now() + timeout)
-                .duration_since(::std::time::SystemTime::UNIX_EPOCH)
+            (std::time::SystemTime::now() + timeout)
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
         )

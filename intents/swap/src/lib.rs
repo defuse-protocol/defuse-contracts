@@ -148,7 +148,7 @@ impl SwapIntentContractImpl {
             Self::ext(env::current_account_id())
                 .with_static_gas(Self::GAR_FOR_RESOLVE_EXECUTE_TRANSFERS.saturating_add(
                     if intent.asset_out.is_native() {
-                        // native asset we need to refund manualy
+                        // native asset should be refunded manualy
                         Asset::GAS_FOR_NATIVE_TRANSFER
                     } else {
                         // other assets have already reserved some gas
