@@ -1,5 +1,5 @@
 use near_sdk::{near, AccountId};
-use serde_with::{serde_as, DefaultOnNull};
+use serde_with::serde_as;
 
 use super::{Asset, Deadline, IntentId};
 
@@ -22,7 +22,6 @@ pub struct CreateSwapIntentAction {
     pub asset_out: Asset,
     /// Where to send asset_out. By default: back to initiator.
     #[serde(default)]
-    #[serde_as(as = "DefaultOnNull")]
     pub recipient: Option<AccountId>,
     /// Deadline to execute the swap.  
     /// NOTE: intent can still be rollbacked at any time.
@@ -38,6 +37,5 @@ pub struct ExecuteSwapIntentAction {
     pub id: IntentId,
     /// Where to send asset_in. By default: back to executor.
     #[serde(default)]
-    #[serde_as(as = "DefaultOnNull")]
     pub recipient: Option<AccountId>,
 }
