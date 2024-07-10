@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use defuse_contracts::intents::swap::{Asset, CreateSwapIntentAction, Deadline, FtAmount, NftItem};
+use defuse_contracts::intents::swap::{
+    Asset, CreateSwapIntentAction, Expiration, FtAmount, NftItem,
+};
 use near_sdk::NearToken;
 
 use crate::{
@@ -23,7 +25,7 @@ async fn test_rollback_native_intent() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(1)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -61,15 +63,12 @@ async fn test_rollback_ft_intent() {
         .user1
         .create_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 1000,
-            }),
+            Asset::Ft(FtAmount::new(env.ft1.id().clone(), 1000,)),
             CreateSwapIntentAction {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -116,7 +115,7 @@ async fn test_rollback_nft_intent() {
                 id: "1".to_string(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await

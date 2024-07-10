@@ -92,12 +92,12 @@ impl SwapIntentShard for near_workspaces::Account {
                 .ft_transfer_call(
                     &token,
                     swap_intent_id,
-                    amount,
+                    amount.0,
                     None,
                     &serde_json::to_string(&SwapIntentAction::Create(create)).unwrap(),
                 )
                 .await?
-                == amount),
+                == amount.0),
             Asset::Nft(NftItem {
                 collection,
                 token_id,
@@ -150,12 +150,12 @@ impl SwapIntentShard for near_workspaces::Account {
                 .ft_transfer_call(
                     &token,
                     swap_intent_id,
-                    amount,
+                    amount.0,
                     None,
                     &serde_json::to_string(&SwapIntentAction::Execute(execute)).unwrap(),
                 )
                 .await?
-                == amount),
+                == amount.0),
             Asset::Nft(NftItem {
                 collection,
                 token_id,

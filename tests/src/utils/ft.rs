@@ -86,8 +86,8 @@ impl FtExt for Account {
                 "account_id": account_id,
             }))
             .await?
-            .json::<String>()?
-            .parse()
+            .json::<U128>()
+            .map(|v| v.0)
             .map_err(Into::into)
     }
 
@@ -132,8 +132,8 @@ impl FtExt for Account {
             .transact()
             .await?
             .into_result()?
-            .json::<String>()?
-            .parse()
+            .json::<U128>()
+            .map(|v| v.0)
             .map_err(Into::into)
     }
 

@@ -13,7 +13,7 @@ pub enum SwapIntentStatus {
     /// Available for execution.
     Available(SwapIntent),
     /// The intent has already been executed/rollbacked
-    /// but we failed to transfer an asset to recipient/initiator.  
+    /// but we failed to transfer an asset to recipient/initiator.
     /// This can happen due to recipient/initiator is not registered
     /// on the target asset contract or does not have enough storage
     /// deposited according to Storage Management standard (NEP-145).
@@ -97,9 +97,9 @@ pub struct SwapIntent {
     /// Where to send asset_out. By default: back to initiator.
     #[serde(default)]
     pub recipient: Option<AccountId>,
-    /// Deadline to execute the swap.  
+    /// Deadline to execute the swap.
     /// NOTE: intent can still be rollbacked at any time.
-    pub expiration: Deadline,
+    pub expiration: Expiration,
 }
 
 impl SwapIntent {
@@ -113,14 +113,14 @@ impl SwapIntent {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[near(serializers=[borsh, json])]
 #[serde(rename_all = "snake_case")]
-pub enum Deadline {
+pub enum Expiration {
     /// UNIX Timestamp in seconds
     Timestamp(u64),
     /// Block number
     BlockNumber(u64),
 }
 
-impl Deadline {
+impl Expiration {
     #[must_use]
     #[inline]
     pub fn has_expired(self) -> bool {

@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use defuse_contracts::intents::swap::{
-    Asset, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction, FtAmount,
+    Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, Expiration, FtAmount,
 };
 use near_sdk::NearToken;
 
@@ -39,12 +39,9 @@ async fn test_execute_wrong_asset() {
             Asset::Native(NearToken::from_near(5)),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
-                asset_out: Asset::Ft(FtAmount {
-                    token: env.ft1.id().clone(),
-                    amount: 500,
-                }),
+                asset_out: Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -66,10 +63,7 @@ async fn test_execute_wrong_asset() {
         .user2
         .execute_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft2.id().clone(),
-                amount: 500,
-            }),
+            Asset::Ft(FtAmount::new(env.ft2.id().clone(), 500)),
             ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: None,

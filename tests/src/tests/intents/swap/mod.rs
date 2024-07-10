@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use defuse_contracts::intents::swap::{
-    Asset, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction, FtAmount, NftItem,
+    Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, Expiration, FtAmount, NftItem,
 };
 
 use env::Env;
@@ -38,7 +38,7 @@ async fn test_swap_native_to_native() {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -100,12 +100,9 @@ async fn test_swap_native_to_ft() {
             Asset::Native(NearToken::from_near(5)),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
-                asset_out: Asset::Ft(FtAmount {
-                    token: env.ft1.id().clone(),
-                    amount: 500,
-                }),
+                asset_out: Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500,)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -127,10 +124,7 @@ async fn test_swap_native_to_ft() {
         .user2
         .execute_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 500,
-            }),
+            Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500)),
             ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: None,
@@ -178,7 +172,7 @@ async fn test_swap_native_to_nft() {
                     token_id: derivation_path.clone(),
                 }),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -249,15 +243,12 @@ async fn test_swap_ft_to_native() {
         .user1
         .create_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 500,
-            }),
+            Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500)),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -336,18 +327,12 @@ async fn test_swap_ft_to_ft() {
         .user1
         .create_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 1000,
-            }),
+            Asset::Ft(FtAmount::new(env.ft1.id().clone(), 1000)),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
-                asset_out: Asset::Ft(FtAmount {
-                    token: env.ft2.id().clone(),
-                    amount: 2000,
-                }),
+                asset_out: Asset::Ft(FtAmount::new(env.ft2.id().clone(), 2000)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -373,10 +358,7 @@ async fn test_swap_ft_to_ft() {
         .user2
         .execute_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft2.id().clone(),
-                amount: 2000,
-            }),
+            Asset::Ft(FtAmount::new(env.ft2.id().clone(), 2000)),
             ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: None,
@@ -430,10 +412,7 @@ async fn test_swap_ft_to_nft() {
         .user1
         .create_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 1000,
-            }),
+            Asset::Ft(FtAmount::new(env.ft1.id().clone(), 1000)),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: Asset::Nft(NftItem {
@@ -441,7 +420,7 @@ async fn test_swap_ft_to_nft() {
                     token_id: derivation_path.clone(),
                 }),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -528,7 +507,7 @@ async fn test_swap_nft_to_native() {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -616,7 +595,7 @@ async fn test_swap_nft_to_nft() {
                     token_id: derivation_path_2.clone(),
                 }),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await

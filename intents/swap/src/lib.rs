@@ -7,9 +7,7 @@ use defuse_contracts::{
 };
 
 use near_sdk::{
-    env,
-    json_types::U128,
-    near,
+    env, near,
     serde_json::{self, json},
     store::lookup_map::LookupMap,
     AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise, PromiseError, PromiseOrValue,
@@ -66,7 +64,7 @@ impl SwapIntentContractImpl {
         // prevent from swapping to zero amount
         if match create.asset_out {
             Asset::Native(amount) => amount.is_zero(),
-            Asset::Ft(FtAmount { amount, .. }) => amount == 0,
+            Asset::Ft(FtAmount { amount, .. }) => amount.0 == 0,
             Asset::Nft(_) => {
                 // we can't know price of NFT
                 false
@@ -162,7 +160,7 @@ impl SwapIntentContractImpl {
 
     /// Transfer asset to recipient (with static gas)
     #[inline]
-    pub(crate) fn transfer(id: &IntentId, asset: Asset, recipient: AccountId) -> Promise {
+    fn transfer(id: &IntentId, asset: Asset, recipient: AccountId) -> Promise {
         match asset {
             Asset::Native(amount) => Self::transfer_native(amount, recipient),
             Asset::Ft(ft) => Self::transfer_ft(ft, recipient, format!("Swap Intent '{id}'")),
@@ -269,7 +267,7 @@ impl SwapIntentContractImpl {
             }
             // ft_on_transfer()
             Asset::Ft(FtAmount { amount, .. }) => {
-                PromiseOrValue::Value(json!(U128(if refund { *amount } else { 0 })))
+                PromiseOrValue::Value(json!(if refund { *amount } else { 0.into() }))
             }
             // nft_on_transfer()
             Asset::Nft(_) => PromiseOrValue::Value(json!(refund)),

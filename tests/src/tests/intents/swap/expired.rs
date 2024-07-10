@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use defuse_contracts::intents::swap::{
-    Asset, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction,
+    Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, Expiration,
 };
 use near_sdk::NearToken;
 
@@ -22,7 +22,7 @@ async fn test_execute_expired() {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(5)),
+                expiration: Expiration::timeout(Duration::from_secs(5)),
             },
         )
         .await

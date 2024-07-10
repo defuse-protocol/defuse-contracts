@@ -33,7 +33,7 @@ impl SwapIntentContractImpl {
 
         let received = Asset::Ft(FtAmount {
             token: env::predecessor_account_id(),
-            amount: amount.0,
+            amount,
         });
 
         Ok(match action {
@@ -60,6 +60,6 @@ impl SwapIntentContractImpl {
         ext_ft_core::ext(token)
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .with_static_gas(Asset::GAS_FOR_FT_TRANSFER)
-            .ft_transfer(recipient, amount.into(), memo.into())
+            .ft_transfer(recipient, amount, memo.into())
     }
 }
