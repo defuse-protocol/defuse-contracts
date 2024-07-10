@@ -326,7 +326,7 @@ async fn test_intent_with_lack_of_gas_for_creation() {
         1000,
         2000,
         Expiration::default(),
-        Gas::from_tgas(45), // 45 TGas is not enough for the creation.
+        Gas::from_tgas(35), // 35 TGas is not enough for the creation.
     )
     .await;
 
@@ -365,7 +365,7 @@ async fn test_intent_with_lack_of_gas_for_execution() {
             env.intent.id(),
             "1",
             2000.into(),
-            Gas::from_tgas(60), // 60 TGas is not enough for the execution.
+            Gas::from_tgas(50), // 50 TGas is not enough for the execution.
         )
         .await;
 
