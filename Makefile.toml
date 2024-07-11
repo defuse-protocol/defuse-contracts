@@ -7,12 +7,14 @@ TARGET = "wasm32-unknown-unknown"
 TARGET_DIR = "${PWD}/res"
 ACCOUNT_WASM_FILE = "defuse-account-contract.wasm"
 CONTROLLER_WASM_FILE = "defuse-controller-contract.wasm"
-INTENT_WASM_FILE = "defuse-intent-contract.wasm"
+SWAP_INTENT_WASM_FILE = "defuse-swap-intent-contract.wasm"
+SWAP_FT_INTENT_WASM_FILE = "defuse-swap-ft-intent-contract.wasm"
 
 [tasks.build]
 dependencies = [
     "build-account",
-    "build-intent",
+    "build-swap-intent",
+    "build-swap-ft-intent",
     "cp-contracts",
     "build-controller",
     "cp-controller",
@@ -30,7 +32,7 @@ alias = "tests"
 [tasks.tests]
 dependencies = ["build"]
 command = "cargo"
-args = ["test", "--workspace", "--all-targets"]
+args = ["test", "--workspace", "--all-targets", "${@}"]
 
 [tasks.build-account]
 command = "cargo"
@@ -43,7 +45,7 @@ args = [
     "defuse-account-contract",
 ]
 
-[tasks.build-intent]
+[tasks.build-swap-intent]
 command = "cargo"
 args = [
     "build",
@@ -51,8 +53,20 @@ args = [
     "${TARGET}",
     "--release",
     "--package",
-    "defuse-intent-contract",
+    "defuse-swap-intent-contract",
 ]
+
+[tasks.build-swap-ft-intent]
+command = "cargo"
+args = [
+    "build",
+    "--target",
+    "${TARGET}",
+    "--release",
+    "--package",
+    "defuse-swap-ft-intent-contract",
+]
+
 
 [tasks.build-controller]
 command = "cargo"
@@ -68,7 +82,8 @@ args = [
 [tasks.cp-contracts]
 script = """
 cp target/${TARGET}/release/defuse_account_contract.wasm ${TARGET_DIR}/${ACCOUNT_WASM_FILE}
-cp target/${TARGET}/release/defuse_intent_contract.wasm ${TARGET_DIR}/${INTENT_WASM_FILE}
+cp target/${TARGET}/release/defuse_swap_intent_contract.wasm ${TARGET_DIR}/${SWAP_INTENT_WASM_FILE}
+cp target/${TARGET}/release/defuse_swap_ft_intent_contract.wasm ${TARGET_DIR}/${SWAP_FT_INTENT_WASM_FILE}
 """
 
 [tasks.cp-controller]
@@ -88,14 +103,15 @@ script = "rm -rf ${TARGET_DIR}/defuse*.wasm ${TARGET_DIR}/binaryen"
 category = "Tools"
 script = '''
 echo "Environment:"
-echo "    CARGO_MAKE_PROFILE:       ${CARGO_MAKE_PROFILE}"
-echo "    ACCOUNT_CONTRACT_FILE:    ${ACCOUNT_WASM_FILE}"
-echo "    ACCOUNT_CONTRACT_SIZE:    $(wc -c ${TARGET_DIR}/${ACCOUNT_WASM_FILE} | awk '{print $1}')"
-echo "    INTENT_CONTRACT_FILE:     ${INTENT_WASM_FILE}"
-echo "    INTENT_CONTRACT_SIZE:     $(wc -c ${TARGET_DIR}/${INTENT_WASM_FILE} | awk '{print $1}')"
-echo "    CONTROLLER_CONTRACT_FILE: ${CONTROLLER_WASM_FILE}"
-echo "    CONTROLLER_CONTRACT_SIZE: $(wc -c ${TARGET_DIR}/${CONTROLLER_WASM_FILE} | awk '{print $1}')"
-echo "    CONTRACTS_DIR:            ${TARGET_DIR}"
-echo "    RUSTFLAGS:                ${RUSTFLAGS}"
-echo "    Extra build args:         ${RELEASE} ${@}"
+echo "    CARGO_MAKE_PROFILE:               ${CARGO_MAKE_PROFILE}"
+echo "    ACCOUNT_CONTRACT_FILE:            ${ACCOUNT_WASM_FILE}"
+echo "    ACCOUNT_CONTRACT_SIZE:            $(wc -c ${TARGET_DIR}/${ACCOUNT_WASM_FILE} | awk '{print $1}')"
+echo "    SWAP_INTENT_CONTRACT_FILE:        ${SWAP_INTENT_WASM_FILE}"
+echo "    SWAP_INTENT_CONTRACT_SIZE:        $(wc -c ${TARGET_DIR}/${SWAP_INTENT_WASM_FILE} | awk '{print $1}')"
+echo "    SWAP_FT_INTENT_CONTRACT_FILE:     ${SWAP_FT_INTENT_WASM_FILE}"
+echo "    SWAP_FT_INTENT_CONTRACT_SIZE:     $(wc -c ${TARGET_DIR}/${SWAP_FT_INTENT_WASM_FILE} | awk '{print $1}')"
+echo "    CONTROLLER_CONTRACT_FILE:         ${CONTROLLER_WASM_FILE}"
+echo "    CONTROLLER_CONTRACT_SIZE:         $(wc -c ${TARGET_DIR}/${CONTROLLER_WASM_FILE} | awk '{print $1}')"
+echo "    CONTRACTS_DIR:                    ${TARGET_DIR}"
+echo "    Extra build args:                 ${RELEASE} ${@}"
 '''

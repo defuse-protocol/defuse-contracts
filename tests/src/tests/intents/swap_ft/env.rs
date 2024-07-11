@@ -1,7 +1,9 @@
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
 
-use crate::utils::{intent::Intending, token::Token, Sandbox};
+use crate::utils::{ft::FtExt, Sandbox};
+
+use super::ext::SwapFtIntentExt;
 
 pub struct Env {
     pub sandbox: Sandbox,
@@ -77,17 +79,26 @@ impl EnvBuilder {
 
     pub async fn build(self) -> Env {
         let sandbox = Sandbox::new().await.unwrap();
-        let token_a = sandbox.deploy_token("token_a").await;
-        let token_b = sandbox.deploy_token("token_b").await;
-        let intent = sandbox.deploy_intent_contract().await;
+        let token_a = sandbox
+            .root_account()
+            .deploy_ft_token("token_a")
+            .await
+            .unwrap();
+        let token_b = sandbox
+            .root_account()
+            .deploy_ft_token("token_b")
+            .await
+            .unwrap();
+        let intent = sandbox
+            .root_account()
+            .deploy_swap_ft_intent_contract()
+            .await
+            .unwrap();
 
         let user = sandbox.create_account("user").await;
         let solver = sandbox.create_account("solver").await;
 
-        intent
-            .as_account()
-            .add_solver(intent.id(), solver.id())
-            .await;
+        intent.add_solver(intent.id(), solver.id()).await;
 
         let solver2 = if self.concurrent_solvers {
             let solver2 = sandbox.create_account("solver2").await;
@@ -97,8 +108,14 @@ impl EnvBuilder {
                 .await;
 
             if self.storage_deposit {
-                token_a.storage_deposit(solver2.id()).await;
-                token_b.storage_deposit(solver2.id()).await;
+                solver2
+                    .ft_storage_deposit(token_a.id(), None)
+                    .await
+                    .unwrap();
+                solver2
+                    .ft_storage_deposit(token_b.id(), None)
+                    .await
+                    .unwrap();
             }
 
             Some(solver2)
@@ -107,18 +124,20 @@ impl EnvBuilder {
         };
 
         if self.storage_deposit {
-            token_a.register_accounts(&[&user, &solver]).await;
-            token_b.register_accounts(&[&user, &solver]).await;
+            user.ft_storage_deposit(token_a.id(), None).await.unwrap();
+            user.ft_storage_deposit(token_b.id(), None).await.unwrap();
+            solver.ft_storage_deposit(token_a.id(), None).await.unwrap();
+            solver.ft_storage_deposit(token_b.id(), None).await.unwrap();
         }
 
         // Transfer tokens to the intent contract to have possibility to refund in case of error in
         // the ft_on_transfer callback.
-        token_a.storage_deposit(intent.id()).await;
-        token_b.storage_deposit(intent.id()).await;
+        intent.ft_storage_deposit(token_a.id(), None).await.unwrap();
+        intent.ft_storage_deposit(token_b.id(), None).await.unwrap();
 
         if self.fund_intent {
-            token_a.ft_transfer(intent.id(), 10_000).await;
-            token_b.ft_transfer(intent.id(), 10_000).await;
+            token_a.ft_mint(intent.id(), 10_000).await.unwrap();
+            token_b.ft_mint(intent.id(), 10_000).await.unwrap();
         }
 
         Env {

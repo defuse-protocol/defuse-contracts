@@ -2,7 +2,9 @@
 pub mod account;
 #[cfg(feature = "controller")]
 pub mod controller;
-#[cfg(feature = "intent")]
-pub mod intent;
+#[cfg(feature = "intents")]
+pub mod intents;
 #[cfg(feature = "mpc")]
 pub mod mpc;
+
+pub mod utils;

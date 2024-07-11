@@ -1,5 +1,5 @@
 [package]
-name = "defuse-intent-contract"
+name = "defuse-swap-intent-contract"
 version = "0.1.0"
 edition.workspace = true
 
@@ -10,8 +10,7 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
-defuse-contracts = { workspace = true, features = ["intent"] }
+defuse-contracts = { workspace = true, features = ["intents"] }
 
 near-contract-standards.workspace = true
-near-gas.workspace = true
 near-sdk.workspace = true

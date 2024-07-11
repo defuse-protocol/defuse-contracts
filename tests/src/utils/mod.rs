@@ -1,6 +1,7 @@
 pub mod account;
-pub mod intent;
+pub mod ft;
+pub mod nft;
 mod sandbox;
-pub mod token;
+pub mod storage_management;
 
-pub use sandbox::Sandbox;
+pub use sandbox::*;

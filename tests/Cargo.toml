@@ -10,9 +10,10 @@ workspace = true
 defuse-contracts.workspace = true
 
 anyhow.workspace = true
+impl-tools.workspace = true
 lazy_static.workspace = true
-near-gas.workspace = true
 near-sdk = { workspace = true, features = ["unit-testing"] }
 near-workspaces.workspace = true
+near-contract-standards.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["macros"] }

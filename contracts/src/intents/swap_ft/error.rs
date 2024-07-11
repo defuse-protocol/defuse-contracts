@@ -2,7 +2,7 @@ use near_sdk::base64;
 use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]
-pub enum IntentError {
+pub enum FtIntentError {
     #[error("borsh deserialize error")]
     BorshDeserialize,
     #[error("borsh serialize error")]

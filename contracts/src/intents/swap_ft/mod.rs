@@ -12,7 +12,7 @@ pub use self::error::*;
 mod error;
 
 #[ext_contract(ext_intent_contract)]
-pub trait IntentContract: FungibleTokenReceiver {
+pub trait FtIntentContract: FungibleTokenReceiver {
     /// Return pending intent by id.
     fn get_intent(&self, id: String) -> Option<&DetailedIntent>;
 
@@ -51,8 +51,8 @@ impl Action {
     ///
     /// `IntentError::Base64`
     /// `IntentError::BorshDeserialize`
-    pub fn decode(msg: impl AsRef<[u8]>) -> Result<Self, IntentError> {
-        Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| IntentError::BorshDeserialize)
+    pub fn decode(msg: impl AsRef<[u8]>) -> Result<Self, FtIntentError> {
+        Self::try_from_slice(&STANDARD.decode(msg)?).map_err(|_| FtIntentError::BorshDeserialize)
     }
 
     /// Encode the action into a string message.
@@ -60,8 +60,8 @@ impl Action {
     /// # Errors
     ///
     /// `IntentError::BorshSerialize`
-    pub fn encode(&self) -> Result<String, IntentError> {
-        Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| IntentError::BorshSerialize)?))
+    pub fn encode(&self) -> Result<String, FtIntentError> {
+        Ok(STANDARD.encode(borsh::to_vec(self).map_err(|_| FtIntentError::BorshSerialize)?))
     }
 }
 
