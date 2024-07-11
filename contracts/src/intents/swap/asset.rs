@@ -1,6 +1,6 @@
 use near_contract_standards::non_fungible_token::TokenId;
+use near_sdk::json_types::U128;
 use near_sdk::{near, AccountId, Gas, NearToken};
-use serde_with::{serde_as, DisplayFromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[near(serializers = [json, borsh])]
@@ -51,13 +51,22 @@ impl Asset {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[serde_as]
 #[near(serializers = [json, borsh])]
 pub struct FtAmount {
     /// Token account
     pub token: AccountId,
-    #[serde_as(as = "DisplayFromStr")]
-    pub amount: u128,
+    /// Amount of tokens
+    pub amount: U128,
+}
+
+impl FtAmount {
+    #[must_use]
+    pub const fn new(token_id: AccountId, amount: u128) -> Self {
+        Self {
+            token: token_id,
+            amount: U128(amount),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

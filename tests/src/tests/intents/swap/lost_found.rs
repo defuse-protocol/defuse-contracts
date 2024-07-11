@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use defuse_contracts::intents::swap::{
-    Asset, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction, FtAmount, LostAsset,
+    Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, Expiration, FtAmount, LostAsset,
     SwapIntentStatus,
 };
 use near_sdk::NearToken;
@@ -33,16 +33,16 @@ async fn text_execute_assets_in_out_ft_no_deposits() {
             env.swap_intent.id(),
             Asset::Ft(FtAmount {
                 token: env.ft1.id().clone(),
-                amount: 1000,
+                amount: 1000.into(),
             }),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: Asset::Ft(FtAmount {
                     token: env.ft2.id().clone(),
-                    amount: 2000,
+                    amount: 2000.into(),
                 }),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -70,7 +70,7 @@ async fn text_execute_assets_in_out_ft_no_deposits() {
             env.swap_intent.id(),
             Asset::Ft(FtAmount {
                 token: env.ft2.id().clone(),
-                amount: 2000,
+                amount: 2000.into(),
             }),
             ExecuteSwapIntentAction {
                 id: intent_id.clone(),
@@ -105,7 +105,7 @@ async fn text_execute_assets_in_out_ft_no_deposits() {
             env.swap_intent.id(),
             Asset::Ft(FtAmount {
                 token: env.ft2.id().clone(),
-                amount: 2000,
+                amount: 2000.into(),
             }),
             ExecuteSwapIntentAction {
                 id: intent_id.clone(),
@@ -150,15 +150,12 @@ async fn test_execute_asset_in_ft_no_deposit() {
         .user1
         .create_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 500,
-            }),
+            Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500)),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -191,10 +188,7 @@ async fn test_execute_asset_in_ft_no_deposit() {
             .unwrap()
             .as_unlocked(),
         Some(&SwapIntentStatus::Lost(LostAsset {
-            asset: Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 500,
-            }),
+            asset: Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500)),
             recipient: env.user2.id().clone(),
         })),
     );
@@ -258,12 +252,9 @@ async fn test_execute_asset_out_ft_no_deposit() {
             Asset::Native(NearToken::from_near(5)),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
-                asset_out: Asset::Ft(FtAmount {
-                    token: env.ft1.id().clone(),
-                    amount: 500,
-                }),
+                asset_out: Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -273,10 +264,7 @@ async fn test_execute_asset_out_ft_no_deposit() {
         .user2
         .execute_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 500,
-            }),
+            Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500)),
             ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: None,
@@ -293,10 +281,7 @@ async fn test_execute_asset_out_ft_no_deposit() {
             .unwrap()
             .as_unlocked(),
         Some(&SwapIntentStatus::Lost(LostAsset {
-            asset: Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 500,
-            }),
+            asset: Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500)),
             recipient: env.user1.id().clone(),
         })),
     );
@@ -358,15 +343,12 @@ async fn test_rollback_lost_found_ft() {
         .user1
         .create_swap_intent(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 1000,
-            }),
+            Asset::Ft(FtAmount::new(env.ft1.id().clone(), 1000)),
             CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: Asset::Native(NearToken::from_near(5)),
                 recipient: None,
-                expiration: Deadline::timeout(Duration::from_secs(60)),
+                expiration: Expiration::timeout(Duration::from_secs(60)),
             },
         )
         .await
@@ -399,10 +381,7 @@ async fn test_rollback_lost_found_ft() {
             .unwrap()
             .as_lost(),
         Some(&LostAsset {
-            asset: Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 1000
-            }),
+            asset: Asset::Ft(FtAmount::new(env.ft1.id().clone(), 1000)),
             recipient: env.user1.id().clone(),
         })
     );
@@ -428,10 +407,7 @@ async fn test_rollback_lost_found_ft() {
             .unwrap()
             .as_lost(),
         Some(&LostAsset {
-            asset: Asset::Ft(FtAmount {
-                token: env.ft1.id().clone(),
-                amount: 1000
-            }),
+            asset: Asset::Ft(FtAmount::new(env.ft1.id().clone(), 1000)),
             recipient: env.user1.id().clone(),
         })
     );

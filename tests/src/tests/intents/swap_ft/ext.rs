@@ -196,7 +196,7 @@ impl SwapFtIntentExt for Account {
             .args_json(json!({
                 "id": id
             }))
-            .gas(Gas::from_tgas(15))
+            .gas(Gas::from_tgas(20))
             .transact()
             .await
             .unwrap()
