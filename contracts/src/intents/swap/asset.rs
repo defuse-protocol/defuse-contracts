@@ -100,10 +100,10 @@ impl AssetWithAccount {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[near(serializers = [json, borsh])]
-#[serde(rename_all = "snake_case", tag = "type", content = "asset")]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum NearAsset {
     /// Native NEAR
-    Native(NearToken),
+    Native { amount: NearToken },
     /// NEP-141
     Nep141(FtAmount),
     /// NEP-171
@@ -120,7 +120,7 @@ impl NearAsset {
     #[inline]
     pub const fn gas_for_transfer(&self) -> Gas {
         match self {
-            Self::Native(_) => Self::GAS_FOR_NATIVE_TRANSFER,
+            Self::Native { .. } => Self::GAS_FOR_NATIVE_TRANSFER,
             Self::Nep141(_) => Self::GAS_FOR_FT_TRANSFER,
             Self::Nep171(_) => Self::GAS_FOR_NFT_TRANSFER,
         }
@@ -131,7 +131,7 @@ impl NearAsset {
     pub const fn gas_for_refund(&self) -> Gas {
         match self {
             // native asset can only be refunded manually
-            Self::Native(_) => Self::GAS_FOR_NATIVE_TRANSFER,
+            Self::Native { .. } => Self::GAS_FOR_NATIVE_TRANSFER,
             // other assets are refunded within *_resolve_transfer()
             _ => Gas::from_gas(0),
         }
@@ -141,7 +141,7 @@ impl NearAsset {
     #[inline]
     pub const fn is_zero_amount(&self) -> bool {
         match self {
-            Self::Native(amount) => amount.is_zero(),
+            Self::Native { amount } => amount.is_zero(),
             Self::Nep141(FtAmount { amount, .. }) => amount.0 == 0,
             Self::Nep171(_) => false,
         }

@@ -19,7 +19,7 @@ pub struct CrossChainAsset {
     /// Where to expect transfer notification from
     pub oracle: AccountId,
     /// Universal cross-chain asset identifier in the following format:
-    /// `<CHAIN_TYPE>:<CHAIN_ID>:<CONTRACT_ADDRESS>`.
+    /// `<CHAIN_TYPE>:<CHAIN_ID>:<ASSET_ADDRESS>`.
     pub asset: String,
     /// In case of NFT, this can be token_id
     pub amount: String,

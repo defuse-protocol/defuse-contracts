@@ -170,7 +170,9 @@ async fn test_execute_asset_in_ft_no_deposit() {
                 id: intent_id.clone(),
                 asset_out: AssetWithAccount::Near {
                     account: env.user1.id().clone(),
-                    asset: NearAsset::Native(NearToken::from_near(5))
+                    asset: NearAsset::Native {
+                        amount: NearToken::from_near(5)
+                    }
                 },
                 lockup_until: None,
                 expiration: Deadline::timeout(Duration::from_secs(60)),
@@ -190,7 +192,9 @@ async fn test_execute_asset_in_ft_no_deposit() {
         .user2
         .swap_intent_action(
             env.swap_intent.id(),
-            Asset::Near(NearAsset::Native(NearToken::from_near(5))),
+            Asset::Near(NearAsset::Native {
+                amount: NearToken::from_near(5)
+            }),
             SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: env.user2.id().clone().into(),
@@ -278,7 +282,9 @@ async fn test_execute_asset_out_ft_no_deposit() {
         .user1
         .swap_intent_action(
             env.swap_intent.id(),
-            Asset::Near(NearAsset::Native(NearToken::from_near(5))),
+            Asset::Near(NearAsset::Native {
+                amount: NearToken::from_near(5)
+            }),
             SwapIntentAction::Create(CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: AssetWithAccount::Near {
@@ -391,7 +397,9 @@ async fn test_rollback_lost_found_ft() {
                 id: intent_id.clone(),
                 asset_out: AssetWithAccount::Near {
                     account: env.user1.id().clone(),
-                    asset: NearAsset::Native(NearToken::from_near(5))
+                    asset: NearAsset::Native {
+                        amount: NearToken::from_near(5)
+                    }
                 },
                 lockup_until: None,
                 expiration: Deadline::timeout(Duration::from_secs(60)),

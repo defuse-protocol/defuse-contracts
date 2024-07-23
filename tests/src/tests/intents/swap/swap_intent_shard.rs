@@ -70,7 +70,7 @@ impl SwapIntentShard for near_workspaces::Account {
         action: SwapIntentAction,
     ) -> anyhow::Result<bool> {
         match asset_in {
-            Asset::Near(NearAsset::Native(amount)) => {
+            Asset::Near(NearAsset::Native { amount }) => {
                 self.native_action(swap_intent_id, amount, action).await
             }
             Asset::Near(NearAsset::Nep141(FtAmount { token, amount })) => Ok(self

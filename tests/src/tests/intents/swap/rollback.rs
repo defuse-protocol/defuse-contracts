@@ -21,12 +21,16 @@ async fn test_rollback_native_intent() {
         .user1
         .swap_intent_action(
             env.swap_intent.id(),
-            Asset::Near(NearAsset::Native(NearToken::from_near(5))),
+            Asset::Near(NearAsset::Native {
+                amount: NearToken::from_near(5),
+            }),
             SwapIntentAction::Create(CreateSwapIntentAction {
                 id: "1".to_string(),
                 asset_out: AssetWithAccount::Near {
                     account: env.user1.id().clone(),
-                    asset: NearAsset::Native(NearToken::from_near(1)),
+                    asset: NearAsset::Native {
+                        amount: NearToken::from_near(1)
+                    },
                 },
                 lockup_until: None,
                 expiration: Deadline::timeout(Duration::from_secs(60)),
@@ -77,7 +81,9 @@ async fn test_rollback_ft_intent() {
                 id: "1".to_string(),
                 asset_out: AssetWithAccount::Near {
                     account: env.user1.id().clone(),
-                    asset: NearAsset::Native(NearToken::from_near(5)),
+                    asset: NearAsset::Native {
+                        amount: NearToken::from_near(5),
+                    },
                 },
                 lockup_until: None,
                 expiration: Deadline::timeout(Duration::from_secs(60)),
@@ -139,7 +145,9 @@ async fn test_rollback_nft_intent() {
                 id: "1".to_string(),
                 asset_out: AssetWithAccount::Near {
                     account: env.user1.id().clone(),
-                    asset: NearAsset::Native(NearToken::from_near(5)),
+                    asset: NearAsset::Native {
+                        amount: NearToken::from_near(5),
+                    },
                 },
                 lockup_until: None,
                 expiration: Deadline::timeout(Duration::from_secs(60)),

@@ -9,7 +9,11 @@ use super::{IntentId, LostAsset, SwapIntent};
 #[must_use = "don't forget to `.emit()` this event"]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum Dip2Event<'a> {
-    Created(&'a SwapIntent),
+    Created {
+        intent_id: &'a IntentId,
+        #[serde(flatten)]
+        intent: &'a SwapIntent,
+    },
     Executed(&'a IntentId),
     RolledBack(&'a IntentId),
     Lost {

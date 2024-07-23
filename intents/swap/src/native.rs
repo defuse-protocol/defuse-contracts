@@ -20,7 +20,9 @@ impl SwapIntentContractImpl {
     ) -> Result<PromiseOrValue<bool>, SwapIntentError> {
         let received = AssetWithAccount::Near {
             account: env::predecessor_account_id(),
-            asset: NearAsset::Native(env::attached_deposit()),
+            asset: NearAsset::Native {
+                amount: env::attached_deposit(),
+            },
         };
         Ok(match action {
             SwapIntentAction::Create(create) => {

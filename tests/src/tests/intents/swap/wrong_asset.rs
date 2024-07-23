@@ -41,7 +41,9 @@ async fn test_execute_wrong_asset() {
         .user1
         .swap_intent_action(
             env.swap_intent.id(),
-            Asset::Near(NearAsset::Native(NearToken::from_near(5))),
+            Asset::Near(NearAsset::Native {
+                amount: NearToken::from_near(5)
+            }),
             SwapIntentAction::Create(CreateSwapIntentAction {
                 id: intent_id.clone(),
                 asset_out: AssetWithAccount::Near {

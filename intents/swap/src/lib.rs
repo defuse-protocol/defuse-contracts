@@ -84,7 +84,11 @@ impl SwapIntentContractImpl {
         };
         intent.validate()?;
 
-        Dip2Event::Created(&intent).emit();
+        Dip2Event::Created {
+            intent_id: &create.id,
+            intent: &intent,
+        }
+        .emit();
 
         if self.intents.insert(create.id, intent.into()).is_some() {
             return Err(SwapIntentError::AlreadyExists);
@@ -149,7 +153,7 @@ impl SwapIntentContractImpl {
                 account: recipient,
                 asset,
             } => match asset {
-                NearAsset::Native(amount) => Self::transfer_native(amount, recipient),
+                NearAsset::Native { amount } => Self::transfer_native(amount, recipient),
                 NearAsset::Nep141(ft) => {
                     Self::transfer_ft(ft, recipient, format!("Swap Intent '{id}'"))
                 }
@@ -238,7 +242,7 @@ impl SwapIntentContractImpl {
                 asset,
             } => match asset {
                 // native_action()
-                NearAsset::Native(amount) => {
+                NearAsset::Native { amount } => {
                     if refund {
                         Promise::new(refund_to.clone()).transfer(*amount).into()
                         // TODO: return false?: env::value_return(value)

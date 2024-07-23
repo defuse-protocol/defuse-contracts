@@ -30,7 +30,9 @@ mod zero_amount;
 #[tokio::test]
 async fn test_swap(
     #[values(
-        Asset::Near(NearAsset::Native(NearToken::from_near(3))),
+        Asset::Near(NearAsset::Native{
+            amount: NearToken::from_near(3),
+        }),
         Asset::Near(NearAsset::Nep141(FtAmount {
             token: FT1.clone(),
             amount: U128(500),
@@ -49,7 +51,9 @@ async fn test_swap(
     )]
     asset_in: Asset,
     #[values(
-        Asset::Near(NearAsset::Native(NearToken::from_near(3))),
+        Asset::Near(NearAsset::Native{
+            amount: NearToken::from_near(5),
+        }),
         Asset::Near(NearAsset::Nep141(FtAmount {
             token: FT2.clone(),
             amount: U128(1000),
@@ -166,7 +170,7 @@ async fn test_swap(
 
     // skip check for same assets
     if match (&asset_in, &asset_out.asset()) {
-        (Asset::Near(NearAsset::Native(_)), Asset::Near(NearAsset::Native(_))) => true,
+        (Asset::Near(NearAsset::Native { .. }), Asset::Near(NearAsset::Native { .. })) => true,
         (
             Asset::Near(NearAsset::Nep141(FtAmount {
                 token: token_in, ..
@@ -182,7 +186,7 @@ async fn test_swap(
 
     for (owner, asset) in [(&env.user2, &asset_in), (&env.user1, &asset_out.asset())] {
         match asset {
-            Asset::Near(NearAsset::Native(amount)) => {
+            Asset::Near(NearAsset::Native { amount }) => {
                 assert!(
                     owner.view_account().await.unwrap().balance
                         >
