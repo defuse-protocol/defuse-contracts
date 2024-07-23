@@ -1,4 +1,4 @@
-use defuse_contracts::intents::swap::{IntentId, LostAsset, Rollback, SwapIntentError};
+use defuse_contracts::intents::swap::{IntentId, Rollback, SwapIntentError};
 use near_sdk::{env, near, AccountId, Gas, NearToken, PromiseError, PromiseOrValue};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
@@ -72,12 +72,7 @@ impl SwapIntentContractImpl {
             .unlock()
             .ok_or(SwapIntentError::WrongStatus)?;
 
-        intent.set_rolled_back(
-            id,
-            (!transfer_asset_in_succeeded).then(|| LostAsset::AssetIn {
-                recipient: intent.asset_in.account(),
-            }),
-        );
+        intent.set_rolled_back(id, !transfer_asset_in_succeeded);
 
         Ok(transfer_asset_in_succeeded)
     }

@@ -3,10 +3,7 @@ use core::time::Duration;
 use defuse_contracts::intents::swap::{
     Asset, AssetWithAccount, CreateSwapIntentAction, CrossChainAsset, Deadline,
     ExecuteSwapIntentAction, FtAmount, GenericAccount, NearAsset, NftItem, SwapIntentAction,
-    SwapIntentStatus,
 };
-
-use env::{Env, ACCOUNT_SHARD1, ACCOUNT_SHARD2, FT1, FT2, USER1, USER2};
 use near_sdk::{json_types::U128, NearToken};
 use rstest::rstest;
 
@@ -14,6 +11,8 @@ use crate::{
     tests::account::AccountShardExt,
     utils::{ft::FtExt, nft::NftExt},
 };
+
+use env::{Env, ACCOUNT_SHARD1, ACCOUNT_SHARD2, FT1, FT2, USER1, USER2};
 
 pub use swap_intent_shard::*;
 
@@ -148,22 +147,22 @@ async fn test_swap(
                     Asset::Near(_) => GenericAccount::Near(env.user2.id().clone()),
                     Asset::CrossChain(_) => GenericAccount::CrossChain("user2".to_string()),
                 },
+                proof: None,
             }),
         )
         .await
         .unwrap());
 
-    assert_eq!(
-        env.swap_intent
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap()
-            .unwrap()
-            .as_unlocked()
-            .unwrap()
-            .status,
-        SwapIntentStatus::Executed,
-    );
+    assert!(env
+        .swap_intent
+        .get_swap_intent(&intent_id)
+        .await
+        .unwrap()
+        .unwrap()
+        .as_unlocked()
+        .unwrap()
+        .status
+        .is_executed(),);
 
     // skip check for same assets
     if match (&asset_in, &asset_out.asset()) {

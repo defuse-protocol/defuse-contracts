@@ -9,7 +9,6 @@ pub trait CrossChainTransferReceiver {
         asset: String,
         amount: String,
         msg: String,
-        // TODO: meta: tx_hash? proof?
     ) -> PromiseOrValue<bool>;
 }
 
@@ -19,17 +18,11 @@ pub trait CrossChainTransferReceiver {
 pub struct CrossChainAsset {
     /// Where to expect transfer notification from
     pub oracle: AccountId,
-    // TODO: format?
-    // eth:1:0x123
+    /// Universal cross-chain asset identifier in the following format:
+    /// `<CHAIN_TYPE>:<CHAIN_ID>:<CONTRACT_ADDRESS>`.
     pub asset: String,
     /// In case of NFT, this can be token_id
     pub amount: String,
-    // TODO: tx_hash?
-    // #[borsh(
-    //     serialize_with = "crate::utils::swerde_borsh::serialize_json",
-    //     deserialize_with = "crate::utils::serde_borsh::deserialize_json"
-    // )]
-    // pub extra: HashMap<String, serde_json::Value>,
 }
 
 impl CrossChainAsset {

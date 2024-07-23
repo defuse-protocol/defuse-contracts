@@ -81,6 +81,7 @@ async fn text_execute_assets_in_out_ft_no_deposits() {
             SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: env.user2.id().clone().into(),
+                proof: None,
             }),
         )
         .await
@@ -116,22 +117,22 @@ async fn text_execute_assets_in_out_ft_no_deposits() {
             SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: env.user2.id().clone().into(),
+                proof: None,
             }),
         )
         .await
         .unwrap());
 
-    assert_eq!(
-        env.swap_intent
-            .get_swap_intent(&intent_id)
-            .await
-            .unwrap()
-            .unwrap()
-            .as_unlocked()
-            .unwrap()
-            .status,
-        SwapIntentStatus::Executed,
-    );
+    assert!(env
+        .swap_intent
+        .get_swap_intent(&intent_id)
+        .await
+        .unwrap()
+        .unwrap()
+        .as_unlocked()
+        .unwrap()
+        .status
+        .is_executed());
 
     assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 0);
     assert_eq!(env.ft2.ft_balance_of(env.user1.id()).await.unwrap(), 2000);
@@ -193,6 +194,7 @@ async fn test_execute_asset_in_ft_no_deposit() {
             SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: env.user2.id().clone().into(),
+                proof: None,
             }),
         )
         .await
@@ -204,10 +206,7 @@ async fn test_execute_asset_in_ft_no_deposit() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(
-        intent.as_unlocked().unwrap().status,
-        SwapIntentStatus::Executed,
-    );
+    assert!(intent.as_unlocked().unwrap().status.is_executed());
     assert_eq!(
         intent.as_unlocked().unwrap().lost,
         Some(LostAsset::AssetIn {
@@ -302,6 +301,7 @@ async fn test_execute_asset_out_ft_no_deposit() {
             SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: env.user2.id().clone().into(),
+                proof: None,
             }),
         )
         .await
@@ -314,10 +314,7 @@ async fn test_execute_asset_out_ft_no_deposit() {
         .unwrap()
         .unwrap();
 
-    assert_eq!(
-        intent.as_unlocked().unwrap().status,
-        SwapIntentStatus::Executed
-    );
+    assert!(intent.as_unlocked().unwrap().status.is_executed());
     assert_eq!(
         intent.as_unlocked().unwrap().lost,
         Some(LostAsset::AssetOut),

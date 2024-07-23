@@ -13,7 +13,6 @@ impl CrossChainTransferReceiver for SwapIntentContractImpl {
         asset: String,
         amount: String,
         msg: String,
-        // TODO: tx_hash? proof?
     ) -> PromiseOrValue<bool> {
         self.internal_cross_chain_action(asset, amount, msg)
             .unwrap()
@@ -43,10 +42,7 @@ impl SwapIntentContractImpl {
                 self.create_intent(received, create)?;
                 PromiseOrValue::Value(true)
             }
-            SwapIntentAction::Execute(execute) => {
-                // TODO: tx_hash?
-                self.execute_intent(&received, execute)?.into()
-            }
+            SwapIntentAction::Execute(execute) => self.execute_intent(&received, execute)?.into(),
         })
     }
 

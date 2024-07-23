@@ -2,7 +2,7 @@ use core::{cmp, time::Duration};
 
 use near_sdk::{env, near, AccountId};
 
-use crate::utils::JsonLog;
+use crate::utils::Event;
 
 use super::{events::Dip2Event, AssetWithAccount, LostAsset, SwapIntentError};
 
@@ -19,18 +19,19 @@ pub struct SwapIntent {
     // TODO: multiple inputs, outputs, e.g. for storage deposit
     pub asset_out: AssetWithAccount,
 
-    // TODO: maybe move to `status`?
-    /// Lockup period when initiator cannot rollback the intent.  
-    /// MUST come before `expiration` if specified
+    /// Optional lockup period for [`asset_in`] when initiator cannot rollback
+    /// the intent.  
+    /// NOTE: MUST come before [`expiration`]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lockup_until: Option<Deadline>,
 
-    // TODO: maybe move to `status`?
-    /// Deadline to execute the swap.
-    /// NOTE: intent can still be rollbacked at any time.
+    /// Deadline to execute the swap.  
+    /// NOTE: intent can still be rollbacked at any time unless
+    /// [`lockup_until`] is specified.
     pub expiration: Deadline,
 
     /// Current status of the intent
+    #[serde(flatten)]
     pub status: SwapIntentStatus,
 
     /// Lost asset in case the intent has already been executed/rollbacked
@@ -72,8 +73,8 @@ impl SwapIntent {
     }
 
     #[inline]
-    pub fn set_executed(&mut self, id: &IntentId, lost: Option<LostAsset>) {
-        self.status = SwapIntentStatus::Executed;
+    pub fn set_executed(&mut self, id: &IntentId, proof: Option<String>, lost: Option<LostAsset>) {
+        self.status = SwapIntentStatus::Executed { proof };
         Dip2Event::Executed(id).emit();
 
         if let Some(lost) = lost {
@@ -81,12 +82,18 @@ impl SwapIntent {
         }
     }
 
-    #[must_use]
     #[inline]
-    pub fn lost_asset(&self) -> Option<AssetWithAccount> {
-        match self.lost.clone()? {
-            LostAsset::AssetIn { recipient } => self.asset_in.with_account(recipient),
-            LostAsset::AssetOut => Some(self.asset_out.clone()),
+    pub fn set_rolled_back(&mut self, id: &IntentId, lost: bool) {
+        self.status = SwapIntentStatus::RolledBack;
+        Dip2Event::RolledBack(id).emit();
+
+        if lost {
+            self.set_lost(
+                id,
+                LostAsset::AssetIn {
+                    recipient: self.asset_in.account(),
+                },
+            );
         }
     }
 
@@ -100,22 +107,19 @@ impl SwapIntent {
         self.lost = Some(lost);
     }
 
+    #[must_use]
     #[inline]
-    pub fn lost_found(&mut self, id: &IntentId) -> Option<LostAsset> {
-        let lost = self.lost.take();
-        if lost.is_some() {
-            Dip2Event::Found(id).emit();
+    pub fn lost_asset(&self) -> Option<AssetWithAccount> {
+        match self.lost.clone()? {
+            LostAsset::AssetIn { recipient } => self.asset_in.with_account(recipient),
+            LostAsset::AssetOut => Some(self.asset_out.clone()),
         }
-        lost
     }
 
     #[inline]
-    pub fn set_rolled_back(&mut self, id: &IntentId, lost: Option<LostAsset>) {
-        self.status = SwapIntentStatus::RolledBack;
-        Dip2Event::RolledBack(id).emit();
-
-        if let Some(lost) = lost {
-            self.set_lost(id, lost);
+    pub fn lost_found(&mut self, id: &IntentId) {
+        if self.lost.take().is_some() {
+            Dip2Event::Found(id).emit();
         }
     }
 
@@ -213,14 +217,18 @@ impl Deadline {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
-// TODO
 #[serde(rename_all = "snake_case", tag = "status")]
 pub enum SwapIntentStatus {
     /// Available for execution.
     #[default]
     Available,
-    // TODO: tx_hash?
-    Executed,
+    /// Executed.
+    Executed {
+        /// Optional proof for cross-chain assets.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        proof: Option<String>,
+    },
+    /// Rolled back.
     RolledBack,
 }
 
@@ -229,5 +237,11 @@ impl SwapIntentStatus {
     #[inline]
     pub const fn is_available(&self) -> bool {
         matches!(self, Self::Available)
+    }
+
+    #[must_use]
+    #[inline]
+    pub const fn is_executed(&self) -> bool {
+        matches!(self, Self::Executed { .. })
     }
 }

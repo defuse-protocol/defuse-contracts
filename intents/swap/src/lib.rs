@@ -4,7 +4,7 @@ use defuse_contracts::{
         FtAmount, GenericAccount, IntentId, LostAsset, NearAsset, SwapIntent, SwapIntentContract,
         SwapIntentError, SwapIntentStatus,
     },
-    utils::{JsonLog, Mutex},
+    utils::{Event, Mutex},
 };
 
 use near_sdk::{
@@ -137,7 +137,7 @@ impl SwapIntentContractImpl {
                         // transfers failed
                         .saturating_add(intent.asset_out.gas_for_refund()),
                 )
-                .resolve_execute_transfers(&execute.id, execute.recipient, received),
+                .resolve_execute_transfers(&execute.id, execute.recipient, received, execute.proof),
         ))
     }
 
@@ -176,6 +176,7 @@ impl SwapIntentContractImpl {
         id: &IntentId,
         asset_in_recipient: GenericAccount,
         asset_out_received: &AssetWithAccount,
+        asset_out_proof: Option<String>,
         #[callback_result] transfer_asset_in: &Result<(), PromiseError>,
         #[callback_result] transfer_asset_out: &Result<(), PromiseError>,
     ) -> PromiseOrValue<serde_json::Value> {
@@ -183,6 +184,7 @@ impl SwapIntentContractImpl {
             id,
             asset_in_recipient,
             asset_out_received,
+            asset_out_proof,
             transfer_asset_in.is_ok(),
             transfer_asset_out.is_ok(),
         )
@@ -196,6 +198,7 @@ impl SwapIntentContractImpl {
         id: &IntentId,
         asset_in_recipient: GenericAccount,
         asset_out_received: &AssetWithAccount,
+        asset_out_proof: Option<String>,
         transfer_asset_in_succeeded: bool,
         transfer_asset_out_succeeded: bool,
     ) -> Result<PromiseOrValue<serde_json::Value>, SwapIntentError> {
@@ -217,7 +220,7 @@ impl SwapIntentContractImpl {
                 Some(LostAsset::AssetOut)
             };
             // TODO: remove the intent to free the storage
-            intent.set_executed(id, maybe_lost);
+            intent.set_executed(id, asset_out_proof, maybe_lost);
         }
 
         Ok(Self::maybe_refund(

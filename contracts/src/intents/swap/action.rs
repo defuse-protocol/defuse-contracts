@@ -13,11 +13,11 @@ pub enum SwapIntentAction {
 #[derive(Debug, Clone)]
 #[near(serializers = [json, borsh])]
 pub struct CreateSwapIntentAction {
-    /// Unique ID of intent.
-    /// NOTE: This MUST not exist before.
+    /// Unique ID of intent.  
+    /// NOTE: Intent with such id MUST NOT exist before.
     pub id: IntentId,
 
-    /// Desired asset as an output.
+    /// Desired output asset and its recipient.
     pub asset_out: AssetWithAccount,
 
     /// Lockup period when initiator cannot rollback the intent.  
@@ -27,9 +27,10 @@ pub struct CreateSwapIntentAction {
 
     /// Deadline to execute the swap.  
     /// Note that the intent can still be rolled back at any time
-    /// unless `lockup_until` is specified.
+    /// unless [`lockup_until`] is specified.
     pub expiration: Deadline,
 
+    /// Referral
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub referral: Option<AccountId>,
 }
@@ -37,10 +38,14 @@ pub struct CreateSwapIntentAction {
 #[derive(Debug, Clone)]
 #[near(serializers = [json, borsh])]
 pub struct ExecuteSwapIntentAction {
-    /// Unique ID of the intent.
-    /// NOTE: This MUST exist.
+    /// Unique ID of the intent.  
+    /// NOTE: Intent with such id MUST exist.
     pub id: IntentId,
 
-    /// Where to send `asset_in` to
+    /// Optional proof for cross-chain assets.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proof: Option<String>,
+
+    /// Recipient for [`asset_in`](super::SwapIntent::asset_in)
     pub recipient: GenericAccount,
 }

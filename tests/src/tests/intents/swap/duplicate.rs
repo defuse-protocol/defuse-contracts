@@ -60,6 +60,7 @@ async fn test_duplicate_native() {
             SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: GenericAccount::Near(env.user2.id().clone()),
+                proof: None,
             }),
         )
         .await
@@ -74,6 +75,7 @@ async fn test_duplicate_native() {
             SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: GenericAccount::Near(env.user2.id().clone()),
+                proof: None,
             }),
         )
         .await

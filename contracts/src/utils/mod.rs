@@ -1,5 +1,4 @@
-pub use self::{log::*, mutex::*};
+pub use self::{event::*, mutex::*};
 
-mod log;
+mod event;
 mod mutex;
-pub mod serde_borsh;

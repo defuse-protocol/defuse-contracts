@@ -149,8 +149,6 @@ impl NearAsset {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[near(serializers = [json, borsh])]
-#[serde(rename_all = "snake_case")]
 pub enum Asset {
     Near(NearAsset),
     CrossChain(CrossChainAsset),
@@ -184,11 +182,9 @@ pub struct NftItem {
     pub token_id: TokenId,
 }
 
-// TODO: move to separate file
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[near(serializers = [json, borsh])]
 #[serde(rename_all = "snake_case", tag = "type", content = "address")]
-// TODO: tag?
 pub enum GenericAccount {
     Near(AccountId),
     CrossChain(String),

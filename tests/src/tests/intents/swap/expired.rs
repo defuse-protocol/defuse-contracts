@@ -54,6 +54,7 @@ async fn test_execute_expired() {
             SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: GenericAccount::Near(env.user2.id().clone()),
+                proof: None,
             }),
         )
         .await
