@@ -16,8 +16,12 @@ async fn test_generic_successful_flow() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
@@ -57,8 +61,12 @@ async fn test_successful_flow_partly() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     // User creates intent for swapping 500 TokenA to 1000 TokenB.
     create_intent(&env, "1", 500, 1000, Expiration::default()).await;
@@ -96,8 +104,12 @@ async fn test_successful_flow_partly() {
 async fn test_execute_non_existed_intent() {
     let env = Env::create().await;
 
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     env.solver
         .execute_intent(env.token_b.id(), env.intent.id(), "1", 2000.into())
@@ -121,8 +133,12 @@ async fn test_rollback_intent() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     // Decrease TTL to 1 second. (Default 5 min).
     env.set_min_ttl(1).await;
@@ -166,8 +182,12 @@ async fn test_rollback_intent_too_early() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
@@ -240,8 +260,12 @@ async fn test_intent_without_initiator_storage_deposit() {
         .unwrap();
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     // Initiator creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
@@ -282,8 +306,12 @@ async fn test_intent_without_solver_storage_deposit() {
         .unwrap();
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
@@ -316,8 +344,12 @@ async fn test_intent_with_lack_of_gas_for_creation() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent_with_gas(
@@ -352,8 +384,12 @@ async fn test_intent_with_lack_of_gas_for_execution() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
@@ -400,9 +436,15 @@ async fn test_concurrent_solvers() {
         .await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
-    env.token_b.ft_mint(env.solver2_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver2_id(), 2000)
+        .await
+        .unwrap();
 
     // User creates intent for swapping 1000 TokenA to 2000 TokenB.
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
@@ -465,8 +507,12 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.token_a.ft_mint(env.user_id(), 1000).await.unwrap();
-    env.token_b.ft_mint(env.solver_id(), 2000).await.unwrap();
+    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+        .await
+        .unwrap();
+    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+        .await
+        .unwrap();
 
     // User creates an intent which is already expired and shouldn't be executed.
     create_intent(&env, "1", 1000, 2000, past).await;

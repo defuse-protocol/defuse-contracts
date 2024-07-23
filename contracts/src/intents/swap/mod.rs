@@ -6,10 +6,13 @@ use near_sdk::ext_contract;
 
 use crate::utils::Mutex;
 
-pub use self::{action::*, asset::*, error::*, intent::*, lost_found::*, native::*, rollback::*};
+pub use self::{
+    action::*, asset::*, cross_chain::*, error::*, intent::*, lost_found::*, native::*, rollback::*,
+};
 
 mod action;
 mod asset;
+mod cross_chain;
 mod error;
 pub mod events;
 mod intent;
@@ -21,5 +24,5 @@ mod rollback;
 pub trait SwapIntentContract:
     NativeAction + FungibleTokenReceiver + NonFungibleTokenReceiver + Rollback + LostFound
 {
-    fn get_swap_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntentStatus>>;
+    fn get_swap_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntent>>;
 }

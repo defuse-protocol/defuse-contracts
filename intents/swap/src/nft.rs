@@ -1,4 +1,6 @@
-use defuse_contracts::intents::swap::{Asset, NftItem, SwapIntentAction, SwapIntentError};
+use defuse_contracts::intents::swap::{
+    AssetWithAccount, NearAsset, NftItem, SwapIntentAction, SwapIntentError,
+};
 use near_contract_standards::non_fungible_token::{
     core::{ext_nft_core, NonFungibleTokenReceiver},
     TokenId,
@@ -31,20 +33,21 @@ impl SwapIntentContractImpl {
     ) -> Result<PromiseOrValue<bool>, SwapIntentError> {
         let action = serde_json::from_str(msg.as_ref()).map_err(SwapIntentError::JSON)?;
 
-        let received = Asset::Nft(NftItem {
-            collection: env::predecessor_account_id(),
-            token_id,
-        });
+        let received = AssetWithAccount::Near {
+            account: sender_id,
+            asset: NearAsset::Nep171(NftItem {
+                collection: env::predecessor_account_id(),
+                token_id,
+            }),
+        };
 
         Ok(match action {
             SwapIntentAction::Create(create) => {
-                self.create_intent(sender_id, received, create)?;
+                self.create_intent(received, create)?;
                 // intent was successfully created, do not refund
                 PromiseOrValue::Value(false)
             }
-            SwapIntentAction::Execute(execute) => {
-                self.execute_intent(sender_id, received, execute)?.into()
-            }
+            SwapIntentAction::Execute(execute) => self.execute_intent(&received, execute)?.into(),
         })
     }
 
@@ -62,7 +65,7 @@ impl SwapIntentContractImpl {
         // protocols
         ext_nft_core::ext(collection)
             .with_attached_deposit(NearToken::from_yoctonear(1))
-            .with_static_gas(Asset::GAS_FOR_NFT_TRANSFER)
+            .with_static_gas(NearAsset::GAS_FOR_NFT_TRANSFER)
             .nft_transfer(recipient, token_id, None, memo.into())
     }
 }

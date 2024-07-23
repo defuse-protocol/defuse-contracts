@@ -45,6 +45,18 @@ impl Env {
             .set_min_ttl(self.intent.id(), min_ttl)
             .await;
     }
+
+    pub async fn ft_mint(
+        &self,
+        token: &AccountId,
+        account_id: &AccountId,
+        amount: u128,
+    ) -> anyhow::Result<()> {
+        self.sandbox
+            .root_account()
+            .ft_mint(token, account_id, amount)
+            .await
+    }
 }
 
 pub struct EnvBuilder {
@@ -136,8 +148,16 @@ impl EnvBuilder {
         intent.ft_storage_deposit(token_b.id(), None).await.unwrap();
 
         if self.fund_intent {
-            token_a.ft_mint(intent.id(), 10_000).await.unwrap();
-            token_b.ft_mint(intent.id(), 10_000).await.unwrap();
+            sandbox
+                .root_account()
+                .ft_mint(token_a.id(), intent.id(), 10_000)
+                .await
+                .unwrap();
+            sandbox
+                .root_account()
+                .ft_mint(token_b.id(), intent.id(), 10_000)
+                .await
+                .unwrap();
         }
 
         Env {

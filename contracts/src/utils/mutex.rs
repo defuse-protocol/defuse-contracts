@@ -5,6 +5,11 @@ use near_sdk::near;
 pub struct Mutex<T> {
     #[serde(flatten)]
     value: T,
+    #[serde(
+        default,
+        // do not serialize `false`
+        skip_serializing_if = "::core::ops::Not::not"
+    )]
     locked: bool,
 }
 

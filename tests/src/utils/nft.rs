@@ -21,7 +21,13 @@ pub trait NftExt {
         msg: String,
     ) -> anyhow::Result<bool>;
 
-    async fn nft_token(&self, token_id: &TokenId) -> anyhow::Result<Option<Token>>;
+    async fn nft_token(
+        &self,
+        collection: &AccountId,
+        token_id: &TokenId,
+    ) -> anyhow::Result<Option<Token>>;
+
+    async fn self_nft_token(&self, token_id: &TokenId) -> anyhow::Result<Option<Token>>;
 }
 
 impl NftExt for near_workspaces::Account {
@@ -70,14 +76,22 @@ impl NftExt for near_workspaces::Account {
             .map_err(Into::into)
     }
 
-    async fn nft_token(&self, token_id: &TokenId) -> anyhow::Result<Option<Token>> {
-        self.view(self.id(), "nft_token")
+    async fn nft_token(
+        &self,
+        collection: &AccountId,
+        token_id: &TokenId,
+    ) -> anyhow::Result<Option<Token>> {
+        self.view(collection, "nft_token")
             .args_json(json!({
                 "token_id": token_id,
             }))
             .await?
             .json()
             .map_err(Into::into)
+    }
+
+    async fn self_nft_token(&self, token_id: &TokenId) -> anyhow::Result<Option<Token>> {
+        self.nft_token(self.id(), token_id).await
     }
 }
 
@@ -107,7 +121,15 @@ impl NftExt for Contract {
             .await
     }
 
-    async fn nft_token(&self, token_id: &TokenId) -> anyhow::Result<Option<Token>> {
-        self.as_account().nft_token(token_id).await
+    async fn nft_token(
+        &self,
+        collection: &AccountId,
+        token_id: &TokenId,
+    ) -> anyhow::Result<Option<Token>> {
+        self.as_account().nft_token(collection, token_id).await
+    }
+
+    async fn self_nft_token(&self, token_id: &TokenId) -> anyhow::Result<Option<Token>> {
+        self.as_account().self_nft_token(token_id).await
     }
 }

@@ -1,9 +1,4 @@
-use defuse_contracts::{
-    intents::swap::{
-        events::Dep2Event, IntentId, LostAsset, Rollback, SwapIntentError, SwapIntentStatus,
-    },
-    utils::JsonLog,
-};
+use defuse_contracts::intents::swap::{IntentId, LostAsset, Rollback, SwapIntentError};
 use near_sdk::{env, near, AccountId, Gas, NearToken, PromiseError, PromiseOrValue};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
@@ -29,22 +24,23 @@ impl SwapIntentContractImpl {
             .get_mut(id)
             .ok_or(SwapIntentError::NotFound)?
             .lock()
-            .and_then(|status| status.as_available())
+            .filter(|intent| intent.is_available())
             .ok_or(SwapIntentError::WrongStatus)?;
 
-        if initiator != &intent.initiator {
+        if initiator != intent.initiator() {
             return Err(SwapIntentError::Unauthorized);
         }
+        if intent.is_locked_up() {
+            return Err(SwapIntentError::LockedUp);
+        }
 
-        Ok(
-            Self::transfer(id, intent.asset_in.clone(), intent.initiator.clone())
-                .then(
-                    Self::ext(env::current_account_id())
-                        .with_static_gas(Self::GAS_FOR_RESOLVE_ROLLBACK_INTENT)
-                        .resolve_rollback_intent(id),
-                )
-                .into(),
-        )
+        Ok(Self::transfer(id, intent.asset_in.clone())
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(Self::GAS_FOR_RESOLVE_ROLLBACK_INTENT)
+                    .resolve_rollback_intent(id),
+            )
+            .into())
     }
 }
 
@@ -76,26 +72,13 @@ impl SwapIntentContractImpl {
             .unlock()
             .ok_or(SwapIntentError::WrongStatus)?;
 
-        let swap = intent.as_available().ok_or(SwapIntentError::WrongStatus)?;
+        intent.set_rolled_back(
+            id,
+            (!transfer_asset_in_succeeded).then(|| LostAsset::AssetIn {
+                recipient: intent.asset_in.account(),
+            }),
+        );
 
-        if transfer_asset_in_succeeded {
-            self.intents.remove(id);
-            Dep2Event::Rollbacked(id)
-                .emit()
-                .map_err(SwapIntentError::JSON)?;
-        } else {
-            let lost = LostAsset {
-                asset: swap.asset_in.clone(),
-                recipient: swap.initiator.clone(),
-            };
-            Dep2Event::Lost {
-                intent_id: id,
-                asset: &lost,
-            }
-            .emit()
-            .map_err(SwapIntentError::JSON)?;
-            *intent = SwapIntentStatus::Lost(lost);
-        }
         Ok(transfer_asset_in_succeeded)
     }
 }

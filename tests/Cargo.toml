@@ -15,5 +15,6 @@ lazy_static.workspace = true
 near-sdk = { workspace = true, features = ["unit-testing"] }
 near-workspaces.workspace = true
 near-contract-standards.workspace = true
+rstest = "0.21.0"
 serde_json.workspace = true
 tokio = { workspace = true, features = ["macros"] }

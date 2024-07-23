@@ -4,11 +4,12 @@ use super::{IntentId, LostAsset, SwapIntent};
 
 #[derive(Debug, Serialize)]
 #[serde(crate = "near_sdk::serde")]
+// TODO: EVENT_JSON standard
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
-pub enum Dep2Event<'a> {
+pub enum Dip2Event<'a> {
     Created(&'a SwapIntent),
     Executed(&'a IntentId),
-    Rollbacked(&'a IntentId),
+    RolledBack(&'a IntentId),
     Lost {
         intent_id: &'a IntentId,
         #[serde(flatten)]

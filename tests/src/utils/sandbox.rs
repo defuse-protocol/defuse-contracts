@@ -26,6 +26,10 @@ impl Sandbox {
         })
     }
 
+    pub async fn block_height(&self) -> u64 {
+        self.worker.view_block().await.unwrap().height()
+    }
+
     pub async fn skip_blocks(&self, num_blocks: u64) {
         self.worker.fast_forward(num_blocks).await.unwrap();
     }
