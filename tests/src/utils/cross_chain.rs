@@ -1,8 +1,8 @@
 use near_sdk::AccountId;
 use serde_json::json;
 
-pub trait OnCrossChainTransferExt {
-    async fn on_cross_chain_tranfer(
+pub trait CrossChainReceiverExt {
+    async fn cross_chain_on_transfer(
         &self,
         contract: &AccountId,
         asset: String,
@@ -11,15 +11,15 @@ pub trait OnCrossChainTransferExt {
     ) -> anyhow::Result<bool>;
 }
 
-impl OnCrossChainTransferExt for near_workspaces::Account {
-    async fn on_cross_chain_tranfer(
+impl CrossChainReceiverExt for near_workspaces::Account {
+    async fn cross_chain_on_transfer(
         &self,
         contract: &AccountId,
         asset: String,
         amount: String,
         msg: String,
     ) -> anyhow::Result<bool> {
-        self.call(contract, "on_cross_chain_transfer")
+        self.call(contract, "cross_chain_on_transfer")
             .args_json(json!({
                 "asset": asset,
                 "amount": amount,

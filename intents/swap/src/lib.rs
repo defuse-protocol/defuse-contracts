@@ -47,7 +47,7 @@ impl SwapIntentContractImpl {
 
 #[near]
 impl SwapIntentContract for SwapIntentContractImpl {
-    fn get_swap_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntent>> {
+    fn get_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntent>> {
         self.intents.get(id)
     }
 }

@@ -1,23 +1,25 @@
 use defuse_contracts::intents::swap::{
-    AssetWithAccount, NativeAction, NearAsset, SwapIntentAction, SwapIntentError,
+    AssetWithAccount, NativeReceiver, NearAsset, SwapIntentAction, SwapIntentError,
 };
-use near_sdk::{env, near, AccountId, NearToken, Promise, PromiseOrValue};
+use near_sdk::{env, near, serde_json, AccountId, NearToken, Promise, PromiseOrValue};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 
 #[near]
-impl NativeAction for SwapIntentContractImpl {
+impl NativeReceiver for SwapIntentContractImpl {
     #[payable]
-    fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<bool> {
-        self.internal_native_action(action).unwrap()
+    fn native_on_transfer(&mut self, msg: String) -> PromiseOrValue<bool> {
+        self.internal_native_action(&msg).unwrap()
     }
 }
 
 impl SwapIntentContractImpl {
     fn internal_native_action(
         &mut self,
-        action: SwapIntentAction,
+        msg: impl AsRef<str>,
     ) -> Result<PromiseOrValue<bool>, SwapIntentError> {
+        let action = serde_json::from_str(msg.as_ref()).map_err(SwapIntentError::JSON)?;
+
         let received = AssetWithAccount::Near {
             account: env::predecessor_account_id(),
             asset: NearAsset::Native {

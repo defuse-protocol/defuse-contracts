@@ -1,26 +1,25 @@
-use defuse_contracts::intents::swap::SwapIntentAction;
 use near_sdk::{AccountId, NearToken};
 use serde_json::json;
 
-pub trait NativeActionExt {
-    async fn native_action(
+pub trait NativeReceiverExt {
+    async fn native_on_transfer(
         &self,
         contract: &AccountId,
         amount: NearToken,
-        action: SwapIntentAction,
+        msg: &str,
     ) -> anyhow::Result<bool>;
 }
 
-impl NativeActionExt for near_workspaces::Account {
-    async fn native_action(
+impl NativeReceiverExt for near_workspaces::Account {
+    async fn native_on_transfer(
         &self,
         contract: &AccountId,
         amount: NearToken,
-        action: SwapIntentAction,
+        msg: &str,
     ) -> anyhow::Result<bool> {
-        self.call(contract, "native_action")
+        self.call(contract, "native_on_transfer")
             .args_json(json!({
-                "action": action,
+                "msg": msg,
             }))
             .deposit(amount)
             .max_gas()
@@ -32,15 +31,15 @@ impl NativeActionExt for near_workspaces::Account {
     }
 }
 
-impl NativeActionExt for near_workspaces::Contract {
-    async fn native_action(
+impl NativeReceiverExt for near_workspaces::Contract {
+    async fn native_on_transfer(
         &self,
         contract: &AccountId,
         amount: NearToken,
-        action: SwapIntentAction,
+        msg: &str,
     ) -> anyhow::Result<bool> {
         self.as_account()
-            .native_action(contract, amount, action)
+            .native_on_transfer(contract, amount, msg)
             .await
     }
 }

@@ -56,7 +56,7 @@ async fn text_execute_assets_in_out_ft_no_deposits() {
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()
@@ -89,7 +89,7 @@ async fn text_execute_assets_in_out_ft_no_deposits() {
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()
@@ -125,7 +125,7 @@ async fn text_execute_assets_in_out_ft_no_deposits() {
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()
@@ -206,7 +206,7 @@ async fn test_execute_asset_in_ft_no_deposit() {
 
     let intent = env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap();
@@ -256,7 +256,7 @@ async fn test_execute_asset_in_ft_no_deposit() {
 
     assert_eq!(
         env.swap_intent
-            .get_swap_intent(&intent_id)
+            .get_intent(&intent_id)
             .await
             .unwrap()
             .unwrap()
@@ -315,7 +315,7 @@ async fn test_execute_asset_out_ft_no_deposit() {
 
     let intent = env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap();
@@ -363,7 +363,7 @@ async fn test_execute_asset_out_ft_no_deposit() {
 
     assert_eq!(
         env.swap_intent
-            .get_swap_intent(&intent_id)
+            .get_intent(&intent_id)
             .await
             .unwrap()
             .unwrap()
@@ -429,7 +429,7 @@ async fn test_rollback_lost_found_ft() {
 
     let intent = env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap();
@@ -458,7 +458,7 @@ async fn test_rollback_lost_found_ft() {
         .unwrap());
     assert_eq!(
         env.swap_intent
-            .get_swap_intent(&intent_id)
+            .get_intent(&intent_id)
             .await
             .unwrap()
             .unwrap()
@@ -487,7 +487,7 @@ async fn test_rollback_lost_found_ft() {
 
     assert_eq!(
         env.swap_intent
-            .get_swap_intent(&intent_id)
+            .get_intent(&intent_id)
             .await
             .unwrap()
             .unwrap()

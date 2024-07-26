@@ -12,7 +12,7 @@ use near_workspaces::Contract;
 use serde_json::json;
 
 use crate::utils::{
-    account::AccountExt, cross_chain::OnCrossChainTransferExt, ft::FtExt, native::NativeActionExt,
+    account::AccountExt, cross_chain::CrossChainReceiverExt, ft::FtExt, native::NativeReceiverExt,
     nft::NftExt, read_wasm,
 };
 
@@ -33,7 +33,7 @@ pub trait SwapIntentShard {
         action: SwapIntentAction,
     ) -> anyhow::Result<bool>;
 
-    async fn get_swap_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>>;
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>>;
 
     async fn rollback_intent(
         &self,
@@ -71,7 +71,8 @@ impl SwapIntentShard for near_workspaces::Account {
     ) -> anyhow::Result<bool> {
         match asset_in {
             Asset::Near(NearAsset::Native { amount }) => {
-                self.native_action(swap_intent_id, amount, action).await
+                self.native_on_transfer(swap_intent_id, amount, &serde_json::to_string(&action)?)
+                    .await
             }
             Asset::Near(NearAsset::Nep141(FtAmount { token, amount })) => Ok(self
                 .ft_transfer_call(
@@ -106,7 +107,7 @@ impl SwapIntentShard for near_workspaces::Account {
                         "this cross-chain asset must be sent from oracle {oracle}"
                     ));
                 }
-                self.on_cross_chain_tranfer(
+                self.cross_chain_on_transfer(
                     swap_intent_id,
                     asset,
                     amount,
@@ -117,8 +118,8 @@ impl SwapIntentShard for near_workspaces::Account {
         }
     }
 
-    async fn get_swap_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
-        self.view(self.id(), "get_swap_intent")
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
+        self.view(self.id(), "get_intent")
             .args_json(json!({
                 "id": id,
             }))
@@ -178,8 +179,8 @@ impl SwapIntentShard for Contract {
             .await
     }
 
-    async fn get_swap_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
-        self.as_account().get_swap_intent(id).await
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
+        self.as_account().get_intent(id).await
     }
 
     async fn rollback_intent(

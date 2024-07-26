@@ -1,14 +1,13 @@
 use defuse_contracts::intents::swap::{
-    AssetWithAccount, CrossChainAsset, CrossChainTransferReceiver, SwapIntentAction,
-    SwapIntentError,
+    AssetWithAccount, CrossChainAsset, CrossChainReceiver, SwapIntentAction, SwapIntentError,
 };
 use near_sdk::{env, near, serde_json, Promise, PromiseOrValue};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 
 #[near]
-impl CrossChainTransferReceiver for SwapIntentContractImpl {
-    fn on_cross_chain_transfer(
+impl CrossChainReceiver for SwapIntentContractImpl {
+    fn cross_chain_on_transfer(
         &mut self,
         asset: String,
         amount: String,

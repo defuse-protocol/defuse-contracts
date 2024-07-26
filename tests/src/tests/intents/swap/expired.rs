@@ -38,7 +38,7 @@ async fn test_execute_expired() {
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()
@@ -68,7 +68,7 @@ async fn test_execute_expired() {
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()
@@ -84,7 +84,7 @@ async fn test_execute_expired() {
 
     assert_eq!(
         env.swap_intent
-            .get_swap_intent(&"1".to_string())
+            .get_intent(&"1".to_string())
             .await
             .unwrap()
             .unwrap()
@@ -128,7 +128,7 @@ async fn test_rollback_locked_up() {
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()
@@ -154,7 +154,7 @@ async fn test_rollback_locked_up() {
 
     assert_eq!(
         env.swap_intent
-            .get_swap_intent(&"1".to_string())
+            .get_intent(&"1".to_string())
             .await
             .unwrap()
             .unwrap()

@@ -35,10 +35,7 @@ async fn test_create_zero_amount() {
         .await
         .is_err());
 
-    assert_eq!(
-        env.swap_intent.get_swap_intent(&intent_id).await.unwrap(),
-        None
-    );
+    assert_eq!(env.swap_intent.get_intent(&intent_id).await.unwrap(), None);
 
     assert!(env
         .user1
@@ -63,10 +60,7 @@ async fn test_create_zero_amount() {
         .await
         .is_err());
 
-    assert_eq!(
-        env.swap_intent.get_swap_intent(&intent_id).await.unwrap(),
-        None
-    );
+    assert_eq!(env.swap_intent.get_intent(&intent_id).await.unwrap(), None);
 
     assert!(env.user1.view_account().await.unwrap().balance > NearToken::from_near(9));
 }

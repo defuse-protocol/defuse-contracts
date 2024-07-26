@@ -50,7 +50,7 @@ async fn test_rollback_native_intent() {
 
     assert_eq!(
         env.swap_intent
-            .get_swap_intent(&"1".to_string())
+            .get_intent(&"1".to_string())
             .await
             .unwrap()
             .unwrap()
@@ -106,7 +106,7 @@ async fn test_rollback_ft_intent() {
         .unwrap());
     assert_eq!(
         env.swap_intent
-            .get_swap_intent(&"1".to_string())
+            .get_intent(&"1".to_string())
             .await
             .unwrap()
             .unwrap()

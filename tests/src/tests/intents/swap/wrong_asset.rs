@@ -60,7 +60,7 @@ async fn test_execute_wrong_asset() {
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()
@@ -86,7 +86,7 @@ async fn test_execute_wrong_asset() {
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()

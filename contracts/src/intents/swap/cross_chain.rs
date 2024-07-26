@@ -1,10 +1,10 @@
 use near_sdk::{ext_contract, near, AccountId, Gas, PromiseOrValue};
 
 #[ext_contract(ext_cross_chain_action)]
-pub trait CrossChainTransferReceiver {
+pub trait CrossChainReceiver {
     /// Called by oracle when an asset from foreign chain was received.
     /// Returns bool indicating whether to refund received asset back to `sender`
-    fn on_cross_chain_transfer(
+    fn cross_chain_on_transfer(
         &mut self,
         asset: String,
         amount: String,
