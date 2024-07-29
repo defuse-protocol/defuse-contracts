@@ -1,35 +1,26 @@
-use near_sdk::serde::Serialize;
-
-use crate::utils::Nep297Event;
+use near_sdk::near;
 
 use super::{IntentId, LostAsset, SwapIntent};
 
-#[derive(Debug, Serialize)]
-#[serde(crate = "near_sdk::serde")]
 #[must_use = "don't forget to `.emit()` this event"]
-#[serde(tag = "event", content = "data", rename_all = "snake_case")]
+#[near(event_json(standard = "dip2"))]
 pub enum Dip2Event<'a> {
+    #[event_version("0.1.0")]
     Created {
         intent_id: &'a IntentId,
         #[serde(flatten)]
         intent: &'a SwapIntent,
     },
+    #[event_version("0.1.0")]
     Executed(&'a IntentId),
+    #[event_version("0.1.0")]
     RolledBack(&'a IntentId),
+    #[event_version("0.1.0")]
     Lost {
         intent_id: &'a IntentId,
         #[serde(flatten)]
         asset: &'a LostAsset,
     },
+    #[event_version("0.1.0")]
     Found(&'a IntentId),
-}
-
-impl<'a> From<Dip2Event<'a>> for Nep297Event<Dip2Event<'a>> {
-    fn from(data: Dip2Event<'a>) -> Self {
-        Self {
-            standard: "dip2",
-            version: "0.1.0",
-            event: data,
-        }
-    }
 }

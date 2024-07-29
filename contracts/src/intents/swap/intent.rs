@@ -2,8 +2,6 @@ use core::{cmp, time::Duration};
 
 use near_sdk::{env, near, AccountId};
 
-use crate::utils::Event;
-
 use super::{events::Dip2Event, AssetWithAccount, LostAsset, SwapIntentError};
 
 pub type IntentId = String;

@@ -1,4 +1,3 @@
-pub use self::{event::*, mutex::*};
+pub use self::mutex::*;
 
-mod event;
 mod mutex;
