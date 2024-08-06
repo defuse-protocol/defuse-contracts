@@ -11,7 +11,7 @@ use crate::utils::{ft::FtExt, storage_management::StorageManagementExt};
 use super::{Env, SwapIntentShard};
 
 #[tokio::test]
-async fn text_execute_assets_in_out_ft_no_deposits() {
+async fn test_execute_assets_in_out_ft_no_deposits() {
     let env = Env::new().await.unwrap();
     env.ft_storage_deposit(env.ft1.id(), &[env.user1.id(), env.swap_intent.id()])
         .await
