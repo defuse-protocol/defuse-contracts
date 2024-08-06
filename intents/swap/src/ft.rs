@@ -10,6 +10,9 @@ use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 
 #[near]
 impl FungibleTokenReceiver for SwapIntentContractImpl {
+    /// Receive NEP-141 tokens.  
+    /// `msg` parameter should contain [`SwapIntentAction`] serialized to
+    /// JSON string.
     fn ft_on_transfer(
         &mut self,
         sender_id: AccountId,

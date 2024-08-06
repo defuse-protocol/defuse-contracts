@@ -7,6 +7,9 @@ use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 
 #[near]
 impl CrossChainReceiver for SwapIntentContractImpl {
+    /// Receive cross-chain asset.  
+    /// `msg` parameter should contain [`SwapIntentAction`] serialized to
+    /// JSON string.
     fn cross_chain_on_transfer(
         &mut self,
         asset: String,

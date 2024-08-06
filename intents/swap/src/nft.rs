@@ -11,6 +11,9 @@ use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 
 #[near]
 impl NonFungibleTokenReceiver for SwapIntentContractImpl {
+    /// Receive NEP-141 tokens.  
+    /// `msg` parameter should contain [`SwapIntentAction`] serialized to
+    /// JSON string.
     fn nft_on_transfer(
         &mut self,
         sender_id: AccountId,

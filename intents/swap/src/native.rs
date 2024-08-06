@@ -7,6 +7,9 @@ use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 
 #[near]
 impl NativeReceiver for SwapIntentContractImpl {
+    /// Receive native NEAR.  
+    /// `msg` parameter should contain [`SwapIntentAction`] serialized to
+    /// JSON string.
     #[payable]
     fn native_on_transfer(&mut self, msg: String) -> PromiseOrValue<bool> {
         self.internal_native_action(&msg).unwrap()
