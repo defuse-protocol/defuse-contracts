@@ -22,7 +22,12 @@ mod rollback;
 
 #[ext_contract(ext_swap_intent)]
 pub trait SwapIntentContract:
-    NativeReceiver + FungibleTokenReceiver + NonFungibleTokenReceiver + Rollback + LostFound
+    NativeReceiver
+    + FungibleTokenReceiver
+    + NonFungibleTokenReceiver
+    + CrossChainReceiver
+    + Rollback
+    + LostFound
 {
     fn get_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntent>>;
 }
