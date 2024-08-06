@@ -78,6 +78,14 @@ args = [
     "defuse-controller-contract",
 ]
 
+[tasks.abi]
+dependencies = ["abi-swap-intent"]
+
+[tasks.abi-swap-intent]
+command = "cargo"
+env.RUSTFLAGS = "--cfg carg_near_abi_generation"
+args = ["near", "abi", "--manifest-path", "./intents/swap/Cargo.toml"]
+
 [tasks.cp-contracts]
 script = """
 cp target/${TARGET}/release/defuse_account_contract.wasm ${TARGET_DIR}/${ACCOUNT_WASM_FILE}
