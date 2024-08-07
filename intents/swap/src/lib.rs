@@ -14,8 +14,6 @@ use near_sdk::{
     BorshStorageKey, Gas, PanicOnDefault, Promise, PromiseError, PromiseOrValue,
 };
 
-#[cfg(carg_near_abi_generation)]
-mod abi;
 mod cross_chain;
 mod ft;
 mod lost_found;
