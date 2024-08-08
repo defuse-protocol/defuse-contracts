@@ -63,7 +63,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ github.ref }}
-      - name: Install cargo-make
+      - name: Install Cargo Plugins
         run: cargo install cargo-make cargo-near
       - name: Build
         run: cargo make build
