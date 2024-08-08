@@ -10,7 +10,7 @@ use super::storage_management::StorageManagementExt;
 const STORAGE_DEPOSIT: NearToken = NearToken::from_yoctonear(2_350_000_000_000_000_000_000);
 const TOTAL_SUPPLY: u128 = 1_000_000_000;
 
-const FUNGIBLE_TOKEN_WASM: &'static [u8] = include_bytes!(concat!(
+const FUNGIBLE_TOKEN_WASM: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/contracts/fungible-token.wasm"
 ));
