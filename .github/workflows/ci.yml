@@ -64,7 +64,7 @@ jobs:
         with:
           shared-key: ${{ github.ref }}
       - name: Install cargo-make
-        run: cargo install cargo-make
+        run: cargo install cargo-make cargo-near
       - name: Build
         run: cargo make build
       - name: Upload Artifacts
