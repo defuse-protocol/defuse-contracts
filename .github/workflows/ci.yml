@@ -9,7 +9,7 @@ on:
 
 jobs:
   fmt:
-    name: Formatting
+    name: Format
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -19,8 +19,8 @@ jobs:
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
 
-  clippy:
-    name: Clippy
+  check:
+    name: Check
     runs-on: ubuntu-latest
     needs: fmt
     steps:
@@ -44,7 +44,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: clippy
+    needs: check
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
