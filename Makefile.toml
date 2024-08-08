@@ -8,6 +8,11 @@ TARGET_DIR = "${PWD}/res"
 [tasks.default]
 alias = "build"
 
+[tasks.clippy]
+command = "cargo"
+dependencies = ["build"]
+args = ["clippy", "--workspace", "--all-targets"]
+
 [tasks.build]
 dependencies = [
     "build-account",
@@ -17,18 +22,6 @@ dependencies = [
     "contract-stats",
 ]
 
-[tasks.clippy]
-command = "cargo"
-dependencies = ["build"]
-args = ["clippy", "--workspace", "--all-targets"]
-
-[tasks.test]
-alias = "tests"
-
-[tasks.tests]
-dependencies = ["build"]
-command = "cargo"
-args = ["test", "--workspace", "--all-targets", "${@}"]
 
 [tasks.build-account]
 command = "cargo"
@@ -81,6 +74,14 @@ args = [
     "--no-docker",
     "--no-embed-abi",
 ]
+
+[tasks.test]
+alias = "tests"
+
+[tasks.tests]
+dependencies = ["build"]
+command = "cargo"
+args = ["test", "--workspace", "--all-targets", "${@}"]
 
 [tasks.clean]
 dependencies = ["rm-contracts"]
