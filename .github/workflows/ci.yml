@@ -49,7 +49,7 @@ jobs:
       - name: Install Dependencies
         uses: awalsh128/cache-apt-pkgs-action@v1
         with:
-          packages: libudev-dev
+          packages: libudev-dev # dependency for cargo-near
           version: 1.0
       - name: Checkout sources
         uses: actions/checkout@v4
