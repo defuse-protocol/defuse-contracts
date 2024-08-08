@@ -6,7 +6,7 @@ use serde_json::json;
 use crate::utils::{account::AccountExt, read_wasm, Sandbox};
 
 lazy_static! {
-    static ref CONTROLLER_WASM: Vec<u8> = read_wasm("defuse-controller-contract");
+    static ref CONTROLLER_WASM: Vec<u8> = read_wasm("defuse_controller_contract");
 }
 
 pub trait ControllerExt {
