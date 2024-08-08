@@ -101,5 +101,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: res
+          path: ./res
       - name: Run Tests
         run: cargo make run-tests
