@@ -10,7 +10,6 @@ alias = "build"
 
 [tasks.clippy]
 command = "cargo"
-dependencies = ["build"]
 args = ["clippy", "--workspace", "--all-targets"]
 
 [tasks.build]
@@ -80,6 +79,9 @@ alias = "tests"
 
 [tasks.tests]
 dependencies = ["build"]
+run_task = "run-tests"
+
+[tasks.run-tests]
 command = "cargo"
 args = ["test", "--workspace", "--all-targets", "${@}"]
 
