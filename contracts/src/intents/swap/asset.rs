@@ -72,15 +72,6 @@ impl AssetWithAccount {
 
     #[must_use]
     #[inline]
-    pub const fn gas_for_transfer(&self) -> Gas {
-        match self {
-            Self::Near { asset, .. } => asset.gas_for_transfer(),
-            Self::CrossChain { asset, .. } => asset.gas_for_transfer(),
-        }
-    }
-
-    #[must_use]
-    #[inline]
     pub const fn gas_for_refund(&self) -> Gas {
         match self {
             Self::Near { asset, .. } => asset.gas_for_refund(),

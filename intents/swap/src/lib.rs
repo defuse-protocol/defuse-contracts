@@ -4,7 +4,7 @@ use defuse_contracts::{
         FtAmount, GenericAccount, IntentId, LostAsset, NearAsset, SwapIntent, SwapIntentContract,
         SwapIntentError, SwapIntentStatus,
     },
-    utils::Mutex,
+    utils::{Mutex, UnwrapOrPanic},
 };
 
 use near_sdk::{
@@ -192,7 +192,7 @@ impl SwapIntentContractImpl {
             transfer_asset_in.is_ok(),
             transfer_asset_out.is_ok(),
         )
-        .unwrap()
+        .unwrap_or_panic_display()
     }
 }
 
@@ -257,7 +257,7 @@ impl SwapIntentContractImpl {
                 // nft_on_transfer()
                 NearAsset::Nep171(_) => PromiseOrValue::Value(json!(refund)),
             },
-            // on_cross_chain_tranfer()
+            // cross_chain_on_transfer()
             AssetWithAccount::CrossChain { .. } => PromiseOrValue::Value(json!(
                 // TODO: fix to `refund`, so it would return if the asset
                 // should be refunded
