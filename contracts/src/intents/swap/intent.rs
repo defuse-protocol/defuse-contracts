@@ -1,126 +1,179 @@
-use core::time::Duration;
+use core::{cmp, time::Duration};
 
 use near_sdk::{env, near, AccountId};
 
-use super::{Asset, LostAsset};
+use super::{events::Dip2Event, AssetWithAccount, LostAsset, SwapIntentError};
 
 pub type IntentId = String;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
-#[serde(tag = "status", rename_all = "snake_case")]
-pub enum SwapIntentStatus {
-    /// Available for execution.
-    Available(SwapIntent),
-    /// The intent has already been executed/rollbacked
+#[serde(rename_all = "snake_case")]
+pub struct SwapIntent {
+    /// Provided asset as an input.
+    pub asset_in: AssetWithAccount,
+
+    /// Desired asset as an output.
+    // TODO: multiple inputs, outputs, e.g. for storage deposit
+    pub asset_out: AssetWithAccount,
+
+    /// Optional lockup period for [`asset_in`] when initiator cannot rollback
+    /// the intent.  
+    /// NOTE: MUST come before [`expiration`]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lockup_until: Option<Deadline>,
+
+    /// Deadline to execute the swap.  
+    /// NOTE: intent can still be rollbacked at any time unless
+    /// [`lockup_until`] is specified.
+    pub expiration: Deadline,
+
+    /// Current status of the intent
+    #[serde(flatten)]
+    pub status: SwapIntentStatus,
+
+    /// Lost asset in case the intent has already been executed/rollbacked
     /// but we failed to transfer an asset to recipient/initiator.
     /// This can happen due to recipient/initiator is not registered
     /// on the target asset contract or does not have enough storage
     /// deposited according to Storage Management standard (NEP-145).
     /// Anyone can call `lost_found(intent_id)` to retry the transfer.
-    Lost(LostAsset),
-}
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lost: Option<LostAsset>,
 
-impl SwapIntentStatus {
-    #[must_use]
-    #[inline]
-    pub const fn is_available(&self) -> bool {
-        matches!(self, Self::Available(_))
-    }
-
-    #[must_use]
-    #[inline]
-    pub const fn as_available(&self) -> Option<&SwapIntent> {
-        #[allow(clippy::match_wildcard_for_single_variants)]
-        match self {
-            Self::Available(swap) => Some(swap),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub fn as_available_mut(&mut self) -> Option<&mut SwapIntent> {
-        #[allow(clippy::match_wildcard_for_single_variants)]
-        match self {
-            Self::Available(swap) => Some(swap),
-            _ => None,
-        }
-    }
-
-    #[must_use]
-    #[inline]
-    pub const fn is_lost(&self) -> bool {
-        matches!(self, Self::Lost(_))
-    }
-
-    #[must_use]
-    #[inline]
-    pub const fn as_lost(&self) -> Option<&LostAsset> {
-        #[allow(clippy::match_wildcard_for_single_variants)]
-        match self {
-            Self::Lost(lost) => Some(lost),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    pub fn as_lost_mut(&mut self) -> Option<&mut LostAsset> {
-        #[allow(clippy::match_wildcard_for_single_variants)]
-        match self {
-            Self::Lost(lost) => Some(lost),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[near(serializers = [borsh, json])]
-pub struct SwapIntent {
-    /// Initiator who created the intent.
-    pub initiator: AccountId,
-    /// Provided asset as an input.
-    pub asset_in: Asset,
-    /// Desired asset as an output.
-    // TODO: in case of NFT, this only allows for simple "barter",
-    // while in case of Defuse, the user doesn't know in advance which
-    // account solver will use for this swap. Possible solutions for this issue:
-    // * Accept whatever NFT from only whitelisted solvers
-    // * Some kind of auction, where solvers "register" their willingness
-    //   to close the intent and compete between each other over given
-    //   set of properties. These properties of suggested addresses by solvers
-    //   can be compared between each other either on-chain (by having
-    //   light-client contracts for each chain) or by user front-ends:
-    //   this info about offers can be presented to the user and user can
-    //   accept the best one or chose between them.
-    //   So, it will become 3-stage process. We need to thing about it properly
-    pub asset_out: Asset,
-    /// Where to send asset_out. By default: back to initiator.
-    #[serde(default)]
-    pub recipient: Option<AccountId>,
-    /// Deadline to execute the swap.
-    /// NOTE: intent can still be rollbacked at any time.
-    pub expiration: Expiration,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub referral: Option<AccountId>,
 }
 
 impl SwapIntent {
     #[must_use]
     #[inline]
+    pub const fn initiator(&self) -> &AccountId {
+        self.asset_in.initiator()
+    }
+
+    #[must_use]
+    #[inline]
+    pub const fn is_available(&self) -> bool {
+        self.status.is_available()
+    }
+
+    #[must_use]
+    #[inline]
     pub fn has_expired(&self) -> bool {
         self.expiration.has_expired()
     }
+
+    #[must_use]
+    #[inline]
+    pub fn is_locked_up(&self) -> bool {
+        !self.lockup_until.map_or(true, Deadline::has_expired)
+    }
+
+    #[inline]
+    pub fn set_executed(&mut self, id: &IntentId, proof: Option<String>, lost: Option<LostAsset>) {
+        self.status = SwapIntentStatus::Executed { proof };
+        Dip2Event::Executed(id).emit();
+
+        if let Some(lost) = lost {
+            self.set_lost(id, lost);
+        }
+    }
+
+    #[inline]
+    pub fn set_rolled_back(&mut self, id: &IntentId, lost: bool) {
+        self.status = SwapIntentStatus::RolledBack;
+        Dip2Event::RolledBack(id).emit();
+
+        if lost {
+            self.set_lost(
+                id,
+                LostAsset::AssetIn {
+                    recipient: self.asset_in.account(),
+                },
+            );
+        }
+    }
+
+    #[inline]
+    pub fn set_lost(&mut self, id: &IntentId, lost: LostAsset) {
+        Dip2Event::Lost {
+            intent_id: id,
+            asset: &lost,
+        }
+        .emit();
+        self.lost = Some(lost);
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn lost_asset(&self) -> Option<AssetWithAccount> {
+        match self.lost.clone()? {
+            LostAsset::AssetIn { recipient } => self.asset_in.with_account(recipient),
+            LostAsset::AssetOut => Some(self.asset_out.clone()),
+        }
+    }
+
+    #[inline]
+    pub fn lost_found(&mut self, id: &IntentId) {
+        if self.lost.take().is_some() {
+            Dip2Event::Found(id).emit();
+        }
+    }
+
+    // Check that lockup_until <= expiration
+    fn validate_lockup(&self) -> Result<(), SwapIntentError> {
+        if let Some(lockup_until) = self.lockup_until {
+            if matches!(
+                lockup_until.partial_cmp(&self.expiration),
+                Some(cmp::Ordering::Greater),
+            ) {
+                return Err(SwapIntentError::LockupAfterExpiration);
+            }
+        }
+        Ok(())
+    }
+
+    pub fn validate(&self) -> Result<(), SwapIntentError> {
+        // prevent from swapping from/to zero amount
+        if self.asset_in.is_zero_amount() || self.asset_out.is_zero_amount() {
+            return Err(SwapIntentError::ZeroAmount);
+        }
+
+        // prevent from creating already expired intents
+        if self.has_expired() || self.lockup_until.map_or(false, Deadline::has_expired) {
+            return Err(SwapIntentError::Expired);
+        }
+
+        self.validate_lockup()?;
+
+        Ok(())
+    }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[near(serializers=[borsh, json])]
 #[serde(rename_all = "snake_case")]
-pub enum Expiration {
+pub enum Deadline {
     /// UNIX Timestamp in seconds
     Timestamp(u64),
     /// Block number
     BlockNumber(u64),
 }
 
-impl Expiration {
+impl PartialOrd for Deadline {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        match (self, other) {
+            (Self::Timestamp(s), Self::Timestamp(other)) => s.partial_cmp(other),
+            (Self::BlockNumber(n), Self::BlockNumber(other)) => n.partial_cmp(other),
+            // no way to compare UNIX timestamp with block number
+            _ => None,
+        }
+    }
+}
+
+impl Deadline {
     #[must_use]
     #[inline]
     pub fn has_expired(self) -> bool {
@@ -157,5 +210,36 @@ impl Expiration {
                 .unwrap()
                 .as_secs(),
         )
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[near(serializers = [borsh, json])]
+#[serde(rename_all = "snake_case", tag = "status")]
+pub enum SwapIntentStatus {
+    /// Available for execution.
+    #[default]
+    Available,
+    /// Executed.
+    Executed {
+        /// Optional proof for cross-chain assets.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        proof: Option<String>,
+    },
+    /// Rolled back.
+    RolledBack,
+}
+
+impl SwapIntentStatus {
+    #[must_use]
+    #[inline]
+    pub const fn is_available(&self) -> bool {
+        matches!(self, Self::Available)
+    }
+
+    #[must_use]
+    #[inline]
+    pub const fn is_executed(&self) -> bool {
+        matches!(self, Self::Executed { .. })
     }
 }

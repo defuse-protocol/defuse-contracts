@@ -1,6 +1,6 @@
-use near_sdk::{ext_contract, near, AccountId, Promise};
+use near_sdk::{ext_contract, near, Promise};
 
-use super::{Asset, IntentId};
+use super::{GenericAccount, IntentId};
 
 #[ext_contract(ext_lost_found)]
 pub trait LostFound {
@@ -8,16 +8,20 @@ pub trait LostFound {
     ///
     /// NOTE: MUST attach 1 yⓃ for security purposes.
     ///
-    /// Returns `bool` indicating whether the asset was transferred successfully
+    /// Returns `bool` indicating whether the asset was transferred successfully.
     fn lost_found(&mut self, id: &IntentId) -> Promise;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
-pub struct LostAsset {
-    #[serde(flatten)]
-    /// The asset that was lost while execute/rollback.
-    pub asset: Asset,
-    /// Where to send the lost asset
-    pub recipient: AccountId,
+#[serde(rename_all = "snake_case", tag = "direction")]
+pub enum LostAsset {
+    /// Failed to transfer [`asset_in`](super::SwapIntent::asset_in).
+    AssetIn {
+        /// Where `asset_in` was meant to be sent.
+        recipient: GenericAccount,
+    },
+    /// Failed to transfer [`asset_out`](super::SwapIntent::asset_out)
+    /// to its recipient.
+    AssetOut,
 }

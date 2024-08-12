@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use defuse_contracts::intents::swap::{
-    Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, Expiration, FtAmount,
+    Asset, AssetWithAccount, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction, FtAmount,
+    GenericAccount, NearAsset, SwapIntentAction,
 };
 use near_sdk::NearToken;
 
@@ -27,29 +28,39 @@ async fn test_execute_wrong_asset() {
         .await
         .unwrap();
 
-    env.ft1.ft_mint(env.user2.id(), 500).await.unwrap();
-    env.ft2.ft_mint(env.user2.id(), 500).await.unwrap();
+    env.ft_mint(env.ft1.id(), env.user2.id(), 500)
+        .await
+        .unwrap();
+    env.ft_mint(env.ft2.id(), env.user2.id(), 500)
+        .await
+        .unwrap();
 
     let intent_id = "1".to_string();
 
     assert!(env
         .user1
-        .create_swap_intent(
+        .swap_intent_action(
             env.swap_intent.id(),
-            Asset::Native(NearToken::from_near(5)),
-            CreateSwapIntentAction {
+            Asset::Near(NearAsset::Native {
+                amount: NearToken::from_near(5)
+            }),
+            SwapIntentAction::Create(CreateSwapIntentAction {
                 id: intent_id.clone(),
-                asset_out: Asset::Ft(FtAmount::new(env.ft1.id().clone(), 500)),
-                recipient: None,
-                expiration: Expiration::timeout(Duration::from_secs(60)),
-            },
+                asset_out: AssetWithAccount::Near {
+                    account: env.user1.id().clone(),
+                    asset: NearAsset::Nep141(FtAmount::new(env.ft1.id().clone(), 500))
+                },
+                lockup_until: None,
+                expiration: Deadline::timeout(Duration::from_secs(60)),
+                referral: None,
+            }),
         )
         .await
         .unwrap());
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()
@@ -61,20 +72,21 @@ async fn test_execute_wrong_asset() {
 
     assert!(!env
         .user2
-        .execute_swap_intent(
+        .swap_intent_action(
             env.swap_intent.id(),
-            Asset::Ft(FtAmount::new(env.ft2.id().clone(), 500)),
-            ExecuteSwapIntentAction {
+            Asset::Near(NearAsset::Nep141(FtAmount::new(env.ft2.id().clone(), 500))),
+            SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
-                recipient: None,
-            },
+                recipient: GenericAccount::Near(env.user2.id().clone()),
+                proof: None,
+            }),
         )
         .await
         .unwrap());
 
     assert!(env
         .swap_intent
-        .get_swap_intent(&intent_id)
+        .get_intent(&intent_id)
         .await
         .unwrap()
         .unwrap()

@@ -1,7 +1,8 @@
+use anyhow::anyhow;
 use defuse_contracts::{
     intents::swap::{
-        Asset, CreateSwapIntentAction, ExecuteSwapIntentAction, FtAmount, IntentId, NftItem,
-        SwapIntentAction, SwapIntentStatus,
+        Asset, CrossChainAsset, FtAmount, IntentId, NearAsset, NftItem, SwapIntent,
+        SwapIntentAction,
     },
     utils::Mutex,
 };
@@ -10,7 +11,10 @@ use near_sdk::{AccountId, NearToken};
 use near_workspaces::Contract;
 use serde_json::json;
 
-use crate::utils::{account::AccountExt, ft::FtExt, nft::NftExt, read_wasm};
+use crate::utils::{
+    account::AccountExt, cross_chain::CrossChainReceiverExt, ft::FtExt, native::NativeReceiverExt,
+    nft::NftExt, read_wasm,
+};
 
 lazy_static! {
     static ref SWAP_INTENT_WASM: Vec<u8> = read_wasm("defuse-swap-intent-contract");
@@ -22,24 +26,14 @@ pub trait SwapIntentShard {
         swap_intent_shard_id: &str,
     ) -> anyhow::Result<Contract>;
 
-    async fn create_swap_intent(
+    async fn swap_intent_action(
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
-        create: CreateSwapIntentAction,
+        action: SwapIntentAction,
     ) -> anyhow::Result<bool>;
 
-    async fn get_swap_intent(
-        &self,
-        id: &IntentId,
-    ) -> anyhow::Result<Option<Mutex<SwapIntentStatus>>>;
-
-    async fn execute_swap_intent(
-        &self,
-        swap_intent_id: &AccountId,
-        asset_in: Asset,
-        fulfill: ExecuteSwapIntentAction,
-    ) -> anyhow::Result<bool>;
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>>;
 
     async fn rollback_intent(
         &self,
@@ -69,107 +63,69 @@ impl SwapIntentShard for near_workspaces::Account {
         Ok(contract)
     }
 
-    async fn create_swap_intent(
+    async fn swap_intent_action(
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
-        create: CreateSwapIntentAction,
+        action: SwapIntentAction,
     ) -> anyhow::Result<bool> {
         match asset_in {
-            Asset::Native(amount) => self
-                .call(swap_intent_id, "native_action")
-                .args_json(json!({
-                    "action": SwapIntentAction::Create(create),
-                }))
-                .deposit(amount)
-                .max_gas()
-                .transact()
-                .await?
-                .into_result()?
-                .json()
-                .map_err(Into::into),
-            Asset::Ft(FtAmount { token, amount }) => Ok(self
+            Asset::Near(NearAsset::Native { amount }) => {
+                self.native_on_transfer(swap_intent_id, amount, &serde_json::to_string(&action)?)
+                    .await
+            }
+            Asset::Near(NearAsset::Nep141(FtAmount { token, amount })) => Ok(self
                 .ft_transfer_call(
                     &token,
                     swap_intent_id,
                     amount.0,
                     None,
-                    &serde_json::to_string(&SwapIntentAction::Create(create)).unwrap(),
+                    &serde_json::to_string(&action)?,
                 )
                 .await?
                 == amount.0),
-            Asset::Nft(NftItem {
+            Asset::Near(NearAsset::Nep171(NftItem {
                 collection,
                 token_id,
-            }) => {
+            })) => {
                 self.nft_transfer_call(
                     &collection,
                     swap_intent_id,
                     token_id,
                     None,
-                    serde_json::to_string(&SwapIntentAction::Create(create)).unwrap(),
+                    serde_json::to_string(&action)?,
+                )
+                .await
+            }
+            Asset::CrossChain(CrossChainAsset {
+                oracle,
+                asset,
+                amount,
+            }) => {
+                if self.id() != &oracle {
+                    return Err(anyhow!(
+                        "this cross-chain asset must be sent from oracle {oracle}"
+                    ));
+                }
+                self.cross_chain_on_transfer(
+                    swap_intent_id,
+                    asset,
+                    amount,
+                    serde_json::to_string(&action)?,
                 )
                 .await
             }
         }
     }
 
-    async fn get_swap_intent(
-        &self,
-        id: &IntentId,
-    ) -> anyhow::Result<Option<Mutex<SwapIntentStatus>>> {
-        self.view(self.id(), "get_swap_intent")
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
+        self.view(self.id(), "get_intent")
             .args_json(json!({
                 "id": id,
             }))
             .await?
             .json()
             .map_err(Into::into)
-    }
-
-    async fn execute_swap_intent(
-        &self,
-        swap_intent_id: &AccountId,
-        asset_in: Asset,
-        execute: ExecuteSwapIntentAction,
-    ) -> anyhow::Result<bool> {
-        match asset_in {
-            Asset::Native(amount) => self
-                .call(swap_intent_id, "native_action")
-                .args_json(json!({
-                    "action": SwapIntentAction::Execute(execute),
-                }))
-                .deposit(amount)
-                .max_gas()
-                .transact()
-                .await?
-                .into_result()?
-                .json()
-                .map_err(Into::into),
-            Asset::Ft(FtAmount { token, amount }) => Ok(self
-                .ft_transfer_call(
-                    &token,
-                    swap_intent_id,
-                    amount.0,
-                    None,
-                    &serde_json::to_string(&SwapIntentAction::Execute(execute)).unwrap(),
-                )
-                .await?
-                == amount.0),
-            Asset::Nft(NftItem {
-                collection,
-                token_id,
-            }) => {
-                self.nft_transfer_call(
-                    &collection,
-                    swap_intent_id,
-                    token_id,
-                    None,
-                    serde_json::to_string(&SwapIntentAction::Execute(execute)).unwrap(),
-                )
-                .await
-            }
-        }
     }
 
     async fn rollback_intent(
@@ -212,33 +168,19 @@ impl SwapIntentShard for Contract {
             .await
     }
 
-    async fn create_swap_intent(
+    async fn swap_intent_action(
         &self,
         swap_intent_id: &AccountId,
         asset_in: Asset,
-        create: CreateSwapIntentAction,
+        action: SwapIntentAction,
     ) -> anyhow::Result<bool> {
         self.as_account()
-            .create_swap_intent(swap_intent_id, asset_in, create)
+            .swap_intent_action(swap_intent_id, asset_in, action)
             .await
     }
 
-    async fn get_swap_intent(
-        &self,
-        id: &IntentId,
-    ) -> anyhow::Result<Option<Mutex<SwapIntentStatus>>> {
-        self.as_account().get_swap_intent(id).await
-    }
-
-    async fn execute_swap_intent(
-        &self,
-        swap_intent_id: &AccountId,
-        asset_in: Asset,
-        fulfill: ExecuteSwapIntentAction,
-    ) -> anyhow::Result<bool> {
-        self.as_account()
-            .execute_swap_intent(swap_intent_id, asset_in, fulfill)
-            .await
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
+        self.as_account().get_intent(id).await
     }
 
     async fn rollback_intent(

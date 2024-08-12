@@ -67,7 +67,6 @@ args = [
     "defuse-swap-ft-intent-contract",
 ]
 
-
 [tasks.build-controller]
 command = "cargo"
 args = [

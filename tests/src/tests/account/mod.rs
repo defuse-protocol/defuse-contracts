@@ -96,7 +96,7 @@ async fn test_account_shard() {
     assert_eq!(
         &account_shard
             .as_account()
-            .nft_token(&"a".to_string())
+            .self_nft_token(&"a".to_string())
             .await
             .unwrap()
             .unwrap()
@@ -111,7 +111,7 @@ async fn test_account_shard() {
     assert_eq!(
         &account_shard
             .as_account()
-            .nft_token(&"a".to_string())
+            .self_nft_token(&"a".to_string())
             .await
             .unwrap()
             .unwrap()

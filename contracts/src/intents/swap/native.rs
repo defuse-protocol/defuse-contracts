@@ -1,10 +1,8 @@
 use near_sdk::{ext_contract, PromiseOrValue};
 
-use super::SwapIntentAction;
-
 #[ext_contract(ext_native_action)]
-pub trait NativeAction {
+pub trait NativeReceiver {
     /// MUST be `#[payable]`.
     /// Returns true if the action succeeded.
-    fn native_action(&mut self, action: SwapIntentAction) -> PromiseOrValue<bool>;
+    fn native_on_transfer(&mut self, msg: String) -> PromiseOrValue<bool>;
 }
