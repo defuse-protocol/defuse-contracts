@@ -1,5 +1,8 @@
-use defuse_contracts::intents::swap::{IntentId, LostFound, SwapIntentError};
-use near_sdk::{env, near, Gas, NearToken, Promise, PromiseError};
+use defuse_contracts::{
+    intents::swap::{IntentId, LostFound, SwapIntentError},
+    utils::UnwrapOrPanic,
+};
+use near_sdk::{env, near, Gas, Promise, PromiseError};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 
@@ -7,8 +10,8 @@ use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 impl LostFound for SwapIntentContractImpl {
     #[payable]
     fn lost_found(&mut self, id: &IntentId) -> Promise {
-        assert_eq!(env::attached_deposit(), NearToken::from_yoctonear(1));
-        self.internal_lost_found(id).unwrap()
+        near_sdk::assert_one_yocto();
+        self.internal_lost_found(id).unwrap_or_panic_display()
     }
 }
 
@@ -44,7 +47,7 @@ impl SwapIntentContractImpl {
         #[callback_result] transfer: &Result<(), PromiseError>,
     ) -> bool {
         self.internal_resolve_lost_found(id, transfer.is_ok())
-            .unwrap()
+            .unwrap_or_panic_display()
     }
 }
 

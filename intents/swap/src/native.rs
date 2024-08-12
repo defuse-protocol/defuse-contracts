@@ -1,5 +1,8 @@
-use defuse_contracts::intents::swap::{
-    AssetWithAccount, NativeReceiver, NearAsset, SwapIntentAction, SwapIntentError,
+use defuse_contracts::{
+    intents::swap::{
+        AssetWithAccount, NativeReceiver, NearAsset, SwapIntentAction, SwapIntentError,
+    },
+    utils::UnwrapOrPanic,
 };
 use near_sdk::{env, near, serde_json, AccountId, NearToken, Promise, PromiseOrValue};
 
@@ -12,7 +15,7 @@ impl NativeReceiver for SwapIntentContractImpl {
     /// JSON string.
     #[payable]
     fn native_on_transfer(&mut self, msg: String) -> PromiseOrValue<bool> {
-        self.internal_native_action(&msg).unwrap()
+        self.internal_native_action(&msg).unwrap_or_panic_display()
     }
 }
 

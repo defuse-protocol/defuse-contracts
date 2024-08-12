@@ -1,5 +1,8 @@
-use defuse_contracts::intents::swap::{
-    AssetWithAccount, CrossChainAsset, CrossChainReceiver, SwapIntentAction, SwapIntentError,
+use defuse_contracts::{
+    intents::swap::{
+        AssetWithAccount, CrossChainAsset, CrossChainReceiver, SwapIntentAction, SwapIntentError,
+    },
+    utils::UnwrapOrPanic,
 };
 use near_sdk::{env, near, serde_json, Promise, PromiseOrValue};
 
@@ -17,7 +20,7 @@ impl CrossChainReceiver for SwapIntentContractImpl {
         msg: String,
     ) -> PromiseOrValue<bool> {
         self.internal_cross_chain_action(asset, amount, msg)
-            .unwrap()
+            .unwrap_or_panic_display()
     }
 }
 
@@ -39,13 +42,14 @@ impl SwapIntentContractImpl {
                 amount,
             },
         };
-        Ok(match action {
-            SwapIntentAction::Create(create) => {
-                self.create_intent(received, create)?;
-                PromiseOrValue::Value(true)
+        match action {
+            SwapIntentAction::Create(create) => self
+                .create_intent(received, create)
+                .map(|()| PromiseOrValue::Value(true)),
+            SwapIntentAction::Execute(execute) => {
+                self.execute_intent(&received, execute).map(Into::into)
             }
-            SwapIntentAction::Execute(execute) => self.execute_intent(&received, execute)?.into(),
-        })
+        }
     }
 
     #[allow(clippy::needless_pass_by_value)]

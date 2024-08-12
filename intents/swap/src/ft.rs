@@ -1,5 +1,6 @@
-use defuse_contracts::intents::swap::{
-    AssetWithAccount, FtAmount, NearAsset, SwapIntentAction, SwapIntentError,
+use defuse_contracts::{
+    intents::swap::{AssetWithAccount, FtAmount, NearAsset, SwapIntentAction, SwapIntentError},
+    utils::UnwrapOrPanic,
 };
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
 use near_sdk::{
@@ -20,7 +21,7 @@ impl FungibleTokenReceiver for SwapIntentContractImpl {
         msg: String,
     ) -> PromiseOrValue<U128> {
         self.internal_ft_on_transfer(sender_id, amount, msg)
-            .unwrap()
+            .unwrap_or_panic_display()
     }
 }
 

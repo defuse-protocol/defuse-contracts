@@ -1,5 +1,6 @@
-use defuse_contracts::intents::swap::{
-    AssetWithAccount, NearAsset, NftItem, SwapIntentAction, SwapIntentError,
+use defuse_contracts::{
+    intents::swap::{AssetWithAccount, NearAsset, NftItem, SwapIntentAction, SwapIntentError},
+    utils::UnwrapOrPanic,
 };
 use near_contract_standards::non_fungible_token::{
     core::{ext_nft_core, NonFungibleTokenReceiver},
@@ -22,7 +23,7 @@ impl NonFungibleTokenReceiver for SwapIntentContractImpl {
         msg: String,
     ) -> PromiseOrValue<bool> {
         self.internal_nft_on_transfer(sender_id, &previous_owner_id, token_id, msg)
-            .unwrap()
+            .unwrap_or_panic_display()
     }
 }
 

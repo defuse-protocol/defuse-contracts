@@ -1,5 +1,8 @@
-use defuse_contracts::intents::swap::{IntentId, Rollback, SwapIntentError};
-use near_sdk::{env, near, AccountId, Gas, NearToken, PromiseError, PromiseOrValue};
+use defuse_contracts::{
+    intents::swap::{IntentId, Rollback, SwapIntentError},
+    utils::UnwrapOrPanic,
+};
+use near_sdk::{env, near, AccountId, Gas, PromiseError, PromiseOrValue};
 
 use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 
@@ -7,9 +10,9 @@ use crate::{SwapIntentContractImpl, SwapIntentContractImplExt};
 impl Rollback for SwapIntentContractImpl {
     #[payable]
     fn rollback_intent(&mut self, id: &IntentId) -> PromiseOrValue<bool> {
-        assert_eq!(env::attached_deposit(), NearToken::from_yoctonear(1));
+        near_sdk::assert_one_yocto();
         self.internal_rollback_intent(id, &env::predecessor_account_id())
-            .unwrap()
+            .unwrap_or_panic_display()
     }
 }
 
@@ -55,7 +58,7 @@ impl SwapIntentContractImpl {
         #[callback_result] transfer_asset_in: &Result<(), PromiseError>,
     ) -> bool {
         self.internal_resolve_rollback_intent(id, transfer_asset_in.is_ok())
-            .unwrap()
+            .unwrap_or_panic_display()
     }
 }
 
