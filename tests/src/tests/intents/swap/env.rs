@@ -24,6 +24,7 @@ pub struct Env {
 
     pub user1: Account,
     pub user2: Account,
+    #[allow(dead_code)]
     pub user3: Account,
 
     pub swap_intent: Contract,
@@ -32,6 +33,7 @@ pub struct Env {
     pub ft2: Contract,
 
     pub account_shard1: Contract,
+    #[allow(dead_code)]
     pub account_shard2: Contract,
 }
 

@@ -17,7 +17,7 @@ use crate::utils::{
 };
 
 lazy_static! {
-    static ref SWAP_INTENT_WASM: Vec<u8> = read_wasm("defuse-swap-intent-contract");
+    static ref SWAP_INTENT_WASM: Vec<u8> = read_wasm("defuse_swap_intent_contract");
 }
 
 pub trait SwapIntentShard {

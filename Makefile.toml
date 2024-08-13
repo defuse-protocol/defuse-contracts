@@ -3,92 +3,87 @@ default_to_workspace = false
 skip_core_tasks = true
 
 [env]
-TARGET = "wasm32-unknown-unknown"
 TARGET_DIR = "${PWD}/res"
-ACCOUNT_WASM_FILE = "defuse-account-contract.wasm"
-CONTROLLER_WASM_FILE = "defuse-controller-contract.wasm"
-SWAP_INTENT_WASM_FILE = "defuse-swap-intent-contract.wasm"
-SWAP_FT_INTENT_WASM_FILE = "defuse-swap-ft-intent-contract.wasm"
+
+[tasks.default]
+alias = "build"
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy", "--workspace", "--all-targets"]
 
 [tasks.build]
 dependencies = [
     "build-account",
     "build-swap-intent",
     "build-swap-ft-intent",
-    "cp-contracts",
     "build-controller",
-    "cp-controller",
     "contract-stats",
 ]
 
-[tasks.clippy]
+
+[tasks.build-account]
 command = "cargo"
-dependencies = ["build"]
-args = ["clippy", "--workspace", "--all-targets"]
+args = [
+    "near",
+    "build",
+    "--manifest-path",
+    "./account/Cargo.toml",
+    "--out-dir",
+    "${TARGET_DIR}",
+    "--no-docker",
+    "--no-embed-abi",
+]
+
+[tasks.build-swap-intent]
+command = "cargo"
+args = [
+    "near",
+    "build",
+    "--manifest-path",
+    "./intents/swap/Cargo.toml",
+    "--out-dir",
+    "${TARGET_DIR}",
+    "--no-docker",
+    "--no-embed-abi",
+]
+
+[tasks.build-swap-ft-intent]
+command = "cargo"
+args = [
+    "near",
+    "build",
+    "--manifest-path",
+    "./intents/swap-ft/Cargo.toml",
+    "--out-dir",
+    "${TARGET_DIR}",
+    "--no-docker",
+    "--no-embed-abi",
+]
+
+[tasks.build-controller]
+command = "cargo"
+args = [
+    "near",
+    "build",
+    "--manifest-path",
+    "./controller/Cargo.toml",
+    "--out-dir",
+    "${TARGET_DIR}",
+    "--no-docker",
+    "--no-embed-abi",
+]
 
 [tasks.test]
 alias = "tests"
 
 [tasks.tests]
 dependencies = ["build"]
+run_task = "run-tests"
+
+[tasks.run-tests]
 command = "cargo"
 args = ["test", "--workspace", "--all-targets", "${@}"]
-
-[tasks.build-account]
-command = "cargo"
-args = [
-    "build",
-    "--target",
-    "${TARGET}",
-    "--release",
-    "--package",
-    "defuse-account-contract",
-]
-
-[tasks.build-swap-intent]
-command = "cargo"
-args = [
-    "build",
-    "--target",
-    "${TARGET}",
-    "--release",
-    "--package",
-    "defuse-swap-intent-contract",
-]
-
-[tasks.build-swap-ft-intent]
-command = "cargo"
-args = [
-    "build",
-    "--target",
-    "${TARGET}",
-    "--release",
-    "--package",
-    "defuse-swap-ft-intent-contract",
-]
-
-[tasks.build-controller]
-command = "cargo"
-args = [
-    "build",
-    "--target",
-    "${TARGET}",
-    "--release",
-    "-p",
-    "defuse-controller-contract",
-]
-
-[tasks.cp-contracts]
-script = """
-cp target/${TARGET}/release/defuse_account_contract.wasm ${TARGET_DIR}/${ACCOUNT_WASM_FILE}
-cp target/${TARGET}/release/defuse_swap_intent_contract.wasm ${TARGET_DIR}/${SWAP_INTENT_WASM_FILE}
-cp target/${TARGET}/release/defuse_swap_ft_intent_contract.wasm ${TARGET_DIR}/${SWAP_FT_INTENT_WASM_FILE}
-"""
-
-[tasks.cp-controller]
-script = """
-cp target/${TARGET}/release/defuse_controller_contract.wasm ${TARGET_DIR}/${CONTROLLER_WASM_FILE}
-"""
 
 [tasks.clean]
 dependencies = ["rm-contracts"]
@@ -96,21 +91,8 @@ command = "cargo"
 args = ["clean"]
 
 [tasks.rm-contracts]
-script = "rm -rf ${TARGET_DIR}/defuse*.wasm ${TARGET_DIR}/binaryen"
+script = "rm -rf ${TARGET_DIR}"
 
 [tasks.contract-stats]
 category = "Tools"
-script = '''
-echo "Environment:"
-echo "    CARGO_MAKE_PROFILE:               ${CARGO_MAKE_PROFILE}"
-echo "    ACCOUNT_CONTRACT_FILE:            ${ACCOUNT_WASM_FILE}"
-echo "    ACCOUNT_CONTRACT_SIZE:            $(wc -c ${TARGET_DIR}/${ACCOUNT_WASM_FILE} | awk '{print $1}')"
-echo "    SWAP_INTENT_CONTRACT_FILE:        ${SWAP_INTENT_WASM_FILE}"
-echo "    SWAP_INTENT_CONTRACT_SIZE:        $(wc -c ${TARGET_DIR}/${SWAP_INTENT_WASM_FILE} | awk '{print $1}')"
-echo "    SWAP_FT_INTENT_CONTRACT_FILE:     ${SWAP_FT_INTENT_WASM_FILE}"
-echo "    SWAP_FT_INTENT_CONTRACT_SIZE:     $(wc -c ${TARGET_DIR}/${SWAP_FT_INTENT_WASM_FILE} | awk '{print $1}')"
-echo "    CONTROLLER_CONTRACT_FILE:         ${CONTROLLER_WASM_FILE}"
-echo "    CONTROLLER_CONTRACT_SIZE:         $(wc -c ${TARGET_DIR}/${CONTROLLER_WASM_FILE} | awk '{print $1}')"
-echo "    CONTRACTS_DIR:                    ${TARGET_DIR}"
-echo "    Extra build args:                 ${RELEASE} ${@}"
-'''
+script = "cd ${TARGET_DIR} && du -ah *.wasm"

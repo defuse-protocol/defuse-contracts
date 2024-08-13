@@ -9,7 +9,7 @@ use serde_json::json;
 use crate::utils::{account::AccountExt, read_wasm};
 
 lazy_static! {
-    static ref SWAP_FT_INTENT_WASM: Vec<u8> = read_wasm("defuse-swap-ft-intent-contract");
+    static ref SWAP_FT_INTENT_WASM: Vec<u8> = read_wasm("defuse_swap_ft_intent_contract");
 }
 
 pub trait SwapFtIntentExt {

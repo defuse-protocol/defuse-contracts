@@ -32,11 +32,9 @@ tokio = { version = "1.38", default-features = false }
 
 [workspace.lints.clippy]
 all = "deny"
-nursery = "deny"
-pedantic = "deny"
-module_name_repetitions = "allow"
-missing_errors_doc = "allow"
-missing_panics_doc = "allow"
+module_name_repetitions = { level = "allow", priority = -1 }
+missing_errors_doc = { level = "allow", priority = -1 }
+missing_panics_doc = { level = "allow", priority = -1 }
 
 [profile.release]
 codegen-units = 1

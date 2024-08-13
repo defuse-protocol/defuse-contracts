@@ -6,7 +6,7 @@ use serde_json::json;
 use crate::utils::{account::AccountExt, nft::NftExt, read_wasm, Sandbox};
 
 lazy_static! {
-    static ref ACCOUNT_WASM: Vec<u8> = read_wasm("defuse-account-contract");
+    static ref ACCOUNT_WASM: Vec<u8> = read_wasm("defuse_account_contract");
 }
 
 pub trait AccountShardExt {

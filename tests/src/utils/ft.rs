@@ -1,11 +1,8 @@
-use lazy_static::lazy_static;
 use near_contract_standards::storage_management::StorageBalance;
 use near_sdk::json_types::U128;
 use near_workspaces::types::NearToken;
 use near_workspaces::{Account, AccountId, Contract};
 use serde_json::json;
-
-use crate::utils::read_wasm;
 
 use super::account::AccountExt;
 use super::storage_management::StorageManagementExt;
@@ -13,9 +10,10 @@ use super::storage_management::StorageManagementExt;
 const STORAGE_DEPOSIT: NearToken = NearToken::from_yoctonear(2_350_000_000_000_000_000_000);
 const TOTAL_SUPPLY: u128 = 1_000_000_000;
 
-lazy_static! {
-    static ref FUNGIBLE_TOKEN_WASM: Vec<u8> = read_wasm("fungible-token");
-}
+const FUNGIBLE_TOKEN_WASM: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/contracts/fungible-token.wasm"
+));
 
 pub trait FtExt: StorageManagementExt {
     async fn deploy_ft_token(&self, token: &str) -> anyhow::Result<Contract>;
@@ -68,7 +66,7 @@ pub trait FtExt: StorageManagementExt {
 
 impl FtExt for Account {
     async fn deploy_ft_token(&self, token: &str) -> anyhow::Result<Contract> {
-        let contract = self.deploy_contract(token, &FUNGIBLE_TOKEN_WASM).await?;
+        let contract = self.deploy_contract(token, FUNGIBLE_TOKEN_WASM).await?;
         contract
             .call("new")
             .args_json(json!({
