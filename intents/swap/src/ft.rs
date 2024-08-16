@@ -42,14 +42,16 @@ impl SwapIntentContractImpl {
             }),
         };
 
-        Ok(match action {
+        match action {
             SwapIntentAction::Create(create) => {
-                self.create_intent(received, create)?;
-                // intent was successfully created, do not refund
-                PromiseOrValue::Value(0.into())
+                self.create_intent(received, create)
+                    // intent was successfully created, do not refund
+                    .map(|_| PromiseOrValue::Value(0.into()))
             }
-            SwapIntentAction::Execute(execute) => self.execute_intent(&received, execute)?.into(),
-        })
+            SwapIntentAction::Execute(execute) => {
+                self.execute_intent(&received, execute).map(Into::into)
+            }
+        }
     }
 
     #[inline]

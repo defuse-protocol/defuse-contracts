@@ -1,6 +1,8 @@
 use near_contract_standards::non_fungible_token::TokenId;
 use near_sdk::{json_types::U128, near, AccountId, Gas, NearToken};
 
+use crate::mt;
+
 use super::CrossChainAsset;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -81,7 +83,7 @@ impl AssetWithAccount {
 
     #[must_use]
     #[inline]
-    pub const fn is_zero_amount(&self) -> bool {
+    pub fn is_zero_amount(&self) -> bool {
         match self {
             Self::Near { asset, .. } => asset.is_zero_amount(),
             Self::CrossChain { asset, .. } => asset.is_zero_amount(),
@@ -99,6 +101,8 @@ pub enum NearAsset {
     Nep141(FtAmount),
     /// NEP-171
     Nep171(NftItem),
+    /// NEP-245
+    Nep245(MultiToken),
 }
 
 impl NearAsset {
@@ -106,6 +110,7 @@ impl NearAsset {
     // TODO: more accurate numbers
     pub const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(20);
     pub const GAS_FOR_NFT_TRANSFER: Gas = Gas::from_tgas(20);
+    pub const GAS_FOR_MT_TRANSFER: Gas = Gas::from_tgas(20);
 
     #[must_use]
     #[inline]
@@ -114,6 +119,7 @@ impl NearAsset {
             Self::Native { .. } => Self::GAS_FOR_NATIVE_TRANSFER,
             Self::Nep141(_) => Self::GAS_FOR_FT_TRANSFER,
             Self::Nep171(_) => Self::GAS_FOR_NFT_TRANSFER,
+            Self::Nep245(_) => Self::GAS_FOR_MT_TRANSFER,
         }
     }
 
@@ -130,11 +136,12 @@ impl NearAsset {
 
     #[must_use]
     #[inline]
-    pub const fn is_zero_amount(&self) -> bool {
+    pub fn is_zero_amount(&self) -> bool {
         match self {
             Self::Native { amount } => amount.is_zero(),
             Self::Nep141(FtAmount { amount, .. }) => amount.0 == 0,
             Self::Nep171(_) => false,
+            Self::Nep245(MultiToken { amounts, .. }) => amounts.iter().all(|amount| amount.0 == 0),
         }
     }
 }
@@ -171,6 +178,15 @@ pub struct NftItem {
     pub collection: AccountId,
     /// Token ID
     pub token_id: TokenId,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[near(serializers = [json, borsh])]
+pub struct MultiToken {
+    pub contract: AccountId,
+    pub token_ids: Vec<mt::TokenId>,
+    /// Ignored in case of NFT
+    pub amounts: Vec<U128>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

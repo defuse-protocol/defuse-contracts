@@ -97,6 +97,7 @@ impl SwapIntentShard for near_workspaces::Account {
                 )
                 .await
             }
+            Asset::Near(NearAsset::Nep245(_)) => todo!(),
             Asset::CrossChain(CrossChainAsset {
                 oracle,
                 asset,
