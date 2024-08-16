@@ -32,13 +32,14 @@ impl SwapIntentContractImpl {
                 amount: env::attached_deposit(),
             },
         };
-        Ok(match action {
-            SwapIntentAction::Create(create) => {
-                self.create_intent(received, create)?;
-                PromiseOrValue::Value(true)
+        match action {
+            SwapIntentAction::Create(create) => self
+                .create_intent(received, create)
+                .map(|_| PromiseOrValue::Value(true)),
+            SwapIntentAction::Execute(execute) => {
+                self.execute_intent(&received, execute).map(Into::into)
             }
-            SwapIntentAction::Execute(execute) => self.execute_intent(&received, execute)?.into(),
-        })
+        }
     }
 
     #[inline]
