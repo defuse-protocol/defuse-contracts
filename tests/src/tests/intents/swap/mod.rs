@@ -217,6 +217,7 @@ async fn test_swap(
                     owner.id(),
                 );
             }
+            Asset::Near(NearAsset::Nep245(_)) => todo!(),
             Asset::CrossChain(_) => {
                 // we can't check the owner of cross-chain asset,
                 // as we don't have oracles yet

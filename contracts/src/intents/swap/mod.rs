@@ -4,7 +4,7 @@ use near_contract_standards::{
 };
 use near_sdk::ext_contract;
 
-use crate::utils::Mutex;
+use crate::{mt::core::MultiTokenReceiver, utils::Mutex};
 
 pub use self::{
     action::*, asset::*, cross_chain::*, error::*, intent::*, lost_found::*, native::*, rollback::*,
@@ -25,6 +25,7 @@ pub trait SwapIntentContract:
     NativeReceiver
     + FungibleTokenReceiver
     + NonFungibleTokenReceiver
+    + MultiTokenReceiver
     + CrossChainReceiver
     + Rollback
     + LostFound

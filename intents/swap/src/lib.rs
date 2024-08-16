@@ -1,8 +1,8 @@
 use defuse_contracts::{
     intents::swap::{
         events::Dip2Event, AssetWithAccount, CreateSwapIntentAction, ExecuteSwapIntentAction,
-        FtAmount, GenericAccount, IntentId, LostAsset, NearAsset, SwapIntent, SwapIntentContract,
-        SwapIntentError, SwapIntentStatus,
+        FtAmount, GenericAccount, IntentId, LostAsset, MultiToken, NearAsset, SwapIntent,
+        SwapIntentContract, SwapIntentError, SwapIntentStatus,
     },
     utils::{Mutex, UnwrapOrPanic},
 };
@@ -17,6 +17,7 @@ use near_sdk::{
 mod cross_chain;
 mod ft;
 mod lost_found;
+mod mt;
 mod native;
 mod nft;
 mod rollback;
@@ -160,6 +161,9 @@ impl SwapIntentContractImpl {
                 NearAsset::Nep171(nft) => {
                     Self::transfer_nft(nft, recipient, format!("Swap Intent '{id}'"))
                 }
+                NearAsset::Nep245(mt) => {
+                    Self::transfer_mt(mt, recipient, format!("Swap Intent '{id}'"))
+                }
             },
             AssetWithAccount::CrossChain {
                 account: recipient,
@@ -256,6 +260,13 @@ impl SwapIntentContractImpl {
                 }
                 // nft_on_transfer()
                 NearAsset::Nep171(_) => PromiseOrValue::Value(json!(refund)),
+                // mt_on_transfer()
+                NearAsset::Nep245(MultiToken { amounts, .. }) => {
+                    PromiseOrValue::Value(json!(amounts
+                        .iter()
+                        .map(|amount| if refund { *amount } else { 0.into() })
+                        .collect::<Vec<_>>()))
+                }
             },
             // cross_chain_on_transfer()
             AssetWithAccount::CrossChain { .. } => PromiseOrValue::Value(json!(
