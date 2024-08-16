@@ -41,8 +41,8 @@ impl SwapIntentContractImpl {
             account: sender_id,
             asset: NearAsset::Nep245(MultiToken {
                 contract: env::predecessor_account_id(),
-                token_ids: token_ids,
-                amounts: amounts,
+                token_ids,
+                amounts,
             }),
         };
 
