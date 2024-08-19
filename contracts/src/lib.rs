@@ -6,5 +6,7 @@ pub mod controller;
 pub mod intents;
 #[cfg(feature = "mpc")]
 pub mod mpc;
+#[cfg(feature = "multi-ft")]
+pub mod multi_ft;
 
 pub mod utils;
