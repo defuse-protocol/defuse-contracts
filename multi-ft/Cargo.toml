@@ -1,0 +1,13 @@
+[package]
+name = "defuse-multi-fungible-token"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+defuse-contracts = { workspace = true, features = ["multi-ft"] }
+
+near-sdk.workspace = true
+near-contract-standards.workspace = true
+
+[lints]
+workspace = true

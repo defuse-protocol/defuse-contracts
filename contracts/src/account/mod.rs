@@ -7,10 +7,10 @@ use near_sdk::{ext_contract, AccountId};
 pub trait AccountContract:
     NonFungibleTokenCore + NonFungibleTokenResolver + NonFungibleTokenEnumeration
 {
-    /// Create an account with given defivation path for given owner
+    /// Create an account with given derivation path for given owner
     /// By default, owner is sender
     // TODO: maybe accept optional derivation path, so it can be also generated on-chain?
-    // TODO: derivation_path can contain owner_id, so it can be generated
-    // off-chain and registration can not be front-runned
+    // TODO: derivation_path can contain owner_id, so it can be generated off-chain and
+    // TODO: registration can not be front-run
     fn create_account(&mut self, derivation_path: String, owner: Option<AccountId>);
 }

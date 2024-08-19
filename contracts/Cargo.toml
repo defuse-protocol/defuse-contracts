@@ -12,8 +12,9 @@ near-contract-standards.workspace = true
 thiserror.workspace = true
 
 [features]
-default = ["account", "controller", "intents", "mpc"]
+default = ["account", "controller", "intents", "mpc", "multi-ft"]
 account = []
 controller = []
 intents = []
 mpc = []
+multi-ft = []
