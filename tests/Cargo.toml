@@ -12,6 +12,7 @@ defuse-contracts.workspace = true
 anyhow.workspace = true
 impl-tools.workspace = true
 lazy_static.workspace = true
+near-crypto = "0.26"
 near-sdk = { workspace = true, features = ["unit-testing"] }
 near-workspaces.workspace = true
 near-contract-standards.workspace = true

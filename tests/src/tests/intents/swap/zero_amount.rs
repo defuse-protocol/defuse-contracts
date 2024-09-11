@@ -1,7 +1,8 @@
 use std::time::Duration;
 
-use defuse_contracts::intents::swap::{
-    Asset, AssetWithAccount, CreateSwapIntentAction, Deadline, NearAsset, SwapIntentAction,
+use defuse_contracts::{
+    intents::swap::{Asset, AssetWithAccount, CreateSwapIntentAction, NearAsset, SwapIntentAction},
+    utils::Deadline,
 };
 use near_sdk::NearToken;
 

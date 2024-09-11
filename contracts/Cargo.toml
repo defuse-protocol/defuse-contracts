@@ -7,13 +7,23 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
+bs58.workspace = true
+hex.workspace = true
+impl-tools.workspace = true
+lazy_static.workspace = true
+near-account-id.workspace = true
 near-sdk.workspace = true
 near-contract-standards.workspace = true
+# num.workspace = true
+serde_with.workspace = true
+strum.workspace = true
 thiserror.workspace = true
 
 [features]
-default = ["account", "controller", "intents", "mpc"]
+default = ["account", "controller", "intents", "mpc", "defuse"]
 account = []
 controller = []
+defuse = ["nep413"]
 intents = []
 mpc = []
+nep413 = ["serde_with/base64", "serde_with/json", "serde_with/schemars_0_8"]

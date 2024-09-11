@@ -17,6 +17,7 @@ dependencies = [
     "build-account",
     "build-swap-intent",
     "build-swap-ft-intent",
+    "build-defuse",
     "build-controller",
     "contract-stats",
 ]
@@ -33,6 +34,7 @@ args = [
     "${TARGET_DIR}",
     "--no-docker",
     "--no-embed-abi",
+    "--no-abi",             # TODO
 ]
 
 [tasks.build-swap-intent]
@@ -46,6 +48,7 @@ args = [
     "${TARGET_DIR}",
     "--no-docker",
     "--no-embed-abi",
+    "--no-abi",                  # TODO
 ]
 
 [tasks.build-swap-ft-intent]
@@ -59,6 +62,21 @@ args = [
     "${TARGET_DIR}",
     "--no-docker",
     "--no-embed-abi",
+    "--no-abi",                     # TODO
+]
+
+[tasks.build-defuse]
+command = "cargo"
+args = [
+    "near",
+    "build",
+    "--manifest-path",
+    "./defuse/Cargo.toml",
+    "--out-dir",
+    "${TARGET_DIR}",
+    "--no-docker",
+    "--no-embed-abi",
+    "--no-abi",            # TODO
 ]
 
 [tasks.build-controller]
@@ -72,6 +90,7 @@ args = [
     "${TARGET_DIR}",
     "--no-docker",
     "--no-embed-abi",
+    "--no-abi",                # TODO
 ]
 
 [tasks.test]
