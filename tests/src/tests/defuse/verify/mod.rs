@@ -1,4 +1,11 @@
-use defuse_contracts::{defuse::verify::diff::SignedDiffs, nep413::PublicKey};
+mod diff;
+
+use std::collections::HashMap;
+
+use defuse_contracts::{
+    crypto::{PublicKey, Signed},
+    defuse::verify::{diff::AccountDiff, payload::MultiStandardPayload},
+};
 use near_sdk::AccountId;
 use serde_json::json;
 
@@ -9,7 +16,15 @@ pub trait VerifierExt {
         public_key: PublicKey,
     ) -> anyhow::Result<bool>;
 
-    async fn apply_signed_diffs(&self, diffs: SignedDiffs) -> anyhow::Result<()>;
+    async fn apply_signed_diffs(
+        &self,
+        diffs: impl IntoIterator<
+            Item = (
+                &AccountId,
+                impl IntoIterator<Item = Signed<MultiStandardPayload<AccountDiff>>>,
+            ),
+        >,
+    ) -> anyhow::Result<()>;
 }
 
 impl VerifierExt for near_workspaces::Account {
@@ -31,10 +46,23 @@ impl VerifierExt for near_workspaces::Account {
             .map_err(Into::into)
     }
 
-    async fn apply_signed_diffs(&self, diffs: SignedDiffs) -> anyhow::Result<()> {
+    async fn apply_signed_diffs(
+        &self,
+        diffs: impl IntoIterator<
+            Item = (
+                &AccountId,
+                impl IntoIterator<Item = Signed<MultiStandardPayload<AccountDiff>>>,
+            ),
+        >,
+    ) -> anyhow::Result<()> {
         self.call(self.id(), "apply_signed_diffs")
             .args_json(json!({
-                "diffs": diffs,
+                "diffs": diffs
+                    .into_iter()
+                    .map(|(account_id, diffs)| (
+                        account_id.clone(),
+                        diffs.into_iter().collect::<Vec<_>>(),
+                    )).collect::<HashMap<_, _>>(),
             }))
             // TODO: .deposit(NearToken::from_yoctonear(1))?
             .max_gas()
@@ -57,7 +85,15 @@ impl VerifierExt for near_workspaces::Contract {
             .await
     }
 
-    async fn apply_signed_diffs(&self, diffs: SignedDiffs) -> anyhow::Result<()> {
+    async fn apply_signed_diffs(
+        &self,
+        diffs: impl IntoIterator<
+            Item = (
+                &AccountId,
+                impl IntoIterator<Item = Signed<MultiStandardPayload<AccountDiff>>>,
+            ),
+        >,
+    ) -> anyhow::Result<()> {
         self.as_account().apply_signed_diffs(diffs).await
     }
 }

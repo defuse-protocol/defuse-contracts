@@ -1,5 +1,5 @@
-mod actions;
 mod env;
+mod tokens;
 pub mod verify;
 
 use defuse_contracts::defuse::token::TokenId;
@@ -23,6 +23,12 @@ pub trait DefuseExt: VerifierExt {
         account_id: &AccountId,
         token_id: &TokenId,
     ) -> anyhow::Result<u128>;
+
+    async fn mt_batch_balance_of(
+        &self,
+        account_id: &AccountId,
+        token_ids: impl IntoIterator<Item = &TokenId>,
+    ) -> anyhow::Result<Vec<u128>>;
 }
 
 impl DefuseExt for near_workspaces::Account {
@@ -54,6 +60,22 @@ impl DefuseExt for near_workspaces::Account {
             .map(|b| b.0)
             .map_err(Into::into)
     }
+
+    async fn mt_batch_balance_of(
+        &self,
+        account_id: &AccountId,
+        token_ids: impl IntoIterator<Item = &TokenId>,
+    ) -> anyhow::Result<Vec<u128>> {
+        self.view(self.id(), "mt_batch_balance_of")
+            .args_json(json!({
+                "account_id": account_id,
+                "token_ids": token_ids.into_iter().collect::<Vec<_>>(),
+            }))
+            .await?
+            .json::<Vec<U128>>()
+            .map(|bs| bs.into_iter().map(|b| b.0).collect())
+            .map_err(Into::into)
+    }
 }
 
 impl DefuseExt for Contract {
@@ -67,5 +89,15 @@ impl DefuseExt for Contract {
         token_id: &TokenId,
     ) -> anyhow::Result<u128> {
         self.as_account().mt_balance_of(account_id, token_id).await
+    }
+
+    async fn mt_batch_balance_of(
+        &self,
+        account_id: &AccountId,
+        token_ids: impl IntoIterator<Item = &TokenId>,
+    ) -> anyhow::Result<Vec<u128>> {
+        self.as_account()
+            .mt_batch_balance_of(account_id, token_ids)
+            .await
     }
 }

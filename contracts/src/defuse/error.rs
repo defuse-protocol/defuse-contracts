@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use near_sdk::serde_json;
 use thiserror::Error as ThisError;
 
@@ -23,4 +25,12 @@ pub enum DefuseError {
 
     #[error("wrong recipient")]
     WrongRecipient,
+}
+
+// Remove when `!` is stabilized:
+// https://github.com/rust-lang/rust/issues/35121
+impl From<Infallible> for DefuseError {
+    fn from(value: Infallible) -> Self {
+        match value {}
+    }
 }

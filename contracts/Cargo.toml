@@ -23,7 +23,13 @@ thiserror.workspace = true
 default = ["account", "controller", "intents", "mpc", "defuse"]
 account = []
 controller = []
+crypto = []
 defuse = ["nep413"]
 intents = []
 mpc = []
-nep413 = ["serde_with/base64", "serde_with/json", "serde_with/schemars_0_8"]
+nep413 = [
+    "crypto",
+    "serde_with/base64",
+    "serde_with/json",
+    "serde_with/schemars_0_8",
+]

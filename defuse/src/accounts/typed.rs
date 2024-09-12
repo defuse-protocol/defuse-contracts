@@ -1,11 +1,12 @@
 use core::ops::{Deref, DerefMut};
 
 use defuse_contracts::{
-    defuse::DefuseError,
-    nep413::{PublicKey, SignedPayload},
+    crypto::{Payload, PublicKey, Signed},
+    defuse::{verify::payload::ValidatePayloadAs, DefuseError},
+    nep413::Nep413Payload,
     utils::cache::CURRENT_ACCOUNT_ID,
 };
-use near_sdk::{borsh::BorshSerialize, near, AccountId};
+use near_sdk::{near, AccountId};
 
 use super::{Account, NamedAccount};
 
@@ -40,26 +41,28 @@ impl TypedAccount {
         }
     }
 
-    pub fn verify_nep413<T>(
+    pub fn verify_signed_as_nep413<S, T>(
         &mut self,
         account_id: &AccountId,
-        signed: SignedPayload<T>,
+        signed: Signed<S>,
     ) -> Result<T, DefuseError>
     where
-        T: BorshSerialize,
+        S: Payload + ValidatePayloadAs<Nep413Payload<T>, Error: Into<DefuseError>>,
     {
-        if signed.recipient != *CURRENT_ACCOUNT_ID {
-            return Err(DefuseError::WrongRecipient);
-        }
-
         let public_key = signed.verify().ok_or(DefuseError::InvalidSignature)?;
         if !self.has_public_key(account_id, &public_key) {
             return Err(DefuseError::InvalidSignature);
         }
 
-        self.commit_nonce(signed.payload.nonce)?;
+        let payload = signed.payload.validate_as().map_err(Into::into)?;
 
-        Ok(signed.payload.message)
+        if payload.recipient != *CURRENT_ACCOUNT_ID {
+            return Err(DefuseError::WrongRecipient);
+        }
+
+        self.commit_nonce(payload.nonce)?;
+
+        Ok(payload.message)
     }
 }
 

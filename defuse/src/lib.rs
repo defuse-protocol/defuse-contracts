@@ -34,6 +34,13 @@ impl Defuse for DefuseImpl {
                 .unwrap_or_default(),
         )
     }
+
+    fn mt_batch_balance_of(&self, account_id: &AccountId, token_ids: &Vec<String>) -> Vec<U128> {
+        token_ids
+            .iter()
+            .map(|token_id| self.mt_balance_of(account_id, token_id))
+            .collect()
+    }
 }
 
 impl DefuseImpl {

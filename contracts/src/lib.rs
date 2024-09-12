@@ -2,6 +2,8 @@
 pub mod account;
 #[cfg(feature = "controller")]
 pub mod controller;
+#[cfg(feature = "crypto")]
+pub mod crypto;
 #[cfg(feature = "defuse")]
 pub mod defuse;
 #[cfg(feature = "intents")]

@@ -18,4 +18,7 @@ pub trait Defuse: Verifier + FungibleTokenReceiver + NonFungibleTokenReceiver {
     // TODO: full implementation of NEP-245
     #[allow(clippy::ptr_arg)]
     fn mt_balance_of(&self, account_id: &AccountId, token_id: &String) -> U128;
+
+    #[allow(clippy::ptr_arg)]
+    fn mt_batch_balance_of(&self, account_id: &AccountId, token_ids: &Vec<String>) -> Vec<U128>;
 }

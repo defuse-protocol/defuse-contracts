@@ -1,15 +1,14 @@
-use defuse_contracts::nep413::{Payload, Signature, SignedPayload};
-use near_sdk::borsh::BorshSerialize;
+use defuse_contracts::crypto::{Payload, Signature, Signed};
 use near_workspaces::Account;
 
 pub trait Signer {
     fn sign(&self, data: &[u8]) -> Signature;
 
-    fn sign_nep413<T>(&self, payload: Payload<T>) -> SignedPayload<T>
+    fn sign_payload<T>(&self, payload: T) -> Signed<T>
     where
-        T: BorshSerialize,
+        T: Payload,
     {
-        SignedPayload {
+        Signed {
             signature: self.sign(&payload.hash()),
             payload,
         }

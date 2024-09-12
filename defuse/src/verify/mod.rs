@@ -3,8 +3,8 @@ pub mod diff;
 use std::collections::HashSet;
 
 use defuse_contracts::{
+    crypto::PublicKey,
     defuse::verify::{diff::SignedDiffs, Verifier},
-    nep413::PublicKey,
 };
 use near_sdk::{env, near, AccountId};
 

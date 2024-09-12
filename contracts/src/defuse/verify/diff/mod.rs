@@ -7,13 +7,15 @@ use std::collections::HashMap;
 use tokens::TokenDeltas;
 
 use crate::{
+    crypto::Signed,
     defuse::{error::DefuseError, token::TokenId},
-    nep413::SignedPayload,
     utils::Deadline,
 };
 
+use super::payload::MultiStandardPayload;
+
 /// Each signer can have multiple diffs signed
-pub type SignedDiffs = HashMap<AccountId, Vec<SignedPayload<AccountDiff>>>;
+pub type SignedDiffs = HashMap<AccountId, Vec<Signed<MultiStandardPayload<AccountDiff>>>>;
 
 #[derive(Debug, Clone, Default)]
 #[near(serializers = [borsh, json])]

@@ -1,4 +1,4 @@
-use defuse_contracts::{nep413::PublicKey, utils::prefix::NestPrefix};
+use defuse_contracts::{crypto::PublicKey, utils::prefix::NestPrefix};
 use impl_tools::autoimpl;
 use near_sdk::{near, store::IterableSet, BorshStorageKey, IntoStorageKey};
 

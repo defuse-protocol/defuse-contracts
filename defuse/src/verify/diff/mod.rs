@@ -16,7 +16,7 @@ impl DefuseImpl {
             let account = self.accounts.get_or_insert(account_id.clone());
 
             for signed in signed_diffs {
-                let diff = account.verify_nep413(&account_id, signed)?;
+                let diff = account.verify_signed_as_nep413(&account_id, signed)?;
 
                 Self::commit_account_diff(&mut account.state, diff, &mut invariant)?;
             }

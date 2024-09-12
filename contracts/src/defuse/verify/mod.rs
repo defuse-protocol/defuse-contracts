@@ -3,9 +3,10 @@ use std::collections::HashSet;
 use diff::SignedDiffs;
 use near_sdk::{ext_contract, AccountId};
 
-use crate::nep413::PublicKey;
+use crate::crypto::PublicKey;
 
 pub mod diff;
+pub mod payload;
 
 #[ext_contract(ext_verifier)]
 pub trait Verifier {
