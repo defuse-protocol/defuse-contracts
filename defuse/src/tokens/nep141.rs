@@ -55,7 +55,6 @@ impl FungibleTokenWithdrawer for DefuseImpl {
         msg: String,
     ) -> Promise {
         assert_one_yocto();
-        assert_one_yocto();
         self.internal_withdraw_nep141(
             token_id,
             to.unwrap_or_else(env::predecessor_account_id),
@@ -73,7 +72,6 @@ impl DefuseImpl {
         amount: U128,
         msg: &str,
     ) -> Result<(), DefuseError> {
-        // TODO: empty msg
         let msg: DepositMessage = Some(msg)
             .filter(|msg| !msg.is_empty())
             .map(serde_json::from_str)

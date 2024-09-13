@@ -95,7 +95,7 @@ impl<'a> MaybeFreshAccount<'a> {
     {
         let public_key = signed.verify().ok_or(DefuseError::InvalidSignature)?;
 
-        let payload = signed.payload.validate_as().map_err(Into::into)?;
+        let payload: Nep413Payload<T> = signed.payload.validate_as().map_err(Into::into)?;
         if payload.recipient != *CURRENT_ACCOUNT_ID {
             return Err(DefuseError::WrongRecipient);
         }
