@@ -4,7 +4,7 @@ use impl_tools::autoimpl;
 use near_sdk::near;
 use serde_with::{serde_as, DisplayFromStr};
 
-use crate::defuse::{token::TokenId, DefuseError};
+use crate::defuse::{tokens::TokenId, DefuseError};
 
 #[derive(Debug, Clone, Default)]
 #[serde_as]

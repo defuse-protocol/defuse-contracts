@@ -1,5 +1,5 @@
 use defuse_contracts::defuse::{
-    token::{DepositMessage, TokenId},
+    tokens::{DepositMessage, TokenId},
     DefuseError,
 };
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenReceiver;
@@ -39,7 +39,7 @@ impl DefuseImpl {
         let token = TokenId::Nep171(env::predecessor_account_id(), token_id);
         let account = self
             .accounts
-            .get_or_insert(msg.deposit_to.unwrap_or(sender_id));
+            .get_or_create(msg.deposit_to.unwrap_or(sender_id));
         account.token_balances.deposit(token, 1)?;
 
         for action in msg.actions {

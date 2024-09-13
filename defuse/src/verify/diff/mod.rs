@@ -13,7 +13,7 @@ impl DefuseImpl {
         let mut invariant = Invariant::default();
 
         for (account_id, signed_diffs) in diffs {
-            let account = self.accounts.get_or_insert(account_id.clone());
+            let mut account = self.accounts.get_or_create_fresh(account_id.clone());
 
             for signed in signed_diffs {
                 let diff = account.verify_signed_as_nep413(&account_id, signed)?;

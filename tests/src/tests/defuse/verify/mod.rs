@@ -14,7 +14,7 @@ pub trait VerifierExt {
         &self,
         defuse_contract_id: &AccountId,
         public_key: PublicKey,
-    ) -> anyhow::Result<bool>;
+    ) -> anyhow::Result<()>;
 
     async fn apply_signed_diffs(
         &self,
@@ -32,7 +32,7 @@ impl VerifierExt for near_workspaces::Account {
         &self,
         defuse_contract_id: &AccountId,
         public_key: PublicKey,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         // TODO: check bool output
         self.call(defuse_contract_id, "add_public_key")
             .args_json(json!({
@@ -41,9 +41,8 @@ impl VerifierExt for near_workspaces::Account {
             .max_gas()
             .transact()
             .await?
-            .into_result()?
-            .json()
-            .map_err(Into::into)
+            .into_result()?;
+        Ok(())
     }
 
     async fn apply_signed_diffs(
@@ -79,7 +78,7 @@ impl VerifierExt for near_workspaces::Contract {
         &self,
         defuse_contract_id: &AccountId,
         public_key: PublicKey,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<()> {
         self.as_account()
             .add_public_key(defuse_contract_id, public_key)
             .await

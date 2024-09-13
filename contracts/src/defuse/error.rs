@@ -5,6 +5,9 @@ use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]
 pub enum DefuseError {
+    #[error("account not found")]
+    AccountNotFound,
+
     #[error("insufficient or excessive balance")]
     BalanceOverflow,
 

@@ -8,7 +8,7 @@ use tokens::TokenDeltas;
 
 use crate::{
     crypto::Signed,
-    defuse::{error::DefuseError, token::TokenId},
+    defuse::{error::DefuseError, tokens::TokenId},
     utils::Deadline,
 };
 

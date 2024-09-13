@@ -1,4 +1,4 @@
-use defuse_contracts::defuse::{token::TokenId, verify::diff::tokens::TokenDeltas, DefuseError};
+use defuse_contracts::defuse::{tokens::TokenId, verify::diff::tokens::TokenDeltas, DefuseError};
 
 #[derive(Debug, Default)]
 pub struct Invariant {

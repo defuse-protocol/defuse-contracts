@@ -2,7 +2,7 @@ mod env;
 mod tokens;
 pub mod verify;
 
-use defuse_contracts::defuse::token::TokenId;
+use defuse_contracts::defuse::tokens::TokenId;
 use lazy_static::lazy_static;
 use near_sdk::{json_types::U128, AccountId};
 use near_workspaces::Contract;

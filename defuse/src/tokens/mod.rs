@@ -1,4 +1,4 @@
-use defuse_contracts::defuse::{token::TokenId, DefuseError};
+use defuse_contracts::defuse::{tokens::TokenId, DefuseError};
 use near_sdk::{near, store::IterableMap, IntoStorageKey};
 
 mod nep141;

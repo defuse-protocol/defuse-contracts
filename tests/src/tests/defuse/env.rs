@@ -1,4 +1,4 @@
-use defuse_contracts::defuse::{action::Action, token::DepositMessage};
+use defuse_contracts::defuse::{action::Action, tokens::DepositMessage};
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
 
@@ -83,7 +83,7 @@ impl Env {
         token_id: &AccountId,
         amount: u128,
         to: AccountId,
-        actions: Vec<Action>,
+        actions: impl IntoIterator<Item = Action>,
     ) -> anyhow::Result<()> {
         self.sandbox
             .root_account()
@@ -93,7 +93,7 @@ impl Env {
                 amount,
                 &DepositMessage {
                     deposit_to: Some(to),
-                    actions,
+                    actions: actions.into_iter().collect(),
                 },
             )
             .await

@@ -1,5 +1,5 @@
 use defuse_contracts::{
-    defuse::{token::TokenId, verify::diff::AccountDiff},
+    defuse::{tokens::TokenId, verify::diff::AccountDiff},
     nep413::Nep413Payload,
 };
 
@@ -16,10 +16,10 @@ async fn test_diff() {
     let ft2 = TokenId::Nep141(env.ft2.id().clone());
 
     // deposit
-    env.defuse_ft_mint(env.ft1.id(), 1000, env.user1.id().clone(), [].into())
+    env.defuse_ft_mint(env.ft1.id(), 1000, env.user1.id().clone(), [])
         .await
         .unwrap();
-    env.defuse_ft_mint(env.ft2.id(), 2000, env.user2.id().clone(), [].into())
+    env.defuse_ft_mint(env.ft2.id(), 2000, env.user2.id().clone(), [])
         .await
         .unwrap();
 
