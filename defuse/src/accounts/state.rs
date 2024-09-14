@@ -16,16 +16,16 @@ impl AccountState {
     {
         let parent = prefix.into_storage_key();
 
-        #[derive(BorshStorageKey)]
-        #[near(serializers = [borsh])]
-        enum AccountStatePrefix {
-            TokenBalances,
-        }
-
         Self {
             token_balances: TokensBalances::new(
                 parent.as_slice().nest(AccountStatePrefix::TokenBalances),
             ),
         }
     }
+}
+
+#[derive(BorshStorageKey)]
+#[near(serializers = [borsh])]
+enum AccountStatePrefix {
+    TokenBalances,
 }
