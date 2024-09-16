@@ -27,7 +27,7 @@ crypto = []
 defuse = ["nep413"]
 intents = []
 mpc = []
-nep413 = ["crypto", "serde_with/base64", "serde_with/json"]
+nep413 = ["crypto"]
 
 # HACK: Semi-feature to enable `#[derive(JsonSchema)]` only when
 # `not(target_arch = "wasm32"))`. This is needed to make
