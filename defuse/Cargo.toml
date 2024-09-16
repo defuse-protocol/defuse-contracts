@@ -3,7 +3,6 @@ name = "defuse-contract"
 version = "0.1.0"
 edition.workspace = true
 
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -17,3 +16,6 @@ impl-tools.workspace = true
 near-account-id.workspace = true
 near-contract-standards.workspace = true
 near-sdk.workspace = true
+
+[features]
+abi = ["defuse-contracts/abi"]

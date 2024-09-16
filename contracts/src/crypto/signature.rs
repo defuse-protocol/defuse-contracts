@@ -1,10 +1,19 @@
 use near_sdk::{env, near};
-use serde_with::{base64::Base64, serde_as};
+use serde_with::serde_as;
 
 use super::PublicKey;
 
+use crate::utils::serde::base64::Base64;
+
 #[derive(Debug, Clone)]
-#[serde_as]
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
 #[near(serializers = [borsh, json])]
 #[serde(untagged)]
 pub enum Signature {

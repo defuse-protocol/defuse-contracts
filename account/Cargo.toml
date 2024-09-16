@@ -16,5 +16,8 @@ near-sdk.workspace = true
 near-contract-standards.workspace = true
 thiserror.workspace = true
 
+[features]
+abi = ["defuse-contracts/abi"]
+
 [dev-dependencies]
 near-sdk = { workspace = true, features = ["unit-testing"] }

@@ -30,11 +30,12 @@ args = [
     "build",
     "--manifest-path",
     "./account/Cargo.toml",
+    "--features",
+    "abi",
     "--out-dir",
     "${TARGET_DIR}",
     "--no-docker",
     "--no-embed-abi",
-    "--no-abi",             # TODO
 ]
 
 [tasks.build-swap-intent]
@@ -44,11 +45,12 @@ args = [
     "build",
     "--manifest-path",
     "./intents/swap/Cargo.toml",
+    "--features",
+    "abi",
     "--out-dir",
     "${TARGET_DIR}",
     "--no-docker",
     "--no-embed-abi",
-    "--no-abi",                  # TODO
 ]
 
 [tasks.build-swap-ft-intent]
@@ -58,11 +60,12 @@ args = [
     "build",
     "--manifest-path",
     "./intents/swap-ft/Cargo.toml",
+    "--features",
+    "abi",
     "--out-dir",
     "${TARGET_DIR}",
     "--no-docker",
     "--no-embed-abi",
-    "--no-abi",                     # TODO
 ]
 
 [tasks.build-defuse]
@@ -72,11 +75,12 @@ args = [
     "build",
     "--manifest-path",
     "./defuse/Cargo.toml",
+    "--features",
+    "abi",
     "--out-dir",
     "${TARGET_DIR}",
     "--no-docker",
     "--no-embed-abi",
-    "--no-abi",            # TODO
 ]
 
 [tasks.build-controller]
@@ -86,11 +90,12 @@ args = [
     "build",
     "--manifest-path",
     "./controller/Cargo.toml",
+    "--features",
+    "abi",
     "--out-dir",
     "${TARGET_DIR}",
     "--no-docker",
     "--no-embed-abi",
-    "--no-abi",                # TODO
 ]
 
 [tasks.test]

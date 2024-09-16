@@ -86,6 +86,27 @@ impl FromStr for PublicKey {
     }
 }
 
+#[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
+mod abi {
+    use super::*;
+
+    use near_sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+
+    impl JsonSchema for PublicKey {
+        fn schema_name() -> String {
+            String::schema_name()
+        }
+
+        fn json_schema(gen: &mut SchemaGenerator) -> Schema {
+            String::json_schema(gen)
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+    }
+}
+
 #[derive(strum::Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum KeyType {

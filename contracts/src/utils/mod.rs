@@ -7,3 +7,4 @@ mod deadline;
 mod error;
 mod mutex;
 pub mod prefix;
+pub mod serde;

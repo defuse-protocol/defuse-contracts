@@ -6,14 +6,24 @@ use near_sdk::{
     env::{self, sha256_array},
     near,
 };
-use serde_with::{base64::Base64, serde_as};
+use serde_with::serde_as;
 
-use crate::{crypto::Payload, utils::bitmap::Uint256};
+use crate::{
+    crypto::Payload,
+    utils::{bitmap::Uint256, serde::base64::Base64},
+};
 
 pub type Nonce = Uint256;
 
 #[derive(Debug, Clone, Default)]
-#[serde_as]
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
 #[near(serializers = [borsh, json])]
 #[autoimpl(Deref using self.message)]
 pub struct Nep413Payload<T = String> {
