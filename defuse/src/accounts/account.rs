@@ -44,7 +44,13 @@ impl Account {
 
     #[must_use]
     #[inline]
-    pub fn public_key_nonces(&mut self, public_key: &PublicKey) -> Option<&mut Nonces> {
+    pub fn public_key_nonces(&self, public_key: &PublicKey) -> Option<&Nonces> {
+        self.public_keys.get(public_key)
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn public_key_nonces_mut(&mut self, public_key: &PublicKey) -> Option<&mut Nonces> {
         self.public_keys.get_mut(public_key)
     }
 
@@ -101,12 +107,13 @@ impl<'a> MaybeFreshAccount<'a> {
         }
 
         if self.fresh {
+            // TODO: what if this implicit account has changed his FullAccessKey already?
             if account_id != &public_key.to_implicit_account_id() {
                 return Err(DefuseError::InvalidSignature);
             }
             self.account.add_public_key(public_key)
         } else {
-            self.public_key_nonces(&public_key)
+            self.public_key_nonces_mut(&public_key)
                 .ok_or(DefuseError::InvalidSignature)?
         }
         .commit(payload.nonce)?;

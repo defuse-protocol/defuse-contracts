@@ -24,6 +24,7 @@ where
     /// Veirifies the signature and returns public counterpart of the key
     /// that was used to sign the payload or `None` if the signature is
     /// invalid
+    #[must_use]
     #[inline]
     pub fn verify(&self) -> Option<PublicKey> {
         self.signature.verify(&self.payload.hash())

@@ -19,6 +19,12 @@ impl Nonces {
         Self(BitMap256::new(prefix))
     }
 
+    #[must_use]
+    #[inline]
+    pub fn is_used(&self, n: Nonce) -> bool {
+        self.0.get(n)
+    }
+
     #[inline]
     pub fn commit(&mut self, n: Nonce) -> Result<(), DefuseError> {
         if self.0.set(n) {

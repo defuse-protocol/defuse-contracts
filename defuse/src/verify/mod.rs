@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use defuse_contracts::{
     crypto::PublicKey,
     defuse::verify::{diff::SignedDiffs, Verifier},
+    nep413::Nonce,
 };
 use near_sdk::{env, near, AccountId};
 
@@ -30,6 +31,13 @@ impl Verifier for DefuseImpl {
             return false;
         };
         account.remove_public_key(public_key)
+    }
+
+    fn is_nonce_available(&self, account_id: &AccountId, public_key: &PublicKey, n: Nonce) -> bool {
+        self.accounts
+            .get(account_id)
+            .and_then(|account| account.public_key_nonces(public_key))
+            .map_or(false, |nonces| !nonces.is_used(n))
     }
 
     fn apply_signed_diffs(&mut self, diffs: SignedDiffs) {

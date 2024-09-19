@@ -35,6 +35,7 @@ impl Signature {
     /// Veirifies the signature and returns public counterpart of the key
     /// that was used to sign given hash or `None` if the signature is
     /// invalid
+    #[must_use]
     #[inline]
     pub fn verify(&self, hash: &[u8; 32]) -> Option<PublicKey> {
         match self {
