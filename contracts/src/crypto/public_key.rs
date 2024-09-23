@@ -3,7 +3,7 @@ use core::{
     str::FromStr,
 };
 
-use near_sdk::{env, near, AccountId};
+use near_sdk::{bs58, env, near, AccountId};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use strum::EnumString;
 use thiserror::Error as ThisError;

@@ -23,7 +23,6 @@ defuse-swap-intent-contract.path = "intents/swap"
 defuse-swap-ft-intent-contract.path = "intents/swap-ft"
 
 anyhow = "1"
-bs58 = "0.5"
 hex = "0.4"
 impl-tools = "0.10"
 lazy_static = "1.4"

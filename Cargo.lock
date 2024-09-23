@@ -615,7 +615,6 @@ dependencies = [
 name = "defuse-contracts"
 version = "0.1.0"
 dependencies = [
- "bs58 0.5.1",
  "hex",
  "impl-tools",
  "lazy_static",

@@ -33,10 +33,11 @@ impl Differ {
         for (token_id, delta) in deltas {
             self.on_token_delta(token_id.clone(), delta)?;
 
-            if delta.is_negative() {
-                balances.withdraw(&token_id, -delta as u128)?;
+            if delta.is_positive() {
+                balances.deposit(token_id.clone(), delta as u128)?;
             } else {
-                balances.deposit(token_id, delta as u128)?;
+                // TODO: overflows
+                balances.withdraw(&token_id, -delta as u128)?;
             }
         }
         Ok(())
