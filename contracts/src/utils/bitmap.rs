@@ -67,3 +67,31 @@ impl BitMap256 {
         old
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        let mut m = BitMap256::new(0);
+
+        let n: Uint256 = Default::default();
+        assert!(!m.get(n));
+
+        assert!(!m.set(n));
+        assert!(m.get(n));
+        assert!(m.set(n));
+        assert!(m.get(n));
+
+        assert!(m.clear(n));
+        assert!(!m.get(n));
+        assert!(!m.clear(n));
+        assert!(!m.get(n));
+
+        assert!(!m.toggle(n));
+        assert!(m.get(n));
+        assert!(m.toggle(n));
+        assert!(!m.get(n));
+    }
+}
