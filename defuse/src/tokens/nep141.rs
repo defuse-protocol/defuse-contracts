@@ -1,29 +1,43 @@
 use defuse_contracts::{
     defuse::{
-        tokens::{nep141::FungibleTokenWithdrawer, DepositMessage, TokenId},
+        tokens::{nep141::FungibleTokenWithdrawer, TokenId},
         DefuseError,
     },
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
 };
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, NearToken, Promise,
-    PromiseError, PromiseOrValue,
+    assert_one_yocto, env, json_types::U128, near, AccountId, NearToken, Promise, PromiseError,
+    PromiseOrValue,
 };
 
 use crate::{DefuseImpl, DefuseImplExt};
 
 #[near]
 impl FungibleTokenReceiver for DefuseImpl {
+    /// Deposit fungible tokens.
+    ///
+    /// `msg` contains [`AccountId`] of the internal recipient.
+    /// Empty `msg` means deposit to `sender_id`
     fn ft_on_transfer(
         &mut self,
         sender_id: AccountId,
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
-        self.internal_ft_on_transfer(sender_id, amount, &msg)
-            .map(|()| PromiseOrValue::Value(U128(0)))
-            .unwrap()
+        let deposit_to = if !msg.is_empty() {
+            msg.parse().unwrap()
+        } else {
+            sender_id
+        };
+
+        self.accounts
+            .get_or_create(deposit_to)
+            .token_balances
+            .deposit(TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone()), amount.0)
+            .unwrap();
+
+        PromiseOrValue::Value(U128(0))
     }
 }
 
@@ -66,32 +80,6 @@ impl FungibleTokenWithdrawer for DefuseImpl {
 }
 
 impl DefuseImpl {
-    fn internal_ft_on_transfer(
-        &mut self,
-        sender_id: AccountId,
-        amount: U128,
-        msg: &str,
-    ) -> Result<(), DefuseError> {
-        let msg: DepositMessage = Some(msg)
-            .filter(|msg| !msg.is_empty())
-            .map(serde_json::from_str)
-            .transpose()?
-            .unwrap_or_default();
-
-        let token = TokenId::Nep141(env::predecessor_account_id());
-        let account = self
-            .accounts
-            .get_or_create(msg.deposit_to.unwrap_or(sender_id));
-        account.token_balances.deposit(token, amount.0)?;
-
-        for action in msg.actions {
-            // TODO: pass predecessor_id?
-            self.execute_action(action)?;
-        }
-
-        Ok(())
-    }
-
     fn internal_withdraw_nep141(
         &mut self,
         token_id: AccountId,

@@ -11,8 +11,6 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 use strum::EnumString;
 use thiserror::Error as ThisError;
 
-use super::action::Action;
-
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SerializeDisplay, DeserializeFromStr)]
 #[near(serializers = [borsh])]
 pub enum TokenId {
@@ -95,13 +93,4 @@ pub enum ParseTokenIdError {
     AccountId(#[from] ParseAccountError),
     #[error(transparent)]
     ParseError(#[from] strum::ParseError),
-}
-
-#[derive(Debug, Default)]
-#[near(serializers = [json])]
-pub struct DepositMessage {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub deposit_to: Option<AccountId>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub actions: Vec<Action>,
 }

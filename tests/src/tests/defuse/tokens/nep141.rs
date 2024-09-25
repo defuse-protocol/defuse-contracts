@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use defuse_contracts::defuse::tokens::{DepositMessage, TokenId};
+use defuse_contracts::defuse::tokens::TokenId;
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use serde_json::json;
 
@@ -12,7 +12,7 @@ use crate::{
 async fn test_deposit_withdraw() {
     let env = Env::new().await.unwrap();
 
-    env.defuse_ft_mint(env.ft1.id(), 1000, env.user1.id().clone(), [])
+    env.defuse_ft_mint(env.ft1.id(), 1000, env.user1.id())
         .await
         .unwrap();
 
@@ -49,7 +49,7 @@ pub trait DefuseFtReceiver {
         defuse_id: &AccountId,
         token_id: &AccountId,
         amount: u128,
-        msg: &DepositMessage,
+        to: impl Into<Option<&AccountId>>,
     ) -> anyhow::Result<()>;
 }
 
@@ -59,7 +59,7 @@ impl DefuseFtReceiver for near_workspaces::Account {
         defuse_id: &AccountId,
         token_id: &AccountId,
         amount: u128,
-        msg: &DepositMessage,
+        to: impl Into<Option<&AccountId>>,
     ) -> anyhow::Result<()> {
         if self
             .ft_transfer_call(
@@ -67,7 +67,7 @@ impl DefuseFtReceiver for near_workspaces::Account {
                 defuse_id,
                 amount,
                 None,
-                &serde_json::to_string(msg)?,
+                to.into().map(AsRef::<str>::as_ref).unwrap_or_default(),
             )
             .await?
             != amount
@@ -84,10 +84,10 @@ impl DefuseFtReceiver for near_workspaces::Contract {
         defuse_id: &AccountId,
         token_id: &AccountId,
         amount: u128,
-        msg: &DepositMessage,
+        to: impl Into<Option<&AccountId>>,
     ) -> anyhow::Result<()> {
         self.as_account()
-            .defuse_ft_deposit(defuse_id, token_id, amount, msg)
+            .defuse_ft_deposit(defuse_id, token_id, amount, to)
             .await
     }
 }

@@ -1,13 +1,14 @@
+pub mod accounts;
+pub mod diff;
 mod env;
 mod tokens;
-pub mod verify;
 
+use accounts::AccountManagerExt;
 use defuse_contracts::defuse::tokens::TokenId;
 use lazy_static::lazy_static;
 use near_sdk::{json_types::U128, AccountId};
 use near_workspaces::Contract;
 use serde_json::json;
-use verify::VerifierExt;
 
 use crate::utils::{account::AccountExt, read_wasm};
 
@@ -15,7 +16,7 @@ lazy_static! {
     static ref DEFUSE_WASM: Vec<u8> = read_wasm("defuse_contract");
 }
 
-pub trait DefuseExt: VerifierExt {
+pub trait DefuseExt: AccountManagerExt {
     async fn deploy_defuse(&self, id: &str) -> anyhow::Result<Contract>;
 
     async fn mt_balance_of(

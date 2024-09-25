@@ -1,22 +1,26 @@
-pub mod action;
+pub mod accounts;
+pub mod diff;
 mod error;
+pub mod payload;
 pub mod tokens;
-pub mod verify;
 
 pub use self::error::*;
+use self::{accounts::AccountManager, tokens::nep141::FungibleTokenWithdrawer};
 
+use diff::SignedDiffer;
 use near_contract_standards::{
     fungible_token::receiver::FungibleTokenReceiver,
     non_fungible_token::core::NonFungibleTokenReceiver,
 };
 use near_sdk::{ext_contract, json_types::U128, AccountId};
-use tokens::nep141::FungibleTokenWithdrawer;
-
-use self::verify::Verifier;
 
 #[ext_contract(ext_defuse)]
 pub trait Defuse:
-    Verifier + FungibleTokenReceiver + FungibleTokenWithdrawer + NonFungibleTokenReceiver
+    SignedDiffer
+    + AccountManager
+    + FungibleTokenReceiver
+    + FungibleTokenWithdrawer
+    + NonFungibleTokenReceiver
 {
     // TODO: full implementation of NEP-245
     #[allow(clippy::ptr_arg)]

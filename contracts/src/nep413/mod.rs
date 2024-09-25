@@ -6,14 +6,11 @@ use near_sdk::{
     env::{self, sha256_array},
     near,
 };
-use serde_with::serde_as;
+use serde_with::{serde_as, DisplayFromStr};
 
-use crate::{
-    crypto::Payload,
-    utils::{bitmap::Uint256, serde::base64::Base64},
-};
+use crate::{crypto::Payload, utils::integer::U256};
 
-pub type Nonce = Uint256;
+pub type Nonce = U256;
 
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(
@@ -32,9 +29,12 @@ pub struct Nep413Payload<T = String> {
         deserialize_with = "crate::utils::borsh::from_base64"
     )]
     pub message: T,
-    #[serde_as(as = "Base64")]
+
+    #[serde_as(as = "DisplayFromStr")]
     pub nonce: Nonce,
+
     pub recipient: String,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub callback_url: Option<String>,
 }

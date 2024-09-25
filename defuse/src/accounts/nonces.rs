@@ -1,11 +1,9 @@
-use defuse_contracts::{
-    defuse::DefuseError,
-    utils::bitmap::{BitMap256, Uint256},
-};
+use core::iter;
+
+use defuse_contracts::{defuse::DefuseError, nep413::Nonce, utils::bitmap::BitMap256};
 use near_sdk::{near, IntoStorageKey};
 
-pub type Nonce = Uint256;
-
+/// See [permit2 nonce schema](https://docs.uniswap.org/contracts/permit2/reference/signature-transfer#nonce-schema)
 #[derive(Debug)]
 #[near(serializers = [borsh])]
 pub struct Nonces(BitMap256);
@@ -26,8 +24,19 @@ impl Nonces {
     }
 
     #[inline]
+    pub fn iter_unused(&self, start: Nonce) -> impl Iterator<Item = Nonce> + '_ {
+        iter::successors(Some(start), |n| n.checked_add(Nonce::ONE)).filter(|n| !self.is_used(*n))
+    }
+
+    /// Returns the first nonce available starting from `start` or `0` otherwise.
+    #[inline]
+    pub fn next_unused(&self, start: impl Into<Option<Nonce>>) -> Option<Nonce> {
+        self.iter_unused(start.into().unwrap_or_default()).next()
+    }
+
+    #[inline]
     pub fn commit(&mut self, n: Nonce) -> Result<(), DefuseError> {
-        if self.0.set(n) {
+        if self.0.set(n, true) {
             return Err(DefuseError::NonceUsed);
         }
         Ok(())

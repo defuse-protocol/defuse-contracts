@@ -2,7 +2,16 @@ mod account;
 mod nonces;
 mod state;
 
-use defuse_contracts::utils::prefix::NestPrefix;
+use std::collections::HashSet;
+
+pub use self::{account::*, nonces::*, state::*};
+
+use defuse_contracts::{
+    crypto::PublicKey,
+    defuse::accounts::AccountManager,
+    nep413::Nonce,
+    utils::{cache::PREDECESSOR_ACCOUNT_ID, prefix::NestPrefix, serde::wrappers::DisplayFromStr},
+};
 use near_sdk::{
     borsh::BorshSerialize,
     near,
@@ -10,7 +19,44 @@ use near_sdk::{
     AccountId, BorshStorageKey, IntoStorageKey,
 };
 
-pub use self::{account::*, nonces::*, state::*};
+use crate::{DefuseImpl, DefuseImplExt};
+
+#[near]
+impl AccountManager for DefuseImpl {
+    fn public_keys_of(&self, account_id: &AccountId) -> HashSet<PublicKey> {
+        self.accounts
+            .get(account_id)
+            .into_iter()
+            .flat_map(Account::iter_public_keys)
+            .copied()
+            .collect()
+    }
+
+    fn add_public_key(&mut self, public_key: PublicKey) {
+        self.accounts
+            .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
+            .add_public_key(public_key);
+    }
+
+    fn remove_public_key(&mut self, public_key: &PublicKey) -> bool {
+        self.accounts
+            .get_mut(&PREDECESSOR_ACCOUNT_ID)
+            .map_or(false, |account| account.remove_public_key(public_key))
+    }
+
+    fn next_nonce_available(
+        &self,
+        account_id: &AccountId,
+        public_key: &PublicKey,
+        start: Option<DisplayFromStr<Nonce>>,
+    ) -> Option<DisplayFromStr<Nonce>> {
+        self.accounts
+            .get(account_id)
+            .and_then(move |account| account.public_key_nonces(public_key))
+            .and_then(move |nonces| nonces.next_unused(start.map(|n| n.0)))
+            .map(DisplayFromStr)
+    }
+}
 
 #[derive(Debug)]
 #[near(serializers = [borsh])]

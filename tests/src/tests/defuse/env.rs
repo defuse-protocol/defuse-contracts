@@ -1,10 +1,9 @@
-use defuse_contracts::defuse::{action::Action, tokens::DepositMessage};
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
 
 use crate::utils::{ft::FtExt, Sandbox};
 
-use super::{tokens::nep141::DefuseFtReceiver, verify::VerifierExt, DefuseExt};
+use super::{accounts::AccountManagerExt, tokens::nep141::DefuseFtReceiver, DefuseExt};
 
 pub struct Env {
     sandbox: Sandbox,
@@ -82,20 +81,11 @@ impl Env {
         &self,
         token_id: &AccountId,
         amount: u128,
-        to: AccountId,
-        actions: impl IntoIterator<Item = Action>,
+        to: &AccountId,
     ) -> anyhow::Result<()> {
         self.sandbox
             .root_account()
-            .defuse_ft_deposit(
-                self.defuse.id(),
-                token_id,
-                amount,
-                &DepositMessage {
-                    deposit_to: Some(to),
-                    actions: actions.into_iter().collect(),
-                },
-            )
+            .defuse_ft_deposit(self.defuse.id(), token_id, amount, to)
             .await
     }
 }

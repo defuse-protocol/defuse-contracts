@@ -1,13 +1,40 @@
 use defuse_contracts::defuse::{
+    diff::{tokens::TokenDeltas, AccountDiff, SignedDiffer, SignedDiffs},
     tokens::TokenId,
-    verify::diff::{tokens::TokenDeltas, AccountDiff},
     DefuseError,
 };
 
-use crate::{accounts::AccountState, tokens::TokensBalances};
+use near_sdk::near;
+
+use crate::{accounts::AccountState, tokens::TokensBalances, DefuseImpl, DefuseImplExt};
+
+#[near]
+impl SignedDiffer for DefuseImpl {
+    fn apply_signed_diffs(&mut self, diffs: SignedDiffs) {
+        self.internal_apply_signed_diffs(diffs).unwrap()
+    }
+}
+
+impl DefuseImpl {
+    fn internal_apply_signed_diffs(&mut self, diffs: SignedDiffs) -> Result<(), DefuseError> {
+        let mut differ = Differ::default();
+
+        for (account_id, signed_diffs) in diffs {
+            let mut account = self.accounts.get_or_create_fresh(account_id.clone());
+
+            for signed in signed_diffs {
+                let diff = account.verify_signed_as_nep413(&account_id, signed)?;
+
+                differ.commit_account_diff(&mut account.state, diff)?;
+            }
+        }
+
+        differ.ensure_invariant()
+    }
+}
 
 #[derive(Debug, Default)]
-pub struct Differ {
+struct Differ {
     token_deltas: TokenDeltas,
 }
 

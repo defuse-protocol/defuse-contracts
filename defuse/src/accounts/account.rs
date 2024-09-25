@@ -1,6 +1,6 @@
 use defuse_contracts::{
     crypto::{Payload, PublicKey, Signed},
-    defuse::{verify::payload::ValidatePayloadAs, DefuseError},
+    defuse::{payload::ValidatePayloadAs, DefuseError},
     nep413::Nep413Payload,
     utils::{cache::CURRENT_ACCOUNT_ID, prefix::NestPrefix},
 };

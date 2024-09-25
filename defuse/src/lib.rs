@@ -1,9 +1,9 @@
 mod accounts;
+mod diff;
 mod tokens;
-mod verify;
 
 use accounts::Accounts;
-use defuse_contracts::defuse::{action::Action, Defuse, DefuseError};
+use defuse_contracts::defuse::Defuse;
 use near_sdk::{json_types::U128, near, AccountId, BorshStorageKey, PanicOnDefault};
 
 #[derive(PanicOnDefault)]
@@ -41,14 +41,6 @@ impl Defuse for DefuseImpl {
             .iter()
             .map(|token_id| self.mt_balance_of(account_id, token_id))
             .collect()
-    }
-}
-
-impl DefuseImpl {
-    fn execute_action(&mut self, action: Action) -> Result<(), DefuseError> {
-        match action {
-            Action::ApplySignedDiffs { diffs } => self.apply_signed_diffs(diffs),
-        }
     }
 }
 
