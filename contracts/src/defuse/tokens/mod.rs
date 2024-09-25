@@ -11,6 +11,8 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 use strum::EnumString;
 use thiserror::Error as ThisError;
 
+use crate::nep245;
+
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SerializeDisplay, DeserializeFromStr)]
 #[near(serializers = [borsh])]
 pub enum TokenId {
@@ -19,7 +21,7 @@ pub enum TokenId {
         AccountId,
         near_contract_standards::non_fungible_token::TokenId,
     ),
-    Defuse(String),
+    Nep245(AccountId, nep245::TokenId),
 }
 
 impl TokenId {
@@ -29,7 +31,7 @@ impl TokenId {
         match self {
             Self::Nep141(_) => TokenIdType::Nep141,
             Self::Nep171(_, _) => TokenIdType::Nep171,
-            Self::Defuse(_) => TokenIdType::Defuse,
+            Self::Nep245(_, _) => TokenIdType::Nep245,
         }
     }
 }
@@ -44,8 +46,8 @@ impl Debug for TokenId {
             Self::Nep171(contract_id, token_id) => {
                 write!(f, "{}:{}:{}", TokenIdType::Nep171, contract_id, token_id)
             }
-            Self::Defuse(defuse_id) => {
-                write!(f, "{}:{}", TokenIdType::Defuse, defuse_id)
+            Self::Nep245(contract_id, token_id) => {
+                write!(f, "{}:{}:{}", TokenIdType::Nep245, contract_id, token_id)
             }
         }
     }
@@ -74,7 +76,12 @@ impl FromStr for TokenId {
                     .ok_or(strum::ParseError::VariantNotFound)?;
                 Self::Nep171(contract_id.parse()?, token_id.to_string())
             }
-            TokenIdType::Defuse => Self::Defuse(data.to_string()),
+            TokenIdType::Nep245 => {
+                let (contract_id, token_id) = data
+                    .split_once(':')
+                    .ok_or(strum::ParseError::VariantNotFound)?;
+                Self::Nep245(contract_id.parse()?, token_id.to_string())
+            }
         })
     }
 }
@@ -84,7 +91,7 @@ impl FromStr for TokenId {
 pub enum TokenIdType {
     Nep141,
     Nep171,
-    Defuse,
+    Nep245,
 }
 
 #[derive(Debug, ThisError)]

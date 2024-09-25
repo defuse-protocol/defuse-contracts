@@ -13,10 +13,7 @@ use defuse_contracts::{
     utils::{cache::PREDECESSOR_ACCOUNT_ID, prefix::NestPrefix, serde::wrappers::DisplayFromStr},
 };
 use near_sdk::{
-    borsh::BorshSerialize,
-    near,
-    store::{iterable_map::Entry, IterableMap},
-    AccountId, BorshStorageKey, IntoStorageKey,
+    borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey, IntoStorageKey,
 };
 
 use crate::{DefuseImpl, DefuseImplExt};
@@ -35,13 +32,14 @@ impl AccountManager for DefuseImpl {
     fn add_public_key(&mut self, public_key: PublicKey) {
         self.accounts
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
-            .add_public_key(public_key);
+            .add_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
     }
 
-    fn remove_public_key(&mut self, public_key: &PublicKey) -> bool {
+    fn deactivate_public_key(&mut self, public_key: &PublicKey) {
         self.accounts
-            .get_mut(&PREDECESSOR_ACCOUNT_ID)
-            .map_or(false, |account| account.remove_public_key(public_key))
+            // create account if doesn't exist, so the user can opt out of implicit public key
+            .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
+            .deactivate_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
     }
 
     fn next_nonce_available(
@@ -52,7 +50,7 @@ impl AccountManager for DefuseImpl {
     ) -> Option<DisplayFromStr<Nonce>> {
         self.accounts
             .get(account_id)
-            .and_then(move |account| account.public_key_nonces(public_key))
+            .and_then(move |account| account.public_key_nonces(account_id, public_key))
             .and_then(move |nonces| nonces.next_unused(start.map(|n| n.0)))
             .map(DisplayFromStr)
     }
@@ -90,22 +88,15 @@ impl Accounts {
 
     #[inline]
     pub fn get_or_create(&mut self, account_id: AccountId) -> &mut Account {
-        self.get_or_create_fresh(account_id).into_account()
-    }
-
-    #[inline]
-    pub fn get_or_create_fresh(&mut self, account_id: AccountId) -> MaybeFreshAccount<'_> {
-        match self.accounts.entry(account_id) {
-            Entry::Occupied(account) => MaybeFreshAccount::new(account.into_mut(), false),
-            Entry::Vacant(entry) => {
-                let account = Account::new(
+        self.accounts
+            .entry(account_id)
+            .or_insert_with_key(|account_id| {
+                Account::new(
                     self.prefix
                         .as_slice()
-                        .nest(AccountsPrefix::Account(entry.key())),
-                );
-                MaybeFreshAccount::new(entry.insert(account), true)
-            }
-        }
+                        .nest(AccountsPrefix::Account(account_id)),
+                )
+            })
     }
 }
 

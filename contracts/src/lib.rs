@@ -10,6 +10,8 @@ pub mod defuse;
 pub mod intents;
 #[cfg(feature = "mpc")]
 pub mod mpc;
+#[cfg(feature = "nep245")]
+pub mod nep245;
 #[cfg(feature = "nep413")]
 pub mod nep413;
 

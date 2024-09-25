@@ -24,9 +24,10 @@ default = ["account", "controller", "defuse", "intents", "mpc"]
 account = []
 controller = []
 crypto = []
-defuse = ["nep413"]
+defuse = ["nep245", "nep413"]
 intents = []
 mpc = []
+nep245 = []
 nep413 = ["crypto"]
 
 # HACK: Semi-feature to enable `#[derive(JsonSchema)]` only when

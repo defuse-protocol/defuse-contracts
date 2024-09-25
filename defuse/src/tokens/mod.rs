@@ -1,8 +1,39 @@
-use defuse_contracts::defuse::{tokens::TokenId, DefuseError};
-use near_sdk::{near, store::IterableMap, IntoStorageKey};
-
 mod nep141;
 mod nep171;
+mod nep245;
+
+use defuse_contracts::defuse::{tokens::TokenId, DefuseError};
+use near_sdk::{near, store::IterableMap, AccountId, IntoStorageKey};
+
+use crate::DefuseImpl;
+
+impl DefuseImpl {
+    pub(crate) fn internal_transfer(
+        &mut self,
+        sender_id: &AccountId,
+        receiver_id: &AccountId,
+        token_id: TokenId,
+        amount: u128,
+    ) -> Result<(), DefuseError> {
+        // TODO: check sender != receiver
+        self.accounts
+            .get_mut(sender_id)
+            .ok_or(DefuseError::AccountNotFound)?
+            .token_balances
+            .withdraw(&token_id, amount)?;
+
+        // TODO: get_or_create(recipient), but then we should public_key?
+        self.accounts
+            .get_mut(receiver_id)
+            .ok_or(DefuseError::AccountNotFound)?
+            .token_balances
+            .deposit(token_id, amount)?;
+
+        // TODO: log transfer event
+
+        Ok(())
+    }
+}
 
 #[derive(Debug)]
 #[near(serializers = [borsh])]

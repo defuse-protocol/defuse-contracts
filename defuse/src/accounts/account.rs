@@ -16,10 +16,12 @@ use super::{AccountState, Nonces};
 #[autoimpl(Deref using self.state)]
 #[autoimpl(DerefMut using self.state)]
 pub struct Account {
-    prefix: Vec<u8>,
-    public_keys: IterableMap<PublicKey, Nonces>,
+    implicit_nonces: MaybeInactive<Nonces>,
+    public_keys: IterableMap<PublicKey, MaybeInactive<Nonces>>,
 
     pub state: AccountState,
+
+    prefix: Vec<u8>,
 }
 
 impl Account {
@@ -31,10 +33,41 @@ impl Account {
         let prefix = prefix.into_storage_key();
 
         Self {
+            implicit_nonces: Nonces::new(prefix.as_slice().nest(AccountPrefix::ImplicitNonces))
+                .into(),
             public_keys: IterableMap::new(prefix.as_slice().nest(AccountPrefix::PublicKeys)),
             state: AccountState::new(prefix.as_slice().nest(AccountPrefix::State)),
             prefix,
         }
+    }
+
+    #[inline]
+    pub fn add_public_key(&mut self, me: &AccountId, public_key: PublicKey) -> &mut Nonces {
+        if me == &public_key.to_implicit_account_id() {
+            &mut self.implicit_nonces
+        } else {
+            self.public_keys
+                .entry(public_key)
+                .or_insert_with_key(|public_key| {
+                    Nonces::new(
+                        self.prefix
+                            .as_slice()
+                            .nest(AccountPrefix::PublicKeyNonces(public_key)),
+                    )
+                    .into()
+                })
+        }
+        .activate()
+    }
+
+    #[inline]
+    pub fn deactivate_public_key(&mut self, me: &AccountId, public_key: &PublicKey) {
+        if me == &public_key.to_implicit_account_id() {
+            Some(&mut self.implicit_nonces)
+        } else {
+            self.public_keys.get_mut(public_key)
+        }
+        .map(MaybeInactive::deactivate);
     }
 
     #[inline]
@@ -44,56 +77,33 @@ impl Account {
 
     #[must_use]
     #[inline]
-    pub fn public_key_nonces(&self, public_key: &PublicKey) -> Option<&Nonces> {
-        self.public_keys.get(public_key)
+    pub fn public_key_nonces(&self, me: &AccountId, public_key: &PublicKey) -> Option<&Nonces> {
+        if me == &public_key.to_implicit_account_id() {
+            Some(&self.implicit_nonces)
+        } else {
+            self.public_keys.get(public_key)
+        }
+        .and_then(MaybeInactive::as_active)
     }
 
     #[must_use]
     #[inline]
-    pub fn public_key_nonces_mut(&mut self, public_key: &PublicKey) -> Option<&mut Nonces> {
-        self.public_keys.get_mut(public_key)
-    }
-
-    #[inline]
-    pub fn add_public_key(&mut self, public_key: PublicKey) -> &mut Nonces {
-        self.public_keys
-            .entry(public_key)
-            .or_insert_with_key(|public_key| {
-                Nonces::new(
-                    self.prefix
-                        .as_slice()
-                        .nest(AccountPrefix::PublicKeyNonces(public_key)),
-                )
-            })
-    }
-
-    #[inline]
-    pub fn remove_public_key(&mut self, public_key: &PublicKey) -> bool {
-        self.public_keys.remove(public_key).is_some()
-    }
-}
-
-#[autoimpl(Deref using self.account)]
-#[autoimpl(DerefMut using self.account)]
-pub struct MaybeFreshAccount<'a> {
-    fresh: bool,
-    account: &'a mut Account,
-}
-
-impl<'a> MaybeFreshAccount<'a> {
-    #[inline]
-    pub(super) fn new(account: &'a mut Account, fresh: bool) -> Self {
-        Self { fresh, account }
-    }
-
-    #[inline]
-    pub fn into_account(self) -> &'a mut Account {
-        self.account
+    pub fn public_key_nonces_mut(
+        &mut self,
+        me: &AccountId,
+        public_key: &PublicKey,
+    ) -> Option<&mut Nonces> {
+        if me == &public_key.to_implicit_account_id() {
+            Some(&mut self.implicit_nonces)
+        } else {
+            self.public_keys.get_mut(public_key)
+        }
+        .and_then(MaybeInactive::as_active_mut)
     }
 
     pub fn verify_signed_as_nep413<S, T>(
         &mut self,
-        account_id: &AccountId,
+        me: &AccountId,
         signed: Signed<S>,
     ) -> Result<T, DefuseError>
     where
@@ -106,18 +116,9 @@ impl<'a> MaybeFreshAccount<'a> {
             return Err(DefuseError::WrongRecipient);
         }
 
-        if self.fresh {
-            // TODO: what if this implicit account has changed his FullAccessKey already?
-            if account_id != &public_key.to_implicit_account_id() {
-                return Err(DefuseError::InvalidSignature);
-            }
-            self.account.add_public_key(public_key)
-        } else {
-            self.public_key_nonces_mut(&public_key)
-                .ok_or(DefuseError::InvalidSignature)?
-        }
-        .commit(payload.nonce)?;
-        self.fresh = false;
+        self.public_key_nonces_mut(me, &public_key)
+            .ok_or(DefuseError::InvalidSignature)?
+            .commit(payload.nonce)?;
 
         Ok(payload.message)
     }
@@ -126,7 +127,60 @@ impl<'a> MaybeFreshAccount<'a> {
 #[derive(BorshSerialize, BorshStorageKey)]
 #[borsh(crate = "::near_sdk::borsh")]
 enum AccountPrefix<'a> {
+    ImplicitNonces,
     PublicKeys,
     PublicKeyNonces(&'a PublicKey),
     State,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+#[near(serializers = [borsh])]
+struct MaybeInactive<T> {
+    inactive: bool,
+    inner: T,
+}
+
+impl<T> MaybeInactive<T> {
+    #[inline]
+    pub const fn active(inner: T) -> Self {
+        Self {
+            inactive: false,
+            inner,
+        }
+    }
+
+    #[inline]
+    pub fn activate(&mut self) -> &mut T {
+        self.inactive = false;
+        &mut self.inner
+    }
+
+    #[inline]
+    pub fn deactivate(&mut self) {
+        self.inactive = true;
+    }
+
+    #[inline]
+    pub const fn as_active(&self) -> Option<&T> {
+        if !self.inactive {
+            Some(&self.inner)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub fn as_active_mut(&mut self) -> Option<&mut T> {
+        if !self.inactive {
+            Some(&mut self.inner)
+        } else {
+            None
+        }
+    }
+}
+
+impl<T> From<T> for MaybeInactive<T> {
+    fn from(value: T) -> Self {
+        Self::active(value)
+    }
 }

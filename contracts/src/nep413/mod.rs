@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use core::fmt::Display;
 
 use impl_tools::autoimpl;
 use near_sdk::{

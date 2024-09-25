@@ -9,11 +9,12 @@ pub trait AccountManager {
     /// Returns set of public keys registered for given account
     fn public_keys_of(&self, account_id: &AccountId) -> HashSet<PublicKey>;
 
-    /// Registers given `public_key` under the caller account_id.
+    /// Registers or re-activates `public_key` under the caller account_id.
     fn add_public_key(&mut self, public_key: PublicKey);
 
-    /// Removes given `public_key` from the caller account_id.
-    fn remove_public_key(&mut self, public_key: &PublicKey) -> bool;
+    /// Deactivate `public_key` from the caller account_id,
+    /// i.e. this key can't be used to make any actions unless it's re-created.
+    fn deactivate_public_key(&mut self, public_key: &PublicKey);
 
     /// Returns the first nonce available for given `public_key` of given `account_id`
     /// starting from `start` or `0` otherwise.
