@@ -51,8 +51,8 @@ impl AccountManager for DefuseImpl {
         self.accounts
             .get(account_id)
             .and_then(move |account| account.public_key_nonces(account_id, public_key))
-            .and_then(move |nonces| nonces.next_unused(start.map(|n| n.0)))
-            .map(DisplayFromStr)
+            .and_then(move |nonces| nonces.next_unused(start.map(DisplayFromStr::into_inner)))
+            .map(Into::into)
     }
 }
 
@@ -95,6 +95,7 @@ impl Accounts {
                     self.prefix
                         .as_slice()
                         .nest(AccountsPrefix::Account(account_id)),
+                    account_id,
                 )
             })
     }

@@ -4,7 +4,7 @@ use near_contract_standards::{
 };
 use near_sdk::ext_contract;
 
-use crate::utils::Mutex;
+use crate::utils::Lock;
 
 pub use self::{
     action::*, asset::*, cross_chain::*, error::*, intent::*, lost_found::*, native::*, rollback::*,
@@ -29,5 +29,5 @@ pub trait SwapIntentContract:
     + Rollback
     + LostFound
 {
-    fn get_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntent>>;
+    fn get_intent(&self, id: &IntentId) -> Option<&Lock<SwapIntent>>;
 }

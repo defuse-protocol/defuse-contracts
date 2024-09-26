@@ -2,9 +2,10 @@ use defuse_contracts::{
     crypto::{Payload, PublicKey, SignedPayload},
     defuse::{payload::ValidatePayloadAs, DefuseError, Result},
     nep413::Nep413Payload,
-    utils::{cache::CURRENT_ACCOUNT_ID, prefix::NestPrefix},
+    utils::{cache::CURRENT_ACCOUNT_ID, prefix::NestPrefix, Lock},
 };
 use impl_tools::autoimpl;
+use near_account_id::AccountType;
 use near_sdk::{
     borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey, IntoStorageKey,
 };
@@ -17,8 +18,8 @@ use super::{AccountState, Nonces};
 #[autoimpl(DerefMut using self.state)]
 pub struct Account {
     /// Nonces used in case of implicit [`AccountId`]
-    implicit_nonces: MaybeInactive<Nonces>,
-    public_keys: IterableMap<PublicKey, MaybeInactive<Nonces>>,
+    implicit_nonces: Lock<Nonces>,
+    public_keys: IterableMap<PublicKey, Lock<Nonces>>,
 
     pub state: AccountState,
 
@@ -27,15 +28,17 @@ pub struct Account {
 
 impl Account {
     #[inline]
-    pub fn new<S>(prefix: S) -> Self
+    pub fn new<S>(prefix: S, me: &AccountId) -> Self
     where
         S: IntoStorageKey,
     {
         let prefix = prefix.into_storage_key();
 
         Self {
-            implicit_nonces: Nonces::new(prefix.as_slice().nest(AccountPrefix::ImplicitNonces))
-                .into(),
+            implicit_nonces: Lock::new(
+                Nonces::new(prefix.as_slice().nest(AccountPrefix::ImplicitNonces)),
+                matches!(me.get_account_type(), AccountType::NamedAccount),
+            ),
             public_keys: IterableMap::new(prefix.as_slice().nest(AccountPrefix::PublicKeys)),
             state: AccountState::new(prefix.as_slice().nest(AccountPrefix::State)),
             prefix,
@@ -58,7 +61,7 @@ impl Account {
                     .into()
                 })
         }
-        .activate()
+        .force_unlock()
     }
 
     #[inline]
@@ -68,7 +71,7 @@ impl Account {
         } else {
             self.public_keys.get_mut(public_key)
         }
-        .map(MaybeInactive::deactivate);
+        .map(Lock::force_lock);
     }
 
     #[inline]
@@ -84,7 +87,7 @@ impl Account {
         } else {
             self.public_keys.get(public_key)
         }
-        .and_then(MaybeInactive::as_active)
+        .and_then(Lock::as_unlocked)
     }
 
     #[must_use]
@@ -99,7 +102,7 @@ impl Account {
         } else {
             self.public_keys.get_mut(public_key)
         }
-        .and_then(MaybeInactive::as_active_mut)
+        .and_then(Lock::as_unlocked_mut)
     }
 
     pub fn verify_signed_as_nep413<S, T>(
@@ -138,61 +141,4 @@ enum AccountPrefix<'a> {
     PublicKeys,
     PublicKeyNonces(&'a PublicKey),
     State,
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-#[near(serializers = [borsh])]
-struct MaybeInactive<T> {
-    inactive: bool,
-    inner: T,
-}
-
-impl<T> MaybeInactive<T> {
-    #[inline]
-    pub const fn active(inner: T) -> Self {
-        Self {
-            inactive: false,
-            inner,
-        }
-    }
-
-    #[inline]
-    pub fn activate(&mut self) -> &mut T {
-        self.inactive = false;
-        &mut self.inner
-    }
-
-    #[inline]
-    pub fn deactivate(&mut self) {
-        self.inactive = true;
-    }
-
-    #[inline]
-    pub const fn is_active(&self) -> bool {
-        !self.inactive
-    }
-
-    #[inline]
-    pub const fn as_active(&self) -> Option<&T> {
-        if self.is_active() {
-            Some(&self.inner)
-        } else {
-            None
-        }
-    }
-
-    #[inline]
-    pub fn as_active_mut(&mut self) -> Option<&mut T> {
-        if self.is_active() {
-            Some(&mut self.inner)
-        } else {
-            None
-        }
-    }
-}
-
-impl<T> From<T> for MaybeInactive<T> {
-    fn from(value: T) -> Self {
-        Self::active(value)
-    }
 }

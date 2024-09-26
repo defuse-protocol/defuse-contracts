@@ -4,7 +4,7 @@ use defuse_contracts::{
         FtAmount, GenericAccount, IntentId, LostAsset, NearAsset, SwapIntent, SwapIntentContract,
         SwapIntentError, SwapIntentStatus,
     },
-    utils::{Mutex, UnwrapOrPanic},
+    utils::{Lock, UnwrapOrPanic},
 };
 
 use near_sdk::{
@@ -24,7 +24,7 @@ mod rollback;
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct SwapIntentContractImpl {
-    intents: LookupMap<IntentId, Mutex<SwapIntent>>,
+    intents: LookupMap<IntentId, Lock<SwapIntent>>,
 }
 
 #[derive(BorshStorageKey)]
@@ -47,7 +47,7 @@ impl SwapIntentContractImpl {
 
 #[near]
 impl SwapIntentContract for SwapIntentContractImpl {
-    fn get_intent(&self, id: &IntentId) -> Option<&Mutex<SwapIntent>> {
+    fn get_intent(&self, id: &IntentId) -> Option<&Lock<SwapIntent>> {
         self.intents.get(id)
     }
 }

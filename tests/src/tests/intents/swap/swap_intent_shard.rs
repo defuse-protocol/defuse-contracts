@@ -6,7 +6,7 @@ use defuse_contracts::{
         Asset, CrossChainAsset, FtAmount, IntentId, NearAsset, NftItem, SwapIntent,
         SwapIntentAction,
     },
-    utils::Mutex,
+    utils::Lock,
 };
 use near_sdk::{AccountId, NearToken};
 use near_workspaces::Contract;
@@ -33,7 +33,7 @@ pub trait SwapIntentShard {
         action: SwapIntentAction,
     ) -> anyhow::Result<bool>;
 
-    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>>;
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Lock<SwapIntent>>>;
 
     async fn rollback_intent(
         &self,
@@ -118,7 +118,7 @@ impl SwapIntentShard for near_workspaces::Account {
         }
     }
 
-    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Lock<SwapIntent>>> {
         self.view(self.id(), "get_intent")
             .args_json(json!({
                 "id": id,
@@ -179,7 +179,7 @@ impl SwapIntentShard for Contract {
             .await
     }
 
-    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Lock<SwapIntent>>> {
         self.as_account().get_intent(id).await
     }
 
