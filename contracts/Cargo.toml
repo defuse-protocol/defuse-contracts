@@ -29,6 +29,7 @@ mpc = []
 nep245 = []
 nep413 = ["crypto"]
 
+unit-testing = []
 # HACK: Semi-feature to enable `#[derive(JsonSchema)]` only when
 # `not(target_arch = "wasm32"))`. This is needed to make
 # `cargo near abi` work as it doesn't allow to pass `--features abi`.

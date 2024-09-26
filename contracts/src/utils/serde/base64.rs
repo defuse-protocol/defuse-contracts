@@ -8,7 +8,7 @@ use serde_with::{
 };
 
 pub struct Base64<ALPHABET: Alphabet = Standard, PADDING: Format = Padded>(
-    serde_with::base64::Base64<ALPHABET, PADDING>,
+    ::serde_with::base64::Base64<ALPHABET, PADDING>,
 );
 
 impl<T, ALPHABET> SerializeAs<T> for Base64<ALPHABET, Padded>
@@ -20,7 +20,7 @@ where
     where
         S: Serializer,
     {
-        serde_with::base64::Base64::<ALPHABET, Padded>::serialize_as(source, serializer)
+        ::serde_with::base64::Base64::<ALPHABET, Padded>::serialize_as(source, serializer)
     }
 }
 

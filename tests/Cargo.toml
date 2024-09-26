@@ -7,7 +7,7 @@ edition.workspace = true
 workspace = true
 
 [dev-dependencies]
-defuse-contracts.workspace = true
+defuse-contracts = { workspace = true, features = ["unit-testing"] }
 
 anyhow.workspace = true
 impl-tools.workspace = true

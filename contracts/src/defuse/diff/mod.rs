@@ -13,7 +13,8 @@ pub trait SignedDiffer {
     fn apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>);
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "unit-testing", derive(Default))]
 #[near(serializers = [borsh, json])]
 pub struct AccountDiff {
     /// For the ease of indexing
@@ -23,7 +24,6 @@ pub struct AccountDiff {
     #[serde(default, skip_serializing_if = "TokenDeltas::is_empty")]
     pub tokens: TokenDeltas,
 
-    #[serde(default, skip_serializing_if = "Deadline::is_none")]
     pub deadline: Deadline,
 }
 

@@ -12,6 +12,7 @@ pub enum Deadline {
     BlockNumber(u64),
 }
 
+#[cfg(feature = "unit-testing")]
 impl Default for Deadline {
     #[inline]
     fn default() -> Self {
@@ -32,11 +33,6 @@ impl PartialOrd for Deadline {
 }
 
 impl Deadline {
-    #[inline]
-    pub const fn is_none(&self) -> bool {
-        matches!(self, Self::BlockNumber(u64::MAX))
-    }
-
     #[must_use]
     #[inline]
     pub fn has_expired(self) -> bool {
