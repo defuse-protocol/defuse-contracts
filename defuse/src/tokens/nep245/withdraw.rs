@@ -4,7 +4,7 @@ use defuse_contracts::{
             nep245::{MultiTokenWithdrawResolver, MultiTokenWithdrawer},
             TokenId,
         },
-        DefuseError, Result,
+        DefuseError,
     },
     nep245::{self, ext_mt_core},
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
@@ -29,22 +29,6 @@ impl MultiTokenWithdrawer for DefuseImpl {
         msg: Option<String>,
     ) -> PromiseOrValue<Vec<U128>> {
         assert_one_yocto();
-        self.internal_mt_withdraw(token, receiver_id, token_ids, amounts, memo, msg)
-            .unwrap()
-    }
-}
-
-impl DefuseImpl {
-    fn internal_mt_withdraw(
-        &mut self,
-        token: AccountId,
-        receiver_id: AccountId,
-        token_ids: Vec<nep245::TokenId>,
-        amounts: Vec<U128>,
-        memo: Option<String>,
-        msg: Option<String>,
-    ) -> Result<PromiseOrValue<Vec<U128>>> {
-        // TODO: maybe do not panic but return an error?
         require!(
             token_ids.len() == amounts.len(),
             "token_ids should be the same length as amounts"
@@ -53,17 +37,19 @@ impl DefuseImpl {
         let account = self
             .accounts
             .get_mut(&PREDECESSOR_ACCOUNT_ID)
-            .ok_or(DefuseError::AccountNotFound)?;
+            .ok_or(DefuseError::AccountNotFound)
+            .unwrap();
         for (token_id, amount) in token_ids.iter().zip(&amounts) {
             account
                 .token_balances
-                .withdraw(&TokenId::Nep245(token.clone(), token_id.clone()), amount.0)?;
+                .withdraw(&TokenId::Nep245(token.clone(), token_id.clone()), amount.0)
+                .unwrap();
         }
 
         let ext =
             ext_mt_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
         let is_call = msg.is_some();
-        Ok(if let Some(msg) = msg {
+        if let Some(msg) = msg {
             ext.mt_batch_transfer_call(
                 receiver_id,
                 token_ids.clone(),
@@ -86,7 +72,7 @@ impl DefuseImpl {
                     is_call,
                 ),
         )
-        .into())
+        .into()
     }
 }
 
@@ -101,6 +87,11 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
         amounts: Vec<U128>,
         is_call: bool,
     ) -> Vec<U128> {
+        require!(
+            token_ids.len() == amounts.len(),
+            "token_ids should be the same length as amounts"
+        );
+
         let mut used = match env::promise_result(0) {
             PromiseResult::Successful(value) => {
                 if is_call {

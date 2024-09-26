@@ -1,7 +1,8 @@
-use near_sdk::{json_types::U128, AccountId, PromiseOrValue};
+use near_sdk::{ext_contract, json_types::U128, AccountId, PromiseOrValue};
 
 use super::TokenId;
 
+#[ext_contract(ext_mt_receiver)]
 pub trait MultiTokenReceiver {
     fn mt_on_transfer(
         &mut self,

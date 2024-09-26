@@ -110,17 +110,23 @@ impl Account {
     where
         S: Payload + ValidatePayloadAs<Nep413Payload<T>, Error: Into<DefuseError>>,
     {
+        // verify signature and derive its public key
         let public_key = signed.verify().ok_or(DefuseError::InvalidSignature)?;
 
+        // extract NEP-413 payload
         let payload: Nep413Payload<T> = signed.payload.validate_as().map_err(Into::into)?;
+
+        // check recipient
         if payload.recipient != *CURRENT_ACCOUNT_ID {
             return Err(DefuseError::WrongRecipient);
         }
 
+        // commit nonce for public key
         self.public_key_nonces_mut(me, &public_key)
             .ok_or(DefuseError::InvalidSignature)?
             .commit(payload.nonce)?;
 
+        // return inner message
         Ok(payload.message)
     }
 }

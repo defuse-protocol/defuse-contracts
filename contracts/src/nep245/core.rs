@@ -30,7 +30,7 @@ pub trait MultiTokenCore: MultiTokenResolver {
         approval: Option<(AccountId, u64)>,
         memo: Option<String>,
         msg: String,
-    ) -> PromiseOrValue<U128>;
+    ) -> PromiseOrValue<Vec<U128>>;
 
     fn mt_batch_transfer_call(
         &mut self,

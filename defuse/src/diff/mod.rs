@@ -20,11 +20,11 @@ impl DefuseImpl {
     fn internal_apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>) -> Result<()> {
         let mut differ = Differ::default();
 
-        for (account_id, signed_diffs) in diffs {
-            let account = self.accounts.get_or_create(account_id.clone());
+        for (signer, payloads) in diffs {
+            let account = self.accounts.get_or_create(signer.clone());
 
-            for signed in signed_diffs {
-                let diff = account.verify_signed_as_nep413(&account_id, signed)?;
+            for payload in payloads {
+                let diff = account.verify_signed_as_nep413(&signer, payload)?;
 
                 differ.commit_account_diff(&mut account.state, diff)?;
             }
@@ -36,6 +36,7 @@ impl DefuseImpl {
 
 #[derive(Debug, Default)]
 struct Differ {
+    // TODO: protocol fees
     token_deltas: TokenDeltas,
 }
 

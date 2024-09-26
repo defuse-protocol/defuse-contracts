@@ -44,6 +44,7 @@ impl<T> From<Nep413Payload<T>> for MultiStandardPayload<T> {
 pub trait ValidatePayloadAs<T> {
     type Error;
 
+    /// Validates self and extracts `T`
     fn validate_as(self) -> Result<T, Self::Error>;
 }
 

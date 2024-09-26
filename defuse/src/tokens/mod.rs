@@ -11,23 +11,25 @@ impl DefuseImpl {
     pub(crate) fn internal_transfer(
         &mut self,
         sender_id: &AccountId,
-        receiver_id: &AccountId,
-        token_id: TokenId,
-        amount: u128,
+        receiver_id: AccountId,
+        token_amounts: &[(TokenId, u128)],
+        #[allow(unused_variables)] memo: Option<String>,
     ) -> Result<()> {
         // TODO: check sender != receiver
-        self.accounts
+        // withdraw
+        let sender = self
+            .accounts
             .get_mut(sender_id)
-            .ok_or(DefuseError::AccountNotFound)?
-            .token_balances
-            .withdraw(&token_id, amount)?;
+            .ok_or(DefuseError::AccountNotFound)?;
+        for (token_id, amount) in token_amounts {
+            sender.token_balances.withdraw(token_id, *amount)?;
+        }
 
-        // TODO: get_or_create(recipient), but then we should public_key?
-        self.accounts
-            .get_mut(receiver_id)
-            .ok_or(DefuseError::AccountNotFound)?
-            .token_balances
-            .deposit(token_id, amount)?;
+        // deposit
+        let receiver = self.accounts.get_or_create(receiver_id);
+        for (token_id, amount) in token_amounts {
+            receiver.token_balances.deposit(token_id.clone(), *amount)?;
+        }
 
         // TODO: log transfer event
 
@@ -57,31 +59,27 @@ impl TokensBalances {
 
     #[inline]
     pub fn deposit(&mut self, token_id: TokenId, amount: u128) -> Result<()> {
-        if amount == 0 {
-            return Ok(());
+        if amount > 0 {
+            let balance = self.0.entry(token_id).or_default();
+            *balance = balance
+                .checked_add(amount)
+                .ok_or(DefuseError::BalanceOverflow)?;
         }
-        let balance = self.0.entry(token_id).or_default();
-        *balance = balance
-            .checked_add(amount)
-            .ok_or(DefuseError::BalanceOverflow)?;
-        // TODO: emit log
         Ok(())
     }
 
     #[inline]
     pub fn withdraw(&mut self, token_id: &TokenId, amount: u128) -> Result<()>
 where {
-        if amount == 0 {
-            return Ok(());
+        if amount > 0 {
+            let balance = self
+                .0
+                .get_mut(token_id)
+                .ok_or(DefuseError::BalanceOverflow)?;
+            *balance = balance
+                .checked_sub(amount)
+                .ok_or(DefuseError::BalanceOverflow)?;
         }
-        let balance = self
-            .0
-            .get_mut(token_id)
-            .ok_or(DefuseError::BalanceOverflow)?;
-        *balance = balance
-            .checked_sub(amount)
-            .ok_or(DefuseError::BalanceOverflow)?;
-        // TODO: emit log
         Ok(())
     }
 }

@@ -1,6 +1,6 @@
 use near_sdk::{json_types::U128, AccountId};
 
-use super::TokenId;
+use super::{ClearedApproval, TokenId};
 
 pub trait MultiTokenResolver {
     fn mt_resolve_transfer(
@@ -9,6 +9,6 @@ pub trait MultiTokenResolver {
         receiver_id: AccountId,
         token_ids: Vec<TokenId>,
         amounts: Vec<U128>,
-        // approvals: Option<Vec<Option<Vec<ClearedApproval>>>>,
+        approvals: Option<Vec<Option<Vec<ClearedApproval>>>>,
     ) -> Vec<U128>;
 }
