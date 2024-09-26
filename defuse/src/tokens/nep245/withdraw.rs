@@ -65,8 +65,8 @@ impl DefuseImpl {
             .ok_or(DefuseError::AccountNotFound)?;
         for (token_id, amount) in token_ids.iter().zip(&amounts) {
             let token_id = TokenId::Nep245(token.clone(), token_id.clone());
-            self.total_supplies.withdraw(&token_id, amount.0)?;
-            account.token_balances.withdraw(&token_id, amount.0)?;
+            self.total_supplies.withdraw(token_id.clone(), amount.0)?;
+            account.token_balances.withdraw(token_id, amount.0)?;
         }
 
         let ext =

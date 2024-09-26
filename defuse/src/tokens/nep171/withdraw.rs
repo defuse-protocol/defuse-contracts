@@ -50,12 +50,12 @@ impl DefuseImpl {
         msg: Option<String>,
     ) -> Result<PromiseOrValue<bool>> {
         let t = TokenId::Nep171(token.clone(), token_id.clone());
-        self.total_supplies.withdraw(&t, 1).unwrap();
+        self.total_supplies.withdraw(t.clone(), 1).unwrap();
         self.accounts
             .get_mut(&sender_id)
             .ok_or(DefuseError::AccountNotFound)?
             .token_balances
-            .withdraw(&t, 1)?;
+            .withdraw(t, 1)?;
 
         let ext =
             ext_nft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));

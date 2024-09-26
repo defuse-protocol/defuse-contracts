@@ -52,12 +52,12 @@ impl DefuseImpl {
     ) -> Result<PromiseOrValue<U128>> {
         // TODO: check amount > 0
         let token_id = TokenId::Nep141(token.clone());
-        self.total_supplies.withdraw(&token_id, amount.0)?;
+        self.total_supplies.withdraw(token_id.clone(), amount.0)?;
         self.accounts
             .get_mut(&sender_id)
             .ok_or(DefuseError::AccountNotFound)?
             .token_balances
-            .withdraw(&token_id, amount.0)?;
+            .withdraw(token_id, amount.0)?;
 
         let ext =
             ext_ft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));

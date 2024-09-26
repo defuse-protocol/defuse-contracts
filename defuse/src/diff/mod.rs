@@ -61,13 +61,7 @@ impl Differ {
     ) -> Result<()> {
         for (token_id, delta) in deltas {
             self.on_token_delta(token_id.clone(), delta)?;
-
-            if delta.is_positive() {
-                balances.deposit(token_id.clone(), delta as u128)?;
-            } else {
-                // TODO: overflows
-                balances.withdraw(&token_id, -delta as u128)?;
-            }
+            balances.add_delta(token_id, delta)?;
         }
         Ok(())
     }

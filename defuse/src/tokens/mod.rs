@@ -3,7 +3,11 @@ mod nep171;
 mod nep245;
 
 use defuse_contracts::defuse::{tokens::TokenId, DefuseError, Result};
-use near_sdk::{near, store::IterableMap, AccountId, IntoStorageKey};
+use near_sdk::{
+    near,
+    store::{iterable_map::Entry, IterableMap},
+    AccountId, IntoStorageKey,
+};
 
 use crate::DefuseImpl;
 
@@ -22,7 +26,7 @@ impl DefuseImpl {
             .get_mut(sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
         for (token_id, amount) in &token_amounts {
-            sender.token_balances.withdraw(token_id, *amount)?;
+            sender.token_balances.withdraw(token_id.clone(), *amount)?;
         }
 
         // deposit
@@ -64,28 +68,53 @@ impl TokensBalances {
     }
 
     #[inline]
-    pub fn deposit(&mut self, token_id: TokenId, amount: u128) -> Result<()> {
-        if amount > 0 {
-            let balance = self.0.entry(token_id).or_default();
-            *balance = balance
-                .checked_add(amount)
-                .ok_or(DefuseError::BalanceOverflow)?;
-        }
-        Ok(())
+    pub fn deposit(&mut self, token_id: TokenId, amount: u128) -> Result<u128> {
+        Ok(match self.0.entry(token_id) {
+            Entry::Vacant(_) if amount == 0 => 0,
+            Entry::Vacant(entry) => *entry.insert(amount),
+            Entry::Occupied(mut entry) => {
+                let b = entry.get_mut();
+                *b = b.checked_add(amount).ok_or(DefuseError::BalanceOverflow)?;
+                if *b == 0 {
+                    entry.remove()
+                } else {
+                    *b
+                }
+            }
+        })
     }
 
     #[inline]
-    pub fn withdraw(&mut self, token_id: &TokenId, amount: u128) -> Result<()>
+    pub fn withdraw(&mut self, token_id: TokenId, amount: u128) -> Result<u128>
 where {
-        if amount > 0 {
-            let balance = self
-                .0
-                .get_mut(token_id)
-                .ok_or(DefuseError::BalanceOverflow)?;
-            *balance = balance
-                .checked_sub(amount)
-                .ok_or(DefuseError::BalanceOverflow)?;
+        Ok(match self.0.entry(token_id) {
+            Entry::Vacant(_) if amount == 0 => 0,
+            Entry::Vacant(entry) => *entry.insert(amount),
+            Entry::Occupied(mut entry) => {
+                let b = entry.get_mut();
+                *b = b.checked_sub(amount).ok_or(DefuseError::BalanceOverflow)?;
+                if *b == 0 {
+                    entry.remove()
+                } else {
+                    *b
+                }
+            }
+        })
+    }
+
+    #[inline]
+    pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Result<u128> {
+        match self.0.entry(token_id) {
+            Entry::Vacant(_) if delta < 0 => Err(DefuseError::BalanceOverflow),
+            Entry::Vacant(_) if delta == 0 => Ok(0),
+            Entry::Vacant(entry) => Ok(*entry.insert(delta.unsigned_abs())),
+            Entry::Occupied(mut entry) => {
+                let b = entry.get_mut();
+                *b = b
+                    .checked_add_signed(delta)
+                    .ok_or(DefuseError::BalanceOverflow)?;
+                Ok(if *b == 0 { entry.remove() } else { *b })
+            }
         }
-        Ok(())
     }
 }

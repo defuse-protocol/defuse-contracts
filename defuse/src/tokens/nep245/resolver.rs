@@ -51,7 +51,10 @@ impl MultiTokenResolver for DefuseImpl {
                         // refund maximum what we can
                         refund = refund.min(receiver_balance);
                         // withdraw refund
-                        receiver.token_balances.withdraw(&token_id, refund).unwrap();
+                        receiver
+                            .token_balances
+                            .withdraw(token_id.clone(), refund)
+                            .unwrap();
 
                         // deposit refund
                         let previous_owner = self.accounts.get_or_create(previous_owner_id);

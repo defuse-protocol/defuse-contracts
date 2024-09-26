@@ -20,11 +20,7 @@ use crate::defuse::{tokens::TokenId, DefuseError, Result};
 pub struct TokenDeltas(
     /// [`BTreeMap`] ensures deterministic order
     #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
-    BTreeMap<
-        TokenId,
-        // TODO: i129
-        i128,
-    >,
+    BTreeMap<TokenId, i128>,
 );
 
 impl TokenDeltas {
@@ -45,12 +41,12 @@ impl TokenDeltas {
             Entry::Vacant(_) if delta == 0 => 0,
             Entry::Vacant(entry) => *entry.insert(delta),
             Entry::Occupied(mut entry) => {
-                let v = entry.get_mut();
-                *v = v.checked_add(delta).ok_or(DefuseError::BalanceOverflow)?;
-                if *v == 0 {
+                let d = entry.get_mut();
+                *d = d.checked_add(delta).ok_or(DefuseError::BalanceOverflow)?;
+                if *d == 0 {
                     entry.remove()
                 } else {
-                    *v
+                    *d
                 }
             }
         })
