@@ -40,9 +40,11 @@ impl MultiTokenWithdrawer for DefuseImpl {
             .ok_or(DefuseError::AccountNotFound)
             .unwrap();
         for (token_id, amount) in token_ids.iter().zip(&amounts) {
+            let token_id = TokenId::Nep245(token.clone(), token_id.clone());
+            self.total_supplies.withdraw(&token_id, amount.0).unwrap();
             account
                 .token_balances
-                .withdraw(&TokenId::Nep245(token.clone(), token_id.clone()), amount.0)
+                .withdraw(&token_id, amount.0)
                 .unwrap();
         }
 
@@ -120,10 +122,11 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
 
             let refund = amount.0 - used.0;
             if refund > 0 {
-                // Are we sure that we want to ignore that?
-                let _ = account
-                    .token_balances
-                    .deposit(TokenId::Nep245(token.clone(), token_id), refund);
+                let token_id = TokenId::Nep245(token.clone(), token_id);
+                self.total_supplies
+                    .deposit(token_id.clone(), refund)
+                    .unwrap();
+                account.token_balances.deposit(token_id, refund).unwrap();
             }
         }
 

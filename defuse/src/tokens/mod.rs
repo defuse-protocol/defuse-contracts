@@ -12,7 +12,7 @@ impl DefuseImpl {
         &mut self,
         sender_id: &AccountId,
         receiver_id: AccountId,
-        token_amounts: &[(TokenId, u128)],
+        token_amounts: Vec<(TokenId, u128)>,
         #[allow(unused_variables)] memo: Option<String>,
     ) -> Result<()> {
         // TODO: check sender != receiver
@@ -21,17 +21,17 @@ impl DefuseImpl {
             .accounts
             .get_mut(sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
-        for (token_id, amount) in token_amounts {
+        for (token_id, amount) in &token_amounts {
             sender.token_balances.withdraw(token_id, *amount)?;
         }
 
         // deposit
         let receiver = self.accounts.get_or_create(receiver_id);
         for (token_id, amount) in token_amounts {
-            receiver.token_balances.deposit(token_id.clone(), *amount)?;
+            receiver.token_balances.deposit(token_id, amount)?;
         }
 
-        // TODO: log transfer event
+        // TODO: log transfer event with memo
 
         Ok(())
     }

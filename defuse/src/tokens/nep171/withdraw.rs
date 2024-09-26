@@ -8,45 +8,12 @@ use defuse_contracts::{
     },
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
 };
-use near_contract_standards::non_fungible_token::{
-    self,
-    core::{ext_nft_core, NonFungibleTokenReceiver},
-};
+use near_contract_standards::non_fungible_token::{self, core::ext_nft_core};
 use near_sdk::{
     assert_one_yocto, env, near, serde_json, AccountId, NearToken, PromiseOrValue, PromiseResult,
 };
 
 use crate::{DefuseImpl, DefuseImplExt};
-
-#[near]
-impl NonFungibleTokenReceiver for DefuseImpl {
-    /// Deposit non-fungible token.
-    ///
-    /// `msg` contains [`AccountId`] of the internal recipient.
-    /// Empty `msg` means deposit to `sender_id`
-    #[allow(unused_variables)]
-    fn nft_on_transfer(
-        &mut self,
-        sender_id: AccountId,
-        previous_owner_id: AccountId,
-        token_id: near_contract_standards::non_fungible_token::TokenId,
-        msg: String,
-    ) -> PromiseOrValue<bool> {
-        let deposit_to = if !msg.is_empty() {
-            msg.parse().unwrap()
-        } else {
-            sender_id
-        };
-
-        self.accounts
-            .get_or_create(deposit_to)
-            .token_balances
-            .deposit(TokenId::Nep171(PREDECESSOR_ACCOUNT_ID.clone(), token_id), 1)
-            .unwrap();
-
-        PromiseOrValue::Value(false)
-    }
-}
 
 #[near]
 impl NonFungibleTokenWithdrawer for DefuseImpl {
@@ -74,13 +41,13 @@ impl DefuseImpl {
         memo: Option<String>,
         msg: Option<String>,
     ) -> Result<PromiseOrValue<bool>> {
-        let account = self
-            .accounts
+        let t = TokenId::Nep171(token.clone(), token_id.clone());
+        self.total_supplies.withdraw(&t, 1).unwrap();
+        self.accounts
             .get_mut(&PREDECESSOR_ACCOUNT_ID)
-            .ok_or(DefuseError::AccountNotFound)?;
-        account
+            .ok_or(DefuseError::AccountNotFound)?
             .token_balances
-            .withdraw(&TokenId::Nep171(token.clone(), token_id.clone()), 1)?;
+            .withdraw(&t, 1)?;
 
         let ext =
             ext_nft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
@@ -122,11 +89,13 @@ impl NonFungibleTokenWithdrawResolver for DefuseImpl {
             PromiseResult::Failed => false,
         };
         if !used {
-            let account = self.accounts.get_or_create(sender_id);
-            // Are we sure that we want to ignore that?
-            let _ = account
+            let token = TokenId::Nep171(token, token_id);
+            self.total_supplies.deposit(token.clone(), 1).unwrap();
+            self.accounts
+                .get_or_create(sender_id)
                 .token_balances
-                .deposit(TokenId::Nep171(token, token_id), 1);
+                .deposit(token, 1)
+                .unwrap();
         }
         used
     }

@@ -26,7 +26,6 @@ anyhow = "1"
 bnum = { version = "0.12", features = ["borsh"] }
 hex = "0.4"
 impl-tools = "0.10"
-lazy_static = "1.4"
 near-account-id = "1.0"
 near-contract-standards = "5.4"
 near-sdk = { version = "5.4", features = ["unstable"] }

@@ -1,13 +1,12 @@
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
+
 use near_sdk::{AccountId, NearToken};
 use near_workspaces::Contract;
 use serde_json::json;
 
 use crate::utils::{account::AccountExt, nft::NftExt, read_wasm, Sandbox};
 
-lazy_static! {
-    static ref ACCOUNT_WASM: Vec<u8> = read_wasm("defuse_account_contract");
-}
+static ACCOUNT_WASM: LazyLock<Vec<u8>> = LazyLock::new(|| read_wasm("defuse_account_contract"));
 
 pub trait AccountShardExt {
     async fn deploy_account_shard(

@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use anyhow::anyhow;
 use defuse_contracts::{
     intents::swap::{
@@ -6,7 +8,6 @@ use defuse_contracts::{
     },
     utils::Mutex,
 };
-use lazy_static::lazy_static;
 use near_sdk::{AccountId, NearToken};
 use near_workspaces::Contract;
 use serde_json::json;
@@ -16,9 +17,8 @@ use crate::utils::{
     nft::NftExt, read_wasm,
 };
 
-lazy_static! {
-    static ref SWAP_INTENT_WASM: Vec<u8> = read_wasm("defuse_swap_intent_contract");
-}
+static SWAP_INTENT_WASM: LazyLock<Vec<u8>> =
+    LazyLock::new(|| read_wasm("defuse_swap_intent_contract"));
 
 pub trait SwapIntentShard {
     async fn deploy_swap_intent_shard(

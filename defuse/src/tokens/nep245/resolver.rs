@@ -60,10 +60,10 @@ impl MultiTokenResolver for DefuseImpl {
                             .deposit(token_id, refund)
                             .unwrap();
 
-                        // TODO: log refund
-
                         // update as used amount in-place
                         amount.0 -= refund;
+
+                        // TODO: log refund
                     }
                 }
             }

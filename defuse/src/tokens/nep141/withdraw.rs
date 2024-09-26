@@ -8,41 +8,13 @@ use defuse_contracts::{
     },
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
 };
-use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
+use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::{
     assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, NearToken,
     PromiseOrValue, PromiseResult,
 };
 
 use crate::{DefuseImpl, DefuseImplExt};
-
-#[near]
-impl FungibleTokenReceiver for DefuseImpl {
-    /// Deposit fungible tokens.
-    ///
-    /// `msg` contains [`AccountId`] of the internal recipient.
-    /// Empty `msg` means deposit to `sender_id`
-    fn ft_on_transfer(
-        &mut self,
-        sender_id: AccountId,
-        amount: U128,
-        msg: String,
-    ) -> PromiseOrValue<U128> {
-        let deposit_to = if !msg.is_empty() {
-            msg.parse().unwrap()
-        } else {
-            sender_id
-        };
-
-        self.accounts
-            .get_or_create(deposit_to)
-            .token_balances
-            .deposit(TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone()), amount.0)
-            .unwrap();
-
-        PromiseOrValue::Value(U128(0))
-    }
-}
 
 #[near]
 impl FungibleTokenWithdrawer for DefuseImpl {
@@ -71,13 +43,13 @@ impl DefuseImpl {
         msg: Option<String>,
     ) -> Result<PromiseOrValue<U128>> {
         // TODO: check amount > 0
-        let account = self
-            .accounts
+        let token_id = TokenId::Nep141(token.clone());
+        self.total_supplies.withdraw(&token_id, amount.0)?;
+        self.accounts
             .get_mut(&PREDECESSOR_ACCOUNT_ID)
-            .ok_or(DefuseError::AccountNotFound)?;
-        account
+            .ok_or(DefuseError::AccountNotFound)?
             .token_balances
-            .withdraw(&TokenId::Nep141(token.clone()), amount.0)?;
+            .withdraw(&token_id, amount.0)?;
 
         let ext =
             ext_ft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
@@ -124,11 +96,13 @@ impl FungibleTokenWithdrawResolver for DefuseImpl {
 
         let refund = amount.0 - used;
         if refund > 0 {
-            let account = self.accounts.get_or_create(sender_id);
-            // Are we sure that we want to ignore that?
-            let _ = account
+            let token = TokenId::Nep141(token);
+            self.total_supplies.deposit(token.clone(), refund).unwrap();
+            self.accounts
+                .get_or_create(sender_id)
                 .token_balances
-                .deposit(TokenId::Nep141(token), refund);
+                .deposit(token, refund)
+                .unwrap();
         }
         U128(used)
     }

@@ -1,5 +1,6 @@
+use std::sync::LazyLock;
+
 use impl_tools::autoimpl;
-use lazy_static::lazy_static;
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
 
@@ -9,14 +10,14 @@ use crate::{
 };
 
 // HACK: to use with #[rstest] as static variables
-lazy_static! {
-    pub static ref USER1: AccountId = "user1.test.near".parse().unwrap();
-    pub static ref USER2: AccountId = "user2.test.near".parse().unwrap();
-    pub static ref FT1: AccountId = "ft1.test.near".parse().unwrap();
-    pub static ref FT2: AccountId = "ft2.test.near".parse().unwrap();
-    pub static ref ACCOUNT_SHARD1: AccountId = "account-shard1.test.near".parse().unwrap();
-    pub static ref ACCOUNT_SHARD2: AccountId = "account-shard2.test.near".parse().unwrap();
-}
+pub static USER1: LazyLock<AccountId> = LazyLock::new(|| "user1.test.near".parse().unwrap());
+pub static USER2: LazyLock<AccountId> = LazyLock::new(|| "user2.test.near".parse().unwrap());
+pub static FT1: LazyLock<AccountId> = LazyLock::new(|| "ft1.test.near".parse().unwrap());
+pub static FT2: LazyLock<AccountId> = LazyLock::new(|| "ft2.test.near".parse().unwrap());
+pub static ACCOUNT_SHARD1: LazyLock<AccountId> =
+    LazyLock::new(|| "account-shard1.test.near".parse().unwrap());
+pub static ACCOUNT_SHARD2: LazyLock<AccountId> =
+    LazyLock::new(|| "account-shard2.test.near".parse().unwrap());
 
 #[autoimpl(Deref using self.sandbox)]
 pub struct Env {

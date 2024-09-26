@@ -46,11 +46,11 @@ impl MultiTokenCore for DefuseImpl {
         self.internal_transfer(
             &PREDECESSOR_ACCOUNT_ID,
             receiver_id,
-            &token_ids
+            token_ids
                 .into_iter()
                 .map(|token_id| token_id.parse().unwrap())
                 .zip(amounts.into_iter().map(|a| a.0))
-                .collect::<Vec<_>>(),
+                .collect(),
             memo,
         )
         .unwrap()
@@ -96,11 +96,11 @@ impl MultiTokenCore for DefuseImpl {
         self.internal_transfer(
             &PREDECESSOR_ACCOUNT_ID,
             receiver_id.clone(),
-            &token_ids
+            token_ids
                 .iter()
                 .map(|token_id| token_id.parse().unwrap())
                 .zip(amounts.iter().map(|a| a.0))
-                .collect::<Vec<_>>(),
+                .collect(),
             memo,
         )
         .unwrap();
@@ -123,6 +123,8 @@ impl MultiTokenCore for DefuseImpl {
             .into()
     }
 
+    // TODO: mt_token
+
     fn mt_balance_of(&self, account_id: AccountId, token_id: nep245::TokenId) -> U128 {
         U128(self.internal_mt_balance_of(&account_id, &token_id.parse().unwrap()))
     }
@@ -141,11 +143,16 @@ impl MultiTokenCore for DefuseImpl {
     }
 
     fn mt_supply(&self, token_id: nep245::TokenId) -> Option<U128> {
-        todo!()
+        Some(U128(
+            self.total_supplies.balance_of(&token_id.parse().ok()?),
+        ))
     }
 
     fn mt_batch_supply(&self, token_ids: Vec<nep245::TokenId>) -> Vec<Option<U128>> {
-        todo!()
+        token_ids
+            .into_iter()
+            .map(|token_id| self.mt_supply(token_id))
+            .collect()
     }
 }
 

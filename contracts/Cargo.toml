@@ -10,7 +10,6 @@ workspace = true
 bnum.workspace = true
 hex.workspace = true
 impl-tools.workspace = true
-lazy_static.workspace = true
 near-account-id.workspace = true
 near-sdk.workspace = true
 near-contract-standards.workspace = true

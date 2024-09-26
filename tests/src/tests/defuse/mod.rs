@@ -3,17 +3,16 @@ pub mod diff;
 mod env;
 mod tokens;
 
+use std::sync::LazyLock;
+
 use accounts::AccountManagerExt;
 use defuse_contracts::defuse::tokens::TokenId;
-use lazy_static::lazy_static;
 use near_sdk::AccountId;
 use near_workspaces::Contract;
 
 use crate::utils::{account::AccountExt, mt::MtExt, read_wasm};
 
-lazy_static! {
-    static ref DEFUSE_WASM: Vec<u8> = read_wasm("defuse_contract");
-}
+static DEFUSE_WASM: LazyLock<Vec<u8>> = LazyLock::new(|| read_wasm("defuse_contract"));
 
 pub trait DefuseExt: AccountManagerExt + MtExt {
     async fn deploy_defuse(&self, id: &str) -> anyhow::Result<Contract>;

@@ -33,15 +33,12 @@ impl MultiTokenReceiver for DefuseImpl {
         };
 
         let receiver = self.accounts.get_or_create(deposit_to);
-        let token_contract_id = PREDECESSOR_ACCOUNT_ID.clone();
         for (token_id, amount) in token_ids.into_iter().zip(&amounts) {
-            receiver
-                .token_balances
-                .deposit(
-                    TokenId::Nep245(token_contract_id.clone(), token_id),
-                    amount.0,
-                )
+            let token_id = TokenId::Nep245(PREDECESSOR_ACCOUNT_ID.clone(), token_id);
+            self.total_supplies
+                .deposit(token_id.clone(), amount.0)
                 .unwrap();
+            receiver.token_balances.deposit(token_id, amount.0).unwrap();
         }
 
         PromiseOrValue::Value(vec![U128(0); amounts.len()])
