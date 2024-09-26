@@ -4,7 +4,7 @@ use near_sdk::{ext_contract, near};
 
 use crate::utils::Deadline;
 
-use super::{error::DefuseError, payload::SignedPayloads, tokens::TokenId};
+use super::{payload::SignedPayloads, tokens::TokenId, Result};
 
 use self::tokens::TokenDeltas;
 
@@ -35,7 +35,7 @@ impl AccountDiff {
     }
 
     #[inline]
-    pub fn with_tokens<I>(mut self, deltas: I) -> Result<Self, DefuseError>
+    pub fn with_tokens<I>(mut self, deltas: I) -> Result<Self>
     where
         I: IntoIterator<Item = (TokenId, i128)>,
     {

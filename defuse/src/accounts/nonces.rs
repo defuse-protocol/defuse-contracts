@@ -1,6 +1,10 @@
 use core::iter;
 
-use defuse_contracts::{defuse::DefuseError, nep413::Nonce, utils::bitmap::BitMap256};
+use defuse_contracts::{
+    defuse::{DefuseError, Result},
+    nep413::Nonce,
+    utils::bitmap::BitMap256,
+};
 use near_sdk::{near, IntoStorageKey};
 
 /// See [permit2 nonce schema](https://docs.uniswap.org/contracts/permit2/reference/signature-transfer#nonce-schema)
@@ -35,7 +39,7 @@ impl Nonces {
     }
 
     #[inline]
-    pub fn commit(&mut self, n: Nonce) -> Result<(), DefuseError> {
+    pub fn commit(&mut self, n: Nonce) -> Result<()> {
         if self.0.set(n, true) {
             return Err(DefuseError::NonceUsed);
         }

@@ -2,7 +2,7 @@ mod nep141;
 mod nep171;
 mod nep245;
 
-use defuse_contracts::defuse::{tokens::TokenId, DefuseError};
+use defuse_contracts::defuse::{tokens::TokenId, DefuseError, Result};
 use near_sdk::{near, store::IterableMap, AccountId, IntoStorageKey};
 
 use crate::DefuseImpl;
@@ -14,7 +14,7 @@ impl DefuseImpl {
         receiver_id: &AccountId,
         token_id: TokenId,
         amount: u128,
-    ) -> Result<(), DefuseError> {
+    ) -> Result<()> {
         // TODO: check sender != receiver
         self.accounts
             .get_mut(sender_id)
@@ -56,7 +56,7 @@ impl TokensBalances {
     }
 
     #[inline]
-    pub fn deposit(&mut self, token_id: TokenId, amount: u128) -> Result<(), DefuseError> {
+    pub fn deposit(&mut self, token_id: TokenId, amount: u128) -> Result<()> {
         if amount == 0 {
             return Ok(());
         }
@@ -69,7 +69,7 @@ impl TokensBalances {
     }
 
     #[inline]
-    pub fn withdraw(&mut self, token_id: &TokenId, amount: u128) -> Result<(), DefuseError>
+    pub fn withdraw(&mut self, token_id: &TokenId, amount: u128) -> Result<()>
 where {
         if amount == 0 {
             return Ok(());

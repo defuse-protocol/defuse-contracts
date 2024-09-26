@@ -4,7 +4,7 @@ use impl_tools::autoimpl;
 use near_sdk::near;
 use serde_with::{serde_as, DisplayFromStr};
 
-use crate::defuse::{tokens::TokenId, DefuseError};
+use crate::defuse::{tokens::TokenId, DefuseError, Result};
 
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(
@@ -29,7 +29,7 @@ pub struct TokenDeltas(
 
 impl TokenDeltas {
     #[inline]
-    pub fn append<I>(&mut self, iter: I) -> Result<(), DefuseError>
+    pub fn append<I>(&mut self, iter: I) -> Result<()>
     where
         I: IntoIterator<Item = (TokenId, i128)>,
     {
@@ -40,7 +40,7 @@ impl TokenDeltas {
     }
 
     #[inline]
-    pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Result<i128, DefuseError> {
+    pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Result<i128> {
         Ok(match self.0.entry(token_id) {
             Entry::Vacant(_) if delta == 0 => 0,
             Entry::Vacant(entry) => *entry.insert(delta),
@@ -57,7 +57,7 @@ impl TokenDeltas {
     }
 
     #[inline]
-    pub fn with_add_delta(mut self, token_id: TokenId, delta: i128) -> Result<Self, DefuseError> {
+    pub fn with_add_delta(mut self, token_id: TokenId, delta: i128) -> Result<Self> {
         self.add_delta(token_id, delta)?;
         Ok(self)
     }

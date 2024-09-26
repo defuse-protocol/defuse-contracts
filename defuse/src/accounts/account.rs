@@ -1,6 +1,6 @@
 use defuse_contracts::{
     crypto::{Payload, PublicKey, SignedPayload},
-    defuse::{payload::ValidatePayloadAs, DefuseError},
+    defuse::{payload::ValidatePayloadAs, DefuseError, Result},
     nep413::Nep413Payload,
     utils::{cache::CURRENT_ACCOUNT_ID, prefix::NestPrefix},
 };
@@ -106,7 +106,7 @@ impl Account {
         &mut self,
         me: &AccountId,
         signed: SignedPayload<S>,
-    ) -> Result<T, DefuseError>
+    ) -> Result<T>
     where
         S: Payload + ValidatePayloadAs<Nep413Payload<T>, Error: Into<DefuseError>>,
     {

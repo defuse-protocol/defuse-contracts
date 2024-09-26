@@ -1,4 +1,6 @@
 pub mod nep141;
+pub mod nep171;
+pub mod nep245;
 
 use core::{
     fmt::{self, Debug, Display},
@@ -8,32 +10,43 @@ use core::{
 use near_account_id::ParseAccountError;
 use near_sdk::{near, AccountId};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
-use strum::EnumString;
+use strum::{EnumDiscriminants, EnumString};
 use thiserror::Error as ThisError;
 
-use crate::nep245;
-
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SerializeDisplay, DeserializeFromStr)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    EnumDiscriminants,
+    SerializeDisplay,
+    DeserializeFromStr,
+)]
+#[strum_discriminants(
+    name(TokenIdType),
+    derive(strum::Display, EnumString),
+    strum(serialize_all = "snake_case")
+)]
 #[near(serializers = [borsh])]
 pub enum TokenId {
-    Nep141(AccountId),
-    Nep171(
+    Nep141(
+        /// Contract
         AccountId,
+    ),
+    Nep171(
+        /// Contract
+        AccountId,
+        /// Token ID
         near_contract_standards::non_fungible_token::TokenId,
     ),
-    Nep245(AccountId, nep245::TokenId),
-}
-
-impl TokenId {
-    #[must_use]
-    #[inline]
-    pub const fn typ(&self) -> TokenIdType {
-        match self {
-            Self::Nep141(_) => TokenIdType::Nep141,
-            Self::Nep171(_, _) => TokenIdType::Nep171,
-            Self::Nep245(_, _) => TokenIdType::Nep245,
-        }
-    }
+    Nep245(
+        /// Contract
+        AccountId,
+        /// Token ID
+        crate::nep245::TokenId,
+    ),
 }
 
 impl Debug for TokenId {
@@ -84,14 +97,6 @@ impl FromStr for TokenId {
             }
         })
     }
-}
-
-#[derive(strum::Display, EnumString)]
-#[strum(serialize_all = "snake_case")]
-pub enum TokenIdType {
-    Nep141,
-    Nep171,
-    Nep245,
 }
 
 #[derive(Debug, ThisError)]

@@ -2,7 +2,7 @@ use defuse_contracts::defuse::{
     diff::{tokens::TokenDeltas, AccountDiff, SignedDiffer},
     payload::SignedPayloads,
     tokens::TokenId,
-    DefuseError,
+    DefuseError, Result,
 };
 
 use near_sdk::near;
@@ -17,10 +17,7 @@ impl SignedDiffer for DefuseImpl {
 }
 
 impl DefuseImpl {
-    fn internal_apply_signed_diffs(
-        &mut self,
-        diffs: SignedPayloads<AccountDiff>,
-    ) -> Result<(), DefuseError> {
+    fn internal_apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>) -> Result<()> {
         let mut differ = Differ::default();
 
         for (account_id, signed_diffs) in diffs {
@@ -47,7 +44,7 @@ impl Differ {
         &mut self,
         state: &mut AccountState,
         diff: AccountDiff,
-    ) -> Result<(), DefuseError> {
+    ) -> Result<()> {
         if diff.deadline.has_expired() {
             return Err(DefuseError::DeadlineExpired);
         }
@@ -60,7 +57,7 @@ impl Differ {
         &mut self,
         balances: &mut TokensBalances,
         deltas: TokenDeltas,
-    ) -> Result<(), DefuseError> {
+    ) -> Result<()> {
         for (token_id, delta) in deltas {
             self.on_token_delta(token_id.clone(), delta)?;
 
@@ -75,13 +72,13 @@ impl Differ {
     }
 
     #[inline]
-    fn on_token_delta(&mut self, token_id: TokenId, delta: i128) -> Result<(), DefuseError> {
+    fn on_token_delta(&mut self, token_id: TokenId, delta: i128) -> Result<()> {
         self.token_deltas.add_delta(token_id, delta)?;
         Ok(())
     }
 
     #[inline]
-    pub fn ensure_invariant(self) -> Result<(), DefuseError> {
+    pub fn ensure_invariant(self) -> Result<()> {
         if !self.token_deltas.is_empty() {
             return Err(DefuseError::InvariantViolated);
         }

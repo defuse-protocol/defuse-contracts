@@ -20,7 +20,7 @@ impl MultiTokenReceiver for DefuseImpl {
         token_ids: Vec<defuse_contracts::nep245::TokenId>,
         amounts: Vec<U128>,
         msg: String,
-    ) -> near_sdk::PromiseOrValue<Vec<U128>> {
+    ) -> PromiseOrValue<Vec<U128>> {
         require!(
             token_ids.len() == amounts.len(),
             "token_ids should be the same length as amounts"
@@ -32,17 +32,18 @@ impl MultiTokenReceiver for DefuseImpl {
             sender_id
         };
 
-        let receiver_tokens = self.accounts.get_or_create(deposit_to);
+        let receiver = self.accounts.get_or_create(deposit_to);
+        let token_contract_id = PREDECESSOR_ACCOUNT_ID.clone();
         for (token_id, amount) in token_ids.into_iter().zip(&amounts) {
-            receiver_tokens
+            receiver
                 .token_balances
                 .deposit(
-                    TokenId::Nep245(PREDECESSOR_ACCOUNT_ID.clone(), token_id.parse().unwrap()),
+                    TokenId::Nep245(token_contract_id.clone(), token_id),
                     amount.0,
                 )
                 .unwrap();
         }
 
-        PromiseOrValue::Value(amounts.into_iter().map(|_| U128(0)).collect())
+        PromiseOrValue::Value(vec![U128(0); amounts.len()])
     }
 }

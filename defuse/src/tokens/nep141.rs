@@ -1,14 +1,17 @@
 use defuse_contracts::{
     defuse::{
-        tokens::{nep141::FungibleTokenWithdrawer, TokenId},
-        DefuseError,
+        tokens::{
+            nep141::{FungibleTokenWithdrawResolver, FungibleTokenWithdrawer},
+            TokenId,
+        },
+        DefuseError, Result,
     },
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
 };
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, AccountId, NearToken, Promise, PromiseError,
-    PromiseOrValue,
+    assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, NearToken,
+    PromiseOrValue, PromiseResult,
 };
 
 use crate::{DefuseImpl, DefuseImplExt};
@@ -44,133 +47,89 @@ impl FungibleTokenReceiver for DefuseImpl {
 #[near]
 impl FungibleTokenWithdrawer for DefuseImpl {
     #[payable]
-    fn nep141_withdraw(
+    fn ft_withdraw(
         &mut self,
-        token_id: AccountId,
-        to: Option<AccountId>,
+        token: AccountId,
+        receiver_id: AccountId,
         amount: U128,
-    ) -> Promise {
+        memo: Option<String>,
+        msg: Option<String>,
+    ) -> PromiseOrValue<U128> {
         assert_one_yocto();
-        self.internal_withdraw_nep141(
-            token_id,
-            to.unwrap_or_else(env::predecessor_account_id),
-            amount.0,
-            None,
-        )
-        .unwrap()
-    }
-
-    #[payable]
-    fn nep141_withdraw_call(
-        &mut self,
-        token_id: AccountId,
-        to: Option<AccountId>,
-        amount: U128,
-        msg: String,
-    ) -> Promise {
-        assert_one_yocto();
-        self.internal_withdraw_nep141(
-            token_id,
-            to.unwrap_or_else(env::predecessor_account_id),
-            amount.0,
-            Some(msg),
-        )
-        .unwrap()
+        self.internal_ft_withdraw(token, receiver_id, amount, memo, msg)
+            .unwrap()
     }
 }
 
 impl DefuseImpl {
-    fn internal_withdraw_nep141(
+    fn internal_ft_withdraw(
         &mut self,
-        token_id: AccountId,
-        to: AccountId,
-        amount: u128,
+        token: AccountId,
+        receiver_id: AccountId,
+        amount: U128,
+        memo: Option<String>,
         msg: Option<String>,
-    ) -> Result<Promise, DefuseError> {
+    ) -> Result<PromiseOrValue<U128>> {
+        // TODO: check amount > 0
         let account = self
             .accounts
             .get_mut(&PREDECESSOR_ACCOUNT_ID)
             .ok_or(DefuseError::AccountNotFound)?;
         account
             .token_balances
-            .withdraw(&TokenId::Nep141(token_id.clone()), amount)?;
+            .withdraw(&TokenId::Nep141(token.clone()), amount.0)?;
 
+        let ext =
+            ext_ft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
+        let is_call = msg.is_some();
         Ok(if let Some(msg) = msg {
-            ext_ft_core::ext(token_id.clone())
-                .with_attached_deposit(NearToken::from_yoctonear(1))
-                .ft_transfer_call(
-                    to.clone(),
-                    U128(amount),
-                    None, // TODO
-                    msg,
-                )
-                .then(
-                    Self::ext(CURRENT_ACCOUNT_ID.clone())
-                        // TODO: static gas
-                        .resolve_nep141_withdraw_call(
-                            token_id,
-                            PREDECESSOR_ACCOUNT_ID.clone(),
-                            U128(amount),
-                        ),
-                )
+            ext.ft_transfer_call(receiver_id, amount, memo, msg)
         } else {
-            ext_ft_core::ext(token_id.clone())
-                .with_attached_deposit(NearToken::from_yoctonear(1))
-                .ft_transfer(
-                    to.clone(),
-                    U128(amount),
-                    None, // TODO
-                )
-                .then(
-                    Self::ext(CURRENT_ACCOUNT_ID.clone())
-                        // TODO: static gas
-                        .resolve_nep141_withdraw(
-                            token_id,
-                            PREDECESSOR_ACCOUNT_ID.clone(),
-                            U128(amount),
-                        ),
-                )
-        })
+            ext.ft_transfer(receiver_id, amount, memo)
+        }
+        .then(
+            Self::ext(CURRENT_ACCOUNT_ID.clone())
+                // TODO: with static gas
+                .ft_resolve_withdraw(token, PREDECESSOR_ACCOUNT_ID.clone(), amount, is_call),
+        )
+        .into())
     }
 }
 
 #[near]
-impl DefuseImpl {
+impl FungibleTokenWithdrawResolver for DefuseImpl {
     #[private]
-    pub fn resolve_nep141_withdraw(
+    fn ft_resolve_withdraw(
         &mut self,
-        token_id: AccountId,
-        from: AccountId,
+        token: AccountId,
+        sender_id: AccountId,
         amount: U128,
-        #[callback_result] ft_transfer_ok: Result<(), PromiseError>,
-    ) -> bool {
-        if ft_transfer_ok.is_err() {
-            let account = self.accounts.get_or_create(from);
+        is_call: bool,
+    ) -> U128 {
+        let used = match env::promise_result(0) {
+            PromiseResult::Successful(value) => {
+                if is_call {
+                    // `ft_transfer_call` returns successfully transferred amount
+                    serde_json::from_slice::<U128>(&value).unwrap_or_default().0
+                } else if value.is_empty() {
+                    // `ft_transfer` returns empty result on success
+                    amount.0
+                } else {
+                    0
+                }
+            }
+            PromiseResult::Failed => 0,
+        }
+        .min(amount.0);
+
+        let refund = amount.0 - used;
+        if refund > 0 {
+            let account = self.accounts.get_or_create(sender_id);
             // Are we sure that we want to ignore that?
             let _ = account
                 .token_balances
-                .deposit(TokenId::Nep141(token_id), amount.0);
+                .deposit(TokenId::Nep141(token), refund);
         }
-        ft_transfer_ok.is_ok()
-    }
-
-    #[private]
-    pub fn resolve_nep141_withdraw_call(
-        &mut self,
-        token_id: AccountId,
-        from: AccountId,
-        amount: U128,
-        #[callback_result] ft_transfer_call_result: Result<U128, PromiseError>,
-    ) -> U128 {
-        let used = ft_transfer_call_result.ok().unwrap_or(amount).min(amount);
-        let refund = amount.0 - used.0;
-        if refund > 0 {
-            let account = self.accounts.get_or_create(from);
-            // ignore refund error
-            let _ = account
-                .token_balances
-                .deposit(TokenId::Nep141(token_id), refund);
-        }
-        used
+        U128(used)
     }
 }
