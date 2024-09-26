@@ -1,14 +1,14 @@
-use defuse_contracts::crypto::{Payload, Signature, Signed};
+use defuse_contracts::crypto::{Payload, Signature, SignedPayload};
 use near_workspaces::Account;
 
 pub trait Signer {
     fn sign(&self, data: &[u8]) -> Signature;
 
-    fn sign_payload<T>(&self, payload: T) -> Signed<T>
+    fn sign_payload<T>(&self, payload: T) -> SignedPayload<T>
     where
         T: Payload,
     {
-        Signed {
+        SignedPayload {
             signature: self.sign(&payload.hash()),
             payload,
         }

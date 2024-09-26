@@ -1,5 +1,6 @@
 use defuse_contracts::defuse::{
-    diff::{tokens::TokenDeltas, AccountDiff, SignedDiffer, SignedDiffs},
+    diff::{tokens::TokenDeltas, AccountDiff, SignedDiffer},
+    payload::SignedPayloads,
     tokens::TokenId,
     DefuseError,
 };
@@ -10,13 +11,16 @@ use crate::{accounts::AccountState, tokens::TokensBalances, DefuseImpl, DefuseIm
 
 #[near]
 impl SignedDiffer for DefuseImpl {
-    fn apply_signed_diffs(&mut self, diffs: SignedDiffs) {
+    fn apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>) {
         self.internal_apply_signed_diffs(diffs).unwrap()
     }
 }
 
 impl DefuseImpl {
-    fn internal_apply_signed_diffs(&mut self, diffs: SignedDiffs) -> Result<(), DefuseError> {
+    fn internal_apply_signed_diffs(
+        &mut self,
+        diffs: SignedPayloads<AccountDiff>,
+    ) -> Result<(), DefuseError> {
         let mut differ = Differ::default();
 
         for (account_id, signed_diffs) in diffs {

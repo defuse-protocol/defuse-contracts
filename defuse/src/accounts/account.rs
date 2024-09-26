@@ -1,5 +1,5 @@
 use defuse_contracts::{
-    crypto::{Payload, PublicKey, Signed},
+    crypto::{Payload, PublicKey, SignedPayload},
     defuse::{payload::ValidatePayloadAs, DefuseError},
     nep413::Nep413Payload,
     utils::{cache::CURRENT_ACCOUNT_ID, prefix::NestPrefix},
@@ -16,6 +16,7 @@ use super::{AccountState, Nonces};
 #[autoimpl(Deref using self.state)]
 #[autoimpl(DerefMut using self.state)]
 pub struct Account {
+    /// Nonces used in case of implicit [`AccountId`]
     implicit_nonces: MaybeInactive<Nonces>,
     public_keys: IterableMap<PublicKey, MaybeInactive<Nonces>>,
 
@@ -104,7 +105,7 @@ impl Account {
     pub fn verify_signed_as_nep413<S, T>(
         &mut self,
         me: &AccountId,
-        signed: Signed<S>,
+        signed: SignedPayload<S>,
     ) -> Result<T, DefuseError>
     where
         S: Payload + ValidatePayloadAs<Nep413Payload<T>, Error: Into<DefuseError>>,
@@ -161,8 +162,13 @@ impl<T> MaybeInactive<T> {
     }
 
     #[inline]
+    pub const fn is_active(&self) -> bool {
+        !self.inactive
+    }
+
+    #[inline]
     pub const fn as_active(&self) -> Option<&T> {
-        if !self.inactive {
+        if self.is_active() {
             Some(&self.inner)
         } else {
             None
@@ -171,7 +177,7 @@ impl<T> MaybeInactive<T> {
 
     #[inline]
     pub fn as_active_mut(&mut self) -> Option<&mut T> {
-        if !self.inactive {
+        if self.is_active() {
             Some(&mut self.inner)
         } else {
             None

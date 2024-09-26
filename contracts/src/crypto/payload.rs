@@ -10,14 +10,14 @@ pub trait Payload {
 #[derive(Debug, Clone)]
 #[near(serializers = [borsh, json])]
 #[autoimpl(Deref using self.payload)]
-pub struct Signed<T> {
+pub struct SignedPayload<T> {
     #[serde(flatten)]
     pub payload: T,
     #[serde(flatten)]
     pub signature: Signature,
 }
 
-impl<T> Signed<T>
+impl<T> SignedPayload<T>
 where
     T: Payload,
 {

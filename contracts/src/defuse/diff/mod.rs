@@ -1,23 +1,16 @@
 pub mod tokens;
 
-use near_sdk::{ext_contract, near, AccountId};
+use near_sdk::{ext_contract, near};
 
-use std::collections::HashMap;
+use crate::utils::Deadline;
 
-use tokens::TokenDeltas;
+use super::{error::DefuseError, payload::SignedPayloads, tokens::TokenId};
 
-use crate::{crypto::Signed, utils::Deadline};
-
-use super::{
-    accounts::AccountManager, error::DefuseError, payload::MultiStandardPayload, tokens::TokenId,
-};
-
-/// Each signer can have multiple diffs signed
-pub type SignedDiffs = HashMap<AccountId, Vec<Signed<MultiStandardPayload<AccountDiff>>>>;
+use self::tokens::TokenDeltas;
 
 #[ext_contract(ext_signed_differ)]
-pub trait SignedDiffer: AccountManager {
-    fn apply_signed_diffs(&mut self, diffs: SignedDiffs);
+pub trait SignedDiffer {
+    fn apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>);
 }
 
 #[derive(Debug, Clone, Default)]

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use defuse_contracts::{
-    crypto::Signed,
+    crypto::SignedPayload,
     defuse::{diff::AccountDiff, payload::MultiStandardPayload, tokens::TokenId},
     nep413::Nep413Payload,
 };
@@ -81,7 +81,7 @@ pub trait SignedDifferExt: AccountManagerExt {
         diffs: impl IntoIterator<
             Item = (
                 &AccountId,
-                impl IntoIterator<Item = Signed<MultiStandardPayload<AccountDiff>>>,
+                impl IntoIterator<Item = SignedPayload<MultiStandardPayload<AccountDiff>>>,
             ),
         >,
     ) -> anyhow::Result<()>;
@@ -93,7 +93,7 @@ impl SignedDifferExt for near_workspaces::Account {
         diffs: impl IntoIterator<
             Item = (
                 &AccountId,
-                impl IntoIterator<Item = Signed<MultiStandardPayload<AccountDiff>>>,
+                impl IntoIterator<Item = SignedPayload<MultiStandardPayload<AccountDiff>>>,
             ),
         >,
     ) -> anyhow::Result<()> {
@@ -121,7 +121,7 @@ impl SignedDifferExt for near_workspaces::Contract {
         diffs: impl IntoIterator<
             Item = (
                 &AccountId,
-                impl IntoIterator<Item = Signed<MultiStandardPayload<AccountDiff>>>,
+                impl IntoIterator<Item = SignedPayload<MultiStandardPayload<AccountDiff>>>,
             ),
         >,
     ) -> anyhow::Result<()> {

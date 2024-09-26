@@ -1,23 +1,19 @@
 use core::convert::Infallible;
+use std::collections::HashMap;
 
-use near_sdk::{borsh::BorshSerialize, near};
+use near_sdk::{borsh::BorshSerialize, near, AccountId};
 
-use crate::{crypto::Payload, nep413::Nep413Payload};
+use crate::{
+    crypto::{Payload, SignedPayload},
+    nep413::Nep413Payload,
+};
 
-pub trait ValidatePayloadAs<T> {
-    type Error;
-
-    fn validate_as(self) -> Result<T, Self::Error>;
-}
-
-impl<T> ValidatePayloadAs<T> for T {
-    type Error = Infallible;
-
-    #[inline]
-    fn validate_as(self) -> Result<Self, Self::Error> {
-        Ok(self)
-    }
-}
+pub type SignedPayloads<T> = HashMap<
+    // Signer account
+    AccountId,
+    // Payloads signed by the account
+    Vec<SignedPayload<MultiStandardPayload<T>>>,
+>;
 
 #[derive(Debug, Clone)]
 #[near(serializers = [borsh, json])]
@@ -38,6 +34,28 @@ where
     }
 }
 
+impl<T> From<Nep413Payload<T>> for MultiStandardPayload<T> {
+    #[inline]
+    fn from(value: Nep413Payload<T>) -> Self {
+        Self::Nep413(value)
+    }
+}
+
+pub trait ValidatePayloadAs<T> {
+    type Error;
+
+    fn validate_as(self) -> Result<T, Self::Error>;
+}
+
+impl<T> ValidatePayloadAs<T> for T {
+    type Error = Infallible;
+
+    #[inline]
+    fn validate_as(self) -> Result<Self, Self::Error> {
+        Ok(self)
+    }
+}
+
 impl<T> ValidatePayloadAs<Nep413Payload<T>> for MultiStandardPayload<T> {
     type Error = Infallible;
 
@@ -46,12 +64,5 @@ impl<T> ValidatePayloadAs<Nep413Payload<T>> for MultiStandardPayload<T> {
         match self {
             Self::Nep413(payload) => Ok(payload),
         }
-    }
-}
-
-impl<T> From<Nep413Payload<T>> for MultiStandardPayload<T> {
-    #[inline]
-    fn from(value: Nep413Payload<T>) -> Self {
-        Self::Nep413(value)
     }
 }
