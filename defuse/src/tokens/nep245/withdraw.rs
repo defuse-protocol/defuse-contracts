@@ -4,7 +4,7 @@ use defuse_contracts::{
             nep245::{MultiTokenWithdrawResolver, MultiTokenWithdrawer},
             TokenId,
         },
-        DefuseError,
+        DefuseError, Result,
     },
     nep245::{self, ext_mt_core},
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
@@ -29,6 +29,31 @@ impl MultiTokenWithdrawer for DefuseImpl {
         msg: Option<String>,
     ) -> PromiseOrValue<Vec<U128>> {
         assert_one_yocto();
+        self.internal_mt_withdraw(
+            PREDECESSOR_ACCOUNT_ID.clone(),
+            receiver_id,
+            token,
+            token_ids,
+            amounts,
+            memo,
+            msg,
+        )
+        .unwrap()
+    }
+}
+
+impl DefuseImpl {
+    #[allow(clippy::too_many_arguments)]
+    fn internal_mt_withdraw(
+        &mut self,
+        sender_id: AccountId,
+        receiver_id: AccountId,
+        token: AccountId,
+        token_ids: Vec<nep245::TokenId>,
+        amounts: Vec<U128>,
+        memo: Option<String>,
+        msg: Option<String>,
+    ) -> Result<PromiseOrValue<Vec<U128>>> {
         require!(
             token_ids.len() == amounts.len(),
             "token_ids should be the same length as amounts"
@@ -36,22 +61,18 @@ impl MultiTokenWithdrawer for DefuseImpl {
 
         let account = self
             .accounts
-            .get_mut(&PREDECESSOR_ACCOUNT_ID)
-            .ok_or(DefuseError::AccountNotFound)
-            .unwrap();
+            .get_mut(&sender_id)
+            .ok_or(DefuseError::AccountNotFound)?;
         for (token_id, amount) in token_ids.iter().zip(&amounts) {
             let token_id = TokenId::Nep245(token.clone(), token_id.clone());
-            self.total_supplies.withdraw(&token_id, amount.0).unwrap();
-            account
-                .token_balances
-                .withdraw(&token_id, amount.0)
-                .unwrap();
+            self.total_supplies.withdraw(&token_id, amount.0)?;
+            account.token_balances.withdraw(&token_id, amount.0)?;
         }
 
         let ext =
             ext_mt_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
         let is_call = msg.is_some();
-        if let Some(msg) = msg {
+        Ok(if let Some(msg) = msg {
             ext.mt_batch_transfer_call(
                 receiver_id,
                 token_ids.clone(),
@@ -66,15 +87,9 @@ impl MultiTokenWithdrawer for DefuseImpl {
         .then(
             Self::ext(CURRENT_ACCOUNT_ID.clone())
                 // TODO: with static gas
-                .mt_resolve_withdraw(
-                    token,
-                    PREDECESSOR_ACCOUNT_ID.clone(),
-                    token_ids,
-                    amounts,
-                    is_call,
-                ),
+                .mt_resolve_withdraw(token, sender_id, token_ids, amounts, is_call),
         )
-        .into()
+        .into())
     }
 }
 

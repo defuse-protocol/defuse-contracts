@@ -1,6 +1,6 @@
 use near_sdk::{ext_contract, json_types::U128, AccountId, PromiseOrValue};
 
-use super::{resolver::MultiTokenResolver, TokenId};
+use super::{resolver::MultiTokenResolver, Token, TokenId};
 
 #[ext_contract(ext_mt_core)]
 pub trait MultiTokenCore: MultiTokenResolver {
@@ -42,7 +42,7 @@ pub trait MultiTokenCore: MultiTokenResolver {
         msg: String,
     ) -> PromiseOrValue<Vec<U128>>;
 
-    // fn mt_token(&self, token_ids: Vec<TokenId>) -> Vec<Option<Token>>;
+    fn mt_token(&self, token_ids: Vec<TokenId>) -> Vec<Option<Token>>;
 
     fn mt_balance_of(&self, account_id: AccountId, token_id: TokenId) -> U128;
 

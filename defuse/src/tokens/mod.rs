@@ -53,6 +53,12 @@ impl TokensBalances {
 
     #[must_use]
     #[inline]
+    pub fn contains(&self, token_id: &TokenId) -> bool {
+        self.0.contains_key(token_id)
+    }
+
+    #[must_use]
+    #[inline]
     pub fn balance_of(&self, token_id: &TokenId) -> u128 {
         self.0.get(token_id).copied().unwrap_or_default()
     }

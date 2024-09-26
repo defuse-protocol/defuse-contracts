@@ -27,16 +27,24 @@ impl NonFungibleTokenWithdrawer for DefuseImpl {
         msg: Option<String>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.internal_nft_withdraw(token, sender_id, token_id, memo, msg)
-            .unwrap()
+        self.internal_nft_withdraw(
+            PREDECESSOR_ACCOUNT_ID.clone(),
+            sender_id,
+            token,
+            token_id,
+            memo,
+            msg,
+        )
+        .unwrap()
     }
 }
 
 impl DefuseImpl {
     fn internal_nft_withdraw(
         &mut self,
-        token: AccountId,
+        sender_id: AccountId,
         receiver_id: AccountId,
+        token: AccountId,
         token_id: non_fungible_token::TokenId,
         memo: Option<String>,
         msg: Option<String>,
@@ -44,7 +52,7 @@ impl DefuseImpl {
         let t = TokenId::Nep171(token.clone(), token_id.clone());
         self.total_supplies.withdraw(&t, 1).unwrap();
         self.accounts
-            .get_mut(&PREDECESSOR_ACCOUNT_ID)
+            .get_mut(&sender_id)
             .ok_or(DefuseError::AccountNotFound)?
             .token_balances
             .withdraw(&t, 1)?;
@@ -60,7 +68,7 @@ impl DefuseImpl {
         .then(
             Self::ext(CURRENT_ACCOUNT_ID.clone())
                 // TODO: with static gas
-                .nft_resolve_withdraw(token, PREDECESSOR_ACCOUNT_ID.clone(), token_id, is_call),
+                .nft_resolve_withdraw(token, sender_id, token_id, is_call),
         )
         .into())
     }

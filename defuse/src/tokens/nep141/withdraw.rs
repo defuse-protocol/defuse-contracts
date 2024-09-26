@@ -28,16 +28,24 @@ impl FungibleTokenWithdrawer for DefuseImpl {
         msg: Option<String>,
     ) -> PromiseOrValue<U128> {
         assert_one_yocto();
-        self.internal_ft_withdraw(token, receiver_id, amount, memo, msg)
-            .unwrap()
+        self.internal_ft_withdraw(
+            PREDECESSOR_ACCOUNT_ID.clone(),
+            receiver_id,
+            token,
+            amount,
+            memo,
+            msg,
+        )
+        .unwrap()
     }
 }
 
 impl DefuseImpl {
     fn internal_ft_withdraw(
         &mut self,
-        token: AccountId,
+        sender_id: AccountId,
         receiver_id: AccountId,
+        token: AccountId,
         amount: U128,
         memo: Option<String>,
         msg: Option<String>,
@@ -46,7 +54,7 @@ impl DefuseImpl {
         let token_id = TokenId::Nep141(token.clone());
         self.total_supplies.withdraw(&token_id, amount.0)?;
         self.accounts
-            .get_mut(&PREDECESSOR_ACCOUNT_ID)
+            .get_mut(&sender_id)
             .ok_or(DefuseError::AccountNotFound)?
             .token_balances
             .withdraw(&token_id, amount.0)?;
@@ -62,7 +70,7 @@ impl DefuseImpl {
         .then(
             Self::ext(CURRENT_ACCOUNT_ID.clone())
                 // TODO: with static gas
-                .ft_resolve_withdraw(token, PREDECESSOR_ACCOUNT_ID.clone(), amount, is_call),
+                .ft_resolve_withdraw(token, sender_id, amount, is_call),
         )
         .into())
     }

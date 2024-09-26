@@ -1,5 +1,4 @@
 use defuse_contracts::{
-    defuse::tokens::TokenId,
     nep245::{self, receiver::ext_mt_receiver, MultiTokenCore},
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
 };
@@ -123,10 +122,22 @@ impl MultiTokenCore for DefuseImpl {
             .into()
     }
 
-    // TODO: mt_token
+    fn mt_token(&self, token_ids: Vec<nep245::TokenId>) -> Vec<Option<nep245::Token>> {
+        token_ids
+            .into_iter()
+            .map(|token_id| {
+                self.total_supplies
+                    .contains(&token_id.parse().ok()?)
+                    .then_some(nep245::Token {
+                        token_id,
+                        owner_id: None,
+                    })
+            })
+            .collect()
+    }
 
     fn mt_balance_of(&self, account_id: AccountId, token_id: nep245::TokenId) -> U128 {
-        U128(self.internal_mt_balance_of(&account_id, &token_id.parse().unwrap()))
+        U128(self.internal_mt_balance_of(&account_id, &token_id))
     }
 
     fn mt_batch_balance_of(
@@ -136,7 +147,6 @@ impl MultiTokenCore for DefuseImpl {
     ) -> Vec<U128> {
         token_ids
             .into_iter()
-            .map(|token_id| token_id.parse().unwrap())
             .map(|token_id| self.internal_mt_balance_of(&account_id, &token_id))
             .map(U128)
             .collect()
@@ -157,10 +167,13 @@ impl MultiTokenCore for DefuseImpl {
 }
 
 impl DefuseImpl {
-    fn internal_mt_balance_of(&self, account_id: &AccountId, token_id: &TokenId) -> u128 {
+    fn internal_mt_balance_of(&self, account_id: &AccountId, token_id: &nep245::TokenId) -> u128 {
+        let Ok(token_id) = token_id.parse() else {
+            return 0;
+        };
         self.accounts
             .get(account_id)
-            .map(|account| account.token_balances.balance_of(token_id))
+            .map(|account| account.token_balances.balance_of(&token_id))
             .unwrap_or_default()
     }
 }
