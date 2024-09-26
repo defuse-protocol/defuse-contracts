@@ -1,4 +1,4 @@
-pub use self::{deadline::*, error::*, mutex::*};
+pub use self::{deadline::*, error::*, lock::*};
 
 pub mod bitmap;
 pub mod borsh;
@@ -6,6 +6,6 @@ pub mod cache;
 mod deadline;
 mod error;
 pub mod integer;
-mod mutex;
+mod lock;
 pub mod prefix;
 pub mod serde;
