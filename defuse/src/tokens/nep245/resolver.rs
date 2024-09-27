@@ -42,34 +42,40 @@ impl MultiTokenResolver for DefuseImpl {
             .zip(amounts.iter_mut().zip(refund))
         {
             let mut refund = refund.0.min(amount.0);
-            if refund > 0 {
-                let token_id = token_id.parse().unwrap();
-
-                if let Some(receiver) = self.accounts.get_mut(&receiver_id) {
-                    let receiver_balance = receiver.token_balances.balance_of(&token_id);
-                    if receiver_balance > 0 {
-                        // refund maximum what we can
-                        refund = refund.min(receiver_balance);
-                        // withdraw refund
-                        receiver
-                            .token_balances
-                            .withdraw(token_id.clone(), refund)
-                            .unwrap();
-
-                        // deposit refund
-                        let previous_owner = self.accounts.get_or_create(previous_owner_id);
-                        previous_owner
-                            .token_balances
-                            .deposit(token_id, refund)
-                            .unwrap();
-
-                        // update as used amount in-place
-                        amount.0 -= refund;
-
-                        // TODO: log refund
-                    }
-                }
+            if refund == 0 {
+                // no need to refund anything
+                continue;
             }
+            // TODO: move out of the loop
+            let Some(receiver) = self.accounts.get_mut(&receiver_id) else {
+                // receiver doesn't have an account anymore
+                continue;
+            };
+            let token_id = token_id.parse().unwrap();
+            let receiver_balance = receiver.token_balances.balance_of(&token_id);
+            if receiver_balance == 0 {
+                // receiver doesn't have any balance anymore
+                continue;
+            }
+            // refund maximum what we can
+            refund = refund.min(receiver_balance);
+            // withdraw refund
+            receiver
+                .token_balances
+                .withdraw(token_id.clone(), refund)
+                .unwrap();
+
+            // deposit refund
+            let previous_owner = self.accounts.get_or_create(previous_owner_id);
+            previous_owner
+                .token_balances
+                .deposit(token_id, refund)
+                .unwrap();
+
+            // update as used amount in-place
+            amount.0 -= refund;
+
+            // TODO: log refund
         }
 
         amounts

@@ -15,21 +15,17 @@ impl FungibleTokenReceiver for DefuseImpl {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
-        let deposit_to = if !msg.is_empty() {
+        let receiver_id = if !msg.is_empty() {
             msg.parse().unwrap()
         } else {
             sender_id
         };
 
-        let token_id = TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone());
-        self.total_supplies
-            .deposit(token_id.clone(), amount.0)
-            .unwrap();
-        self.accounts
-            .get_or_create(deposit_to)
-            .token_balances
-            .deposit(token_id, amount.0)
-            .unwrap();
+        self.internal_deposit(
+            receiver_id,
+            [(TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone()), amount.0)],
+        )
+        .unwrap();
 
         PromiseOrValue::Value(U128(0))
     }

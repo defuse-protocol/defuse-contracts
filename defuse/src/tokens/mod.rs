@@ -2,16 +2,51 @@ mod nep141;
 mod nep171;
 mod nep245;
 
-use defuse_contracts::defuse::{tokens::TokenId, DefuseError, Result};
-use near_sdk::{
-    near,
-    store::{iterable_map::Entry, IterableMap},
-    AccountId, IntoStorageKey,
+use defuse_contracts::{
+    defuse::{tokens::TokenId, DefuseError, Result},
+    utils::cleanup::CleanupMap,
 };
+use near_sdk::{near, store::IterableMap, AccountId, IntoStorageKey};
 
 use crate::DefuseImpl;
 
 impl DefuseImpl {
+    pub(crate) fn internal_balance_of(&self, account_id: &AccountId, token_id: &TokenId) -> u128 {
+        self.accounts
+            .get(account_id)
+            .map(|account| account.token_balances.balance_of(token_id))
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn internal_deposit(
+        &mut self,
+        account_id: AccountId,
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+    ) -> Result<()> {
+        let account = self.accounts.get_or_create(account_id);
+        for (token_id, amount) in token_amounts {
+            self.total_supplies.deposit(token_id.clone(), amount)?;
+            account.token_balances.deposit(token_id, amount)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn internal_withdraw(
+        &mut self,
+        account_id: &AccountId,
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+    ) -> Result<()> {
+        let account = self
+            .accounts
+            .get_mut(account_id)
+            .ok_or(DefuseError::AccountNotFound)?;
+        for (token_id, amount) in token_amounts {
+            self.total_supplies.withdraw(token_id.clone(), amount)?;
+            account.token_balances.withdraw(token_id, amount)?;
+        }
+        Ok(())
+    }
+
     pub(crate) fn internal_transfer(
         &mut self,
         sender_id: &AccountId,
@@ -19,7 +54,9 @@ impl DefuseImpl {
         token_amounts: Vec<(TokenId, u128)>,
         #[allow(unused_variables)] memo: Option<String>,
     ) -> Result<()> {
-        // TODO: check sender != receiver
+        if sender_id == &receiver_id {
+            return Err(DefuseError::InvalidSenderReceiver);
+        }
         // withdraw
         let sender = self
             .accounts
@@ -69,52 +106,32 @@ impl TokensBalances {
 
     #[inline]
     pub fn deposit(&mut self, token_id: TokenId, amount: u128) -> Result<u128> {
-        Ok(match self.0.entry(token_id) {
-            Entry::Vacant(_) if amount == 0 => 0,
-            Entry::Vacant(entry) => *entry.insert(amount),
-            Entry::Occupied(mut entry) => {
-                let b = entry.get_mut();
-                *b = b.checked_add(amount).ok_or(DefuseError::BalanceOverflow)?;
-                if *b == 0 {
-                    entry.remove()
-                } else {
-                    *b
-                }
-            }
+        self.0.try_apply_cleanup_default(token_id, |balance| {
+            *balance = balance
+                .checked_add(amount)
+                .ok_or(DefuseError::BalanceOverflow)?;
+            Ok(())
         })
     }
 
     #[inline]
     pub fn withdraw(&mut self, token_id: TokenId, amount: u128) -> Result<u128>
 where {
-        Ok(match self.0.entry(token_id) {
-            Entry::Vacant(_) if amount == 0 => 0,
-            Entry::Vacant(entry) => *entry.insert(amount),
-            Entry::Occupied(mut entry) => {
-                let b = entry.get_mut();
-                *b = b.checked_sub(amount).ok_or(DefuseError::BalanceOverflow)?;
-                if *b == 0 {
-                    entry.remove()
-                } else {
-                    *b
-                }
-            }
+        self.0.try_apply_cleanup_default(token_id, |balance| {
+            *balance = balance
+                .checked_sub(amount)
+                .ok_or(DefuseError::BalanceOverflow)?;
+            Ok(())
         })
     }
 
     #[inline]
     pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Result<u128> {
-        match self.0.entry(token_id) {
-            Entry::Vacant(_) if delta < 0 => Err(DefuseError::BalanceOverflow),
-            Entry::Vacant(_) if delta == 0 => Ok(0),
-            Entry::Vacant(entry) => Ok(*entry.insert(delta.unsigned_abs())),
-            Entry::Occupied(mut entry) => {
-                let b = entry.get_mut();
-                *b = b
-                    .checked_add_signed(delta)
-                    .ok_or(DefuseError::BalanceOverflow)?;
-                Ok(if *b == 0 { entry.remove() } else { *b })
-            }
-        }
+        self.0.try_apply_cleanup_default(token_id, |balance| {
+            *balance = balance
+                .checked_add_signed(delta)
+                .ok_or(DefuseError::BalanceOverflow)?;
+            Ok(())
+        })
     }
 }

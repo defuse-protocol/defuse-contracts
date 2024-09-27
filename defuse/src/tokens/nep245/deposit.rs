@@ -26,21 +26,22 @@ impl MultiTokenReceiver for DefuseImpl {
             "token_ids should be the same length as amounts"
         );
 
-        let deposit_to = if !msg.is_empty() {
+        let receiver_id = if !msg.is_empty() {
             msg.parse().unwrap()
         } else {
             sender_id
         };
 
-        let receiver = self.accounts.get_or_create(deposit_to);
-        for (token_id, amount) in token_ids.into_iter().zip(&amounts) {
-            let token_id = TokenId::Nep245(PREDECESSOR_ACCOUNT_ID.clone(), token_id);
-            self.total_supplies
-                .deposit(token_id.clone(), amount.0)
-                .unwrap();
-            receiver.token_balances.deposit(token_id, amount.0).unwrap();
-        }
+        let n = amounts.len();
+        self.internal_deposit(
+            receiver_id,
+            token_ids
+                .into_iter()
+                .map(|token_id| TokenId::Nep245(PREDECESSOR_ACCOUNT_ID.clone(), token_id))
+                .zip(amounts.into_iter().map(|a| a.0)),
+        )
+        .unwrap();
 
-        PromiseOrValue::Value(vec![U128(0); amounts.len()])
+        PromiseOrValue::Value(vec![U128(0); n])
     }
 }

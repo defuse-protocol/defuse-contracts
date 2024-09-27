@@ -171,9 +171,6 @@ impl DefuseImpl {
         let Ok(token_id) = token_id.parse() else {
             return 0;
         };
-        self.accounts
-            .get(account_id)
-            .map(|account| account.token_balances.balance_of(&token_id))
-            .unwrap_or_default()
+        self.internal_balance_of(account_id, &token_id)
     }
 }

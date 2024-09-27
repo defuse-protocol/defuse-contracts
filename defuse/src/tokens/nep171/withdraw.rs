@@ -4,7 +4,7 @@ use defuse_contracts::{
             nep171::{NonFungibleTokenWithdrawResolver, NonFungibleTokenWithdrawer},
             TokenId,
         },
-        DefuseError, Result,
+        Result,
     },
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
 };
@@ -49,13 +49,10 @@ impl DefuseImpl {
         memo: Option<String>,
         msg: Option<String>,
     ) -> Result<PromiseOrValue<bool>> {
-        let t = TokenId::Nep171(token.clone(), token_id.clone());
-        self.total_supplies.withdraw(t.clone(), 1).unwrap();
-        self.accounts
-            .get_mut(&sender_id)
-            .ok_or(DefuseError::AccountNotFound)?
-            .token_balances
-            .withdraw(t, 1)?;
+        self.internal_withdraw(
+            &sender_id,
+            [(TokenId::Nep171(token.clone(), token_id.clone()), 1)],
+        )?;
 
         let ext =
             ext_nft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));

@@ -4,7 +4,7 @@ use defuse_contracts::{
             nep245::{MultiTokenWithdrawResolver, MultiTokenWithdrawer},
             TokenId,
         },
-        DefuseError, Result,
+        Result,
     },
     nep245::{self, ext_mt_core},
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
@@ -59,15 +59,14 @@ impl DefuseImpl {
             "token_ids should be the same length as amounts"
         );
 
-        let account = self
-            .accounts
-            .get_mut(&sender_id)
-            .ok_or(DefuseError::AccountNotFound)?;
-        for (token_id, amount) in token_ids.iter().zip(&amounts) {
-            let token_id = TokenId::Nep245(token.clone(), token_id.clone());
-            self.total_supplies.withdraw(token_id.clone(), amount.0)?;
-            account.token_balances.withdraw(token_id, amount.0)?;
-        }
+        self.internal_withdraw(
+            &sender_id,
+            token_ids
+                .iter()
+                .cloned()
+                .map(|token_id| TokenId::Nep245(token.clone(), token_id))
+                .zip(amounts.iter().map(|a| a.0)),
+        )?;
 
         let ext =
             ext_mt_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));

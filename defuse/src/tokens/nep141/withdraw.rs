@@ -4,13 +4,13 @@ use defuse_contracts::{
             nep141::{FungibleTokenWithdrawResolver, FungibleTokenWithdrawer},
             TokenId,
         },
-        DefuseError, Result,
+        Result,
     },
     utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
 };
 use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, NearToken,
+    assert_one_yocto, env, json_types::U128, near, require, serde_json, AccountId, NearToken,
     PromiseOrValue, PromiseResult,
 };
 
@@ -50,14 +50,9 @@ impl DefuseImpl {
         memo: Option<String>,
         msg: Option<String>,
     ) -> Result<PromiseOrValue<U128>> {
-        // TODO: check amount > 0
-        let token_id = TokenId::Nep141(token.clone());
-        self.total_supplies.withdraw(token_id.clone(), amount.0)?;
-        self.accounts
-            .get_mut(&sender_id)
-            .ok_or(DefuseError::AccountNotFound)?
-            .token_balances
-            .withdraw(token_id, amount.0)?;
+        require!(amount.0 > 0, "zero amount");
+
+        self.internal_withdraw(&sender_id, [(TokenId::Nep141(token.clone()), amount.0)])?;
 
         let ext =
             ext_ft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));

@@ -1,10 +1,13 @@
-use std::collections::btree_map::{self, BTreeMap, Entry};
+use std::collections::btree_map::{self, BTreeMap};
 
 use impl_tools::autoimpl;
 use near_sdk::near;
 use serde_with::{serde_as, DisplayFromStr};
 
-use crate::defuse::{tokens::TokenId, DefuseError, Result};
+use crate::{
+    defuse::{tokens::TokenId, DefuseError, Result},
+    utils::cleanup::CleanupMap,
+};
 
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(
@@ -37,18 +40,9 @@ impl TokenDeltas {
 
     #[inline]
     pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Result<i128> {
-        Ok(match self.0.entry(token_id) {
-            Entry::Vacant(_) if delta == 0 => 0,
-            Entry::Vacant(entry) => *entry.insert(delta),
-            Entry::Occupied(mut entry) => {
-                let d = entry.get_mut();
-                *d = d.checked_add(delta).ok_or(DefuseError::BalanceOverflow)?;
-                if *d == 0 {
-                    entry.remove()
-                } else {
-                    *d
-                }
-            }
+        self.0.try_apply_cleanup_default(token_id, |d| {
+            *d = d.checked_add(delta).ok_or(DefuseError::BalanceOverflow)?;
+            Ok(())
         })
     }
 
@@ -83,5 +77,59 @@ impl<'a> IntoIterator for &'a TokenDeltas {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn invariant() {
+        let [t1, t2] = ["t1.near", "t2.near"].map(|t| TokenId::Nep141(t.parse().unwrap()));
+
+        assert!(TokenDeltas::default().is_empty());
+        assert!(TokenDeltas::default()
+            .with_add_delta(t1.clone(), 0)
+            .unwrap()
+            .is_empty());
+
+        assert!(!TokenDeltas::default()
+            .with_add_delta(t1.clone(), 1)
+            .unwrap()
+            .is_empty());
+
+        assert!(!TokenDeltas::default()
+            .with_add_delta(t1.clone(), -1)
+            .unwrap()
+            .is_empty());
+
+        assert!(TokenDeltas::default()
+            .with_add_delta(t1.clone(), 1)
+            .unwrap()
+            .with_add_delta(t1.clone(), -1)
+            .unwrap()
+            .is_empty());
+
+        assert!(!TokenDeltas::default()
+            .with_add_delta(t1.clone(), 1)
+            .unwrap()
+            .with_add_delta(t1.clone(), -1)
+            .unwrap()
+            .with_add_delta(t2.clone(), -1)
+            .unwrap()
+            .is_empty());
+
+        assert!(TokenDeltas::default()
+            .with_add_delta(t1.clone(), 1)
+            .unwrap()
+            .with_add_delta(t2.clone(), -1)
+            .unwrap()
+            .with_add_delta(t1.clone(), -1)
+            .unwrap()
+            .with_add_delta(t2.clone(), 1)
+            .unwrap()
+            .is_empty());
     }
 }

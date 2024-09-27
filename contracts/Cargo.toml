@@ -11,8 +11,8 @@ bnum.workspace = true
 hex.workspace = true
 impl-tools.workspace = true
 near-account-id.workspace = true
-near-sdk.workspace = true
 near-contract-standards.workspace = true
+near-sdk.workspace = true
 serde_with = { workspace = true, features = ["base64"] }
 strum.workspace = true
 thiserror.workspace = true
@@ -29,7 +29,7 @@ mpc = []
 nep245 = []
 nep413 = ["crypto"]
 
-unit-testing = []
+unit-testing = ["near-sdk/unit-testing"]
 # HACK: Semi-feature to enable `#[derive(JsonSchema)]` only when
 # `not(target_arch = "wasm32"))`. This is needed to make
 # `cargo near abi` work as it doesn't allow to pass `--features abi`.

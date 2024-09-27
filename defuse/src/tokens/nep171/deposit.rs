@@ -18,19 +18,17 @@ impl NonFungibleTokenReceiver for DefuseImpl {
         token_id: near_contract_standards::non_fungible_token::TokenId,
         msg: String,
     ) -> PromiseOrValue<bool> {
-        let deposit_to = if !msg.is_empty() {
+        let receiver_id = if !msg.is_empty() {
             msg.parse().unwrap()
         } else {
             sender_id
         };
 
-        let token = TokenId::Nep171(PREDECESSOR_ACCOUNT_ID.clone(), token_id);
-        self.total_supplies.deposit(token.clone(), 1).unwrap();
-        self.accounts
-            .get_or_create(deposit_to)
-            .token_balances
-            .deposit(token, 1)
-            .unwrap();
+        self.internal_deposit(
+            receiver_id,
+            [(TokenId::Nep171(PREDECESSOR_ACCOUNT_ID.clone(), token_id), 1)],
+        )
+        .unwrap();
 
         PromiseOrValue::Value(false)
     }

@@ -16,6 +16,9 @@ pub enum DefuseError {
     #[error("deadline has expired")]
     DeadlineExpired,
 
+    #[error("invalid sender/receiver")]
+    InvalidSenderReceiver,
+
     #[error("invalid signature")]
     InvalidSignature,
 
