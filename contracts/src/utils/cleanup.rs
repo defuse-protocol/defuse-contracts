@@ -13,6 +13,7 @@ use near_sdk::{
     store::{iterable_map, key::ToKey, IterableMap},
 };
 
+/// A mapping where non-existent entries considered to be [`Default`] values
 pub trait DefaultMap<K, V>
 where
     V: Default + Eq,
@@ -24,6 +25,22 @@ where
     where
         Self: 'a;
 
+    /// Get an entry at given key or [`Default`] value if the key doesn't exist.
+    ///
+    /// The returned entry will automatically be removed from the map if it becomes
+    /// equal to [`Default`] after modifications.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::collections::HashMap;
+    /// # use defuse_contracts::utils::cleanup::DefaultMap;
+    /// let mut m: HashMap<&str, i32> = HashMap::new();
+    /// *m.entry_or_default("a") += 1;
+    /// assert_eq!(m.get("a"), Some(&1));
+    /// *m.entry_or_default("a") -= 1;
+    /// assert_eq!(m.get("a"), None);
+    /// ```
     fn entry_or_default(
         &mut self,
         key: K,
