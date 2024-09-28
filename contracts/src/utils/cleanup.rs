@@ -70,6 +70,14 @@ where
             Self::Occupied(entry) => entry.key(),
         }
     }
+
+    #[inline]
+    pub fn remove(self) -> V {
+        match self {
+            Self::Vacant(entry) => entry.remove(),
+            Self::Occupied(entry) => entry.remove(),
+        }
+    }
 }
 
 impl<K, V, VE, OE> Deref for DefaultEntry<K, V, VE, OE>
@@ -144,8 +152,13 @@ where
     }
 
     #[inline]
-    fn key(&self) -> &K {
+    pub fn key(&self) -> &K {
         self.0.as_ref().unwrap_or_else(|| unreachable!()).1.key()
+    }
+
+    #[inline]
+    pub fn remove(mut self) -> V {
+        self.0.take().unwrap_or_else(|| unreachable!()).0
     }
 }
 
@@ -180,7 +193,9 @@ where
 {
     #[inline]
     fn drop(&mut self) {
-        let (v, entry) = self.0.take().unwrap_or_else(|| unreachable!());
+        let Some((v, entry)) = self.0.take() else {
+            return;
+        };
         if v != Default::default() {
             entry.insert(v);
         }
@@ -203,8 +218,13 @@ where
     }
 
     #[inline]
-    fn key(&self) -> &K {
+    pub fn key(&self) -> &K {
         self.0.as_ref().unwrap_or_else(|| unreachable!()).key()
+    }
+
+    #[inline]
+    pub fn remove(mut self) -> V {
+        self.0.take().unwrap_or_else(|| unreachable!()).remove()
     }
 }
 
@@ -239,8 +259,10 @@ where
 {
     #[inline]
     fn drop(&mut self) {
-        let mut entry = self.0.take().unwrap_or_else(|| unreachable!());
-        if entry.get_mut() == &Default::default() {
+        let Some(entry) = self.0.take() else {
+            return;
+        };
+        if entry.get() == &Default::default() {
             entry.remove();
         }
     }
@@ -256,7 +278,7 @@ pub trait OccupiedEntry<K, V> {
     fn key(&self) -> &K;
     fn get(&self) -> &V;
     fn get_mut(&mut self) -> &mut V;
-    fn remove(self);
+    fn remove(self) -> V;
 }
 
 impl<K, V> DefaultMap for HashMap<K, V>
@@ -320,8 +342,8 @@ impl<'a, K, V> OccupiedEntry<K, V> for hash_map::OccupiedEntry<'a, K, V> {
     }
 
     #[inline]
-    fn remove(self) {
-        self.remove();
+    fn remove(self) -> V {
+        self.remove()
     }
 }
 
@@ -393,8 +415,8 @@ where
     }
 
     #[inline]
-    fn remove(self) {
-        self.remove();
+    fn remove(self) -> V {
+        self.remove()
     }
 }
 
@@ -471,7 +493,7 @@ where
     }
 
     #[inline]
-    fn remove(self) {
-        self.remove();
+    fn remove(self) -> V {
+        self.remove()
     }
 }
