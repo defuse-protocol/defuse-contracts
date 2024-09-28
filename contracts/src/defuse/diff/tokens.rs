@@ -9,7 +9,9 @@ use crate::{
     utils::cleanup::DefaultMap,
 };
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
+#[autoimpl(Default)]
+#[autoimpl(Deref using self.0)]
 #[cfg_attr(
     all(feature = "abi", not(target_arch = "wasm32")),
     serde_as(schemars = true)
@@ -19,18 +21,22 @@ use crate::{
     serde_as(schemars = false)
 )]
 #[near(serializers = [borsh, json])]
-#[autoimpl(Deref using self.0)]
-pub struct TokenDeltas(
+pub struct TokenDeltas<T: Ord = TokenId>(
     /// [`BTreeMap`] ensures deterministic order
     #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
-    BTreeMap<TokenId, i128>,
+    // HACK
+    #[serde(bound(
+        serialize = "T: ::near_sdk::serde::Serialize",
+        deserialize = "T: ::near_sdk::serde::Deserialize<'de>"
+    ))]
+    BTreeMap<T, i128>,
 );
 
-impl TokenDeltas {
+impl<T: Ord> TokenDeltas<T> {
     #[inline]
     pub fn append<I>(&mut self, iter: I) -> Result<()>
     where
-        I: IntoIterator<Item = (TokenId, i128)>,
+        I: IntoIterator<Item = (T, i128)>,
     {
         for (token_id, delta) in iter {
             self.add_delta(token_id, delta)?;
@@ -39,14 +45,14 @@ impl TokenDeltas {
     }
 
     #[inline]
-    pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Result<i128> {
+    pub fn add_delta(&mut self, token_id: T, delta: i128) -> Result<i128> {
         let mut d = self.0.entry_or_default(token_id);
         *d = d.checked_add(delta).ok_or(DefuseError::BalanceOverflow)?;
         Ok(*d)
     }
 
     #[inline]
-    pub fn with_add_delta(mut self, token_id: TokenId, delta: i128) -> Result<Self> {
+    pub fn with_add_delta(mut self, token_id: T, delta: i128) -> Result<Self> {
         self.add_delta(token_id, delta)?;
         Ok(self)
     }
@@ -88,7 +94,7 @@ mod tests {
     fn invariant() {
         let [t1, t2] = ["t1.near", "t2.near"].map(|t| TokenId::Nep141(t.parse().unwrap()));
 
-        assert!(TokenDeltas::default().is_empty());
+        assert!(TokenDeltas::<()>::default().is_empty());
         assert!(TokenDeltas::default()
             .with_add_delta(t1.clone(), 0)
             .unwrap()

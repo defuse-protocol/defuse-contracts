@@ -21,17 +21,17 @@ use super::{accounts::AccountManagerExt, env::Env, DefuseExt};
 #[tokio::test]
 async fn test_swap_p2p() {
     let env = Env::new().await.unwrap();
-    test_diffs(
+    test_ft_diffs(
         &env,
         [
             (
                 &env.user1,
-                TestAccountDiff {
+                AccountFtDiff {
                     init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
                     deltas: [TokenDeltas::default()
-                        .with_add_delta(TokenId::Nep141(env.ft1.id().clone()), -100)
+                        .with_add_delta(env.ft1.id(), -100)
                         .unwrap()
-                        .with_add_delta(TokenId::Nep141(env.ft2.id().clone()), 200)
+                        .with_add_delta(env.ft2.id(), 200)
                         .unwrap()]
                     .into(),
                     result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
@@ -39,12 +39,12 @@ async fn test_swap_p2p() {
             ),
             (
                 &env.user2,
-                TestAccountDiff {
+                AccountFtDiff {
                     init_balances: [(env.ft2.id(), 200)].into_iter().collect(),
                     deltas: [TokenDeltas::default()
-                        .with_add_delta(TokenId::Nep141(env.ft1.id().clone()), 100)
+                        .with_add_delta(env.ft1.id(), 100)
                         .unwrap()
-                        .with_add_delta(TokenId::Nep141(env.ft2.id().clone()), -200)
+                        .with_add_delta(env.ft2.id(), -200)
                         .unwrap()]
                     .into(),
                     result_balances: [(env.ft1.id(), 100)].into_iter().collect(),
@@ -59,17 +59,17 @@ async fn test_swap_p2p() {
 #[tokio::test]
 async fn test_swap_many() {
     let env = Env::new().await.unwrap();
-    test_diffs(
+    test_ft_diffs(
         &env,
         [
             (
                 &env.user1,
-                TestAccountDiff {
+                AccountFtDiff {
                     init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
                     deltas: [TokenDeltas::default()
-                        .with_add_delta(TokenId::Nep141(env.ft1.id().clone()), -100)
+                        .with_add_delta(env.ft1.id(), -100)
                         .unwrap()
-                        .with_add_delta(TokenId::Nep141(env.ft2.id().clone()), 200)
+                        .with_add_delta(env.ft2.id(), 200)
                         .unwrap()]
                     .into(),
                     result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
@@ -77,18 +77,18 @@ async fn test_swap_many() {
             ),
             (
                 &env.user2,
-                TestAccountDiff {
+                AccountFtDiff {
                     init_balances: [(env.ft2.id(), 500)].into_iter().collect(),
                     deltas: [
                         TokenDeltas::default()
-                            .with_add_delta(TokenId::Nep141(env.ft1.id().clone()), 100)
+                            .with_add_delta(env.ft1.id(), 100)
                             .unwrap()
-                            .with_add_delta(TokenId::Nep141(env.ft2.id().clone()), -200)
+                            .with_add_delta(env.ft2.id(), -200)
                             .unwrap(),
                         TokenDeltas::default()
-                            .with_add_delta(TokenId::Nep141(env.ft3.id().clone()), 500)
+                            .with_add_delta(env.ft3.id(), 500)
                             .unwrap()
-                            .with_add_delta(TokenId::Nep141(env.ft2.id().clone()), -300)
+                            .with_add_delta(env.ft2.id(), -300)
                             .unwrap(),
                     ]
                     .into(),
@@ -99,12 +99,12 @@ async fn test_swap_many() {
             ),
             (
                 &env.user3,
-                TestAccountDiff {
+                AccountFtDiff {
                     init_balances: [(env.ft3.id(), 500)].into_iter().collect(),
                     deltas: [TokenDeltas::default()
-                        .with_add_delta(TokenId::Nep141(env.ft2.id().clone()), 300)
+                        .with_add_delta(env.ft2.id(), 300)
                         .unwrap()
-                        .with_add_delta(TokenId::Nep141(env.ft3.id().clone()), -500)
+                        .with_add_delta(env.ft3.id(), -500)
                         .unwrap()]
                     .into(),
                     result_balances: [(env.ft2.id(), 300)].into_iter().collect(),
@@ -119,14 +119,13 @@ async fn test_swap_many() {
 type FtBalances<'a> = BTreeMap<&'a AccountId, u128>;
 
 #[derive(Debug)]
-struct TestAccountDiff<'a> {
+struct AccountFtDiff<'a> {
     init_balances: FtBalances<'a>,
-    // TODO: generic TokenId
-    deltas: Vec<TokenDeltas>,
+    deltas: Vec<TokenDeltas<&'a AccountId>>,
     result_balances: FtBalances<'a>,
 }
 
-async fn test_diffs(env: &Env, accounts: Vec<(&Account, TestAccountDiff<'_>)>) {
+async fn test_ft_diffs(env: &Env, accounts: Vec<(&Account, AccountFtDiff<'_>)>) {
     // deposit
     for (account, t) in &accounts {
         for (token_id, balance) in &t.init_balances {
@@ -141,12 +140,20 @@ async fn test_diffs(env: &Env, accounts: Vec<(&Account, TestAccountDiff<'_>)>) {
         .apply_signed_diffs(accounts.iter().map(move |(account, t)| {
             (
                 account.id(),
-                t.deltas.clone().into_iter().map(|delta| {
+                t.deltas.iter().map(|deltas| {
                     account.sign_payload(
-                        Nep413Payload::new(AccountDiff::default().with_tokens(delta).unwrap())
-                            .with_nonce(thread_rng().gen())
-                            .with_recipient(env.defuse.id())
-                            .into(),
+                        Nep413Payload::new(
+                            AccountDiff::default()
+                                .with_tokens(
+                                    deltas
+                                        .iter()
+                                        .map(|(t, d)| (TokenId::Nep141((*t).clone()), *d)),
+                                )
+                                .unwrap(),
+                        )
+                        .with_nonce(thread_rng().gen())
+                        .with_recipient(env.defuse.id())
+                        .into(),
                     )
                 }),
             )

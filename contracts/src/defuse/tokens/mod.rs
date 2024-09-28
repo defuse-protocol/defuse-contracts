@@ -106,3 +106,24 @@ pub enum ParseTokenIdError {
     #[error(transparent)]
     ParseError(#[from] strum::ParseError),
 }
+
+#[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
+mod abi {
+    use super::*;
+
+    use near_sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+
+    impl JsonSchema for TokenId {
+        fn schema_name() -> String {
+            String::schema_name()
+        }
+
+        fn json_schema(gen: &mut SchemaGenerator) -> Schema {
+            String::json_schema(gen)
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+    }
+}
