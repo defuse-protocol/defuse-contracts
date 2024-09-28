@@ -10,7 +10,11 @@ use std::collections::{
 
 use near_sdk::{
     borsh::{BorshDeserialize, BorshSerialize},
-    store::{iterable_map, key::ToKey, IterableMap},
+    store::{
+        iterable_map::{self, IterableMap},
+        key::ToKey,
+        lookup_map::{self, LookupMap},
+    },
 };
 
 /// A mapping where non-existing keys considered to have [`Default`] values
@@ -18,7 +22,7 @@ pub trait DefaultMap {
     type Key;
     type Value: Default + Eq;
 
-    type VacantEntry<'a>: VacantEntry<Self::Key, Self::Value>
+    type VacantEntry<'a>: VacantEntry<'a, Self::Key, Self::Value>
     where
         Self: 'a;
     type OccupiedEntry<'a>: OccupiedEntry<Self::Key, Self::Value>
@@ -44,25 +48,36 @@ pub trait DefaultMap {
     fn entry_or_default(
         &mut self,
         key: Self::Key,
-    ) -> DefaultEntry<Self::Key, Self::Value, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>>;
+    ) -> DefaultEntry<'_, Self::Key, Self::Value, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>>;
 }
 
-pub enum DefaultEntry<K, V, VE, OE>
+#[derive(Debug)]
+pub enum DefaultEntry<'a, K, V, VE, OE>
 where
     V: Default + Eq,
-    VE: VacantEntry<K, V>,
+    VE: VacantEntry<'a, K, V>,
     OE: OccupiedEntry<K, V>,
 {
-    Vacant(DefaultVacantEntry<K, V, VE>),
+    Vacant(DefaultVacantEntry<'a, K, V, VE>),
     Occupied(DefaultOccupiedEntry<K, V, OE>),
 }
 
-impl<K, V, VE, OE> DefaultEntry<K, V, VE, OE>
+impl<'a, K, V, VE, OE> DefaultEntry<'a, K, V, VE, OE>
 where
     V: Default + Eq,
-    VE: VacantEntry<K, V>,
+    VE: VacantEntry<'a, K, V>,
     OE: OccupiedEntry<K, V>,
 {
+    /// Get the key associated with the entry.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::collections::HashMap;
+    /// # use defuse_contracts::utils::cleanup::DefaultMap;
+    /// let mut m: HashMap<_, ()> = HashMap::new();
+    /// assert_eq!(*m.entry_or_default("a").key(), "a");
+    /// ```
     #[inline]
     pub fn key(&self) -> &K {
         match self {
@@ -71,6 +86,19 @@ where
         }
     }
 
+    /// Remove the entry from the map, regardless of its value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::collections::HashMap;
+    /// # use defuse_contracts::utils::cleanup::DefaultMap;
+    /// let mut m: HashMap<_, i32> = HashMap::new();
+    /// let mut entry = m.entry_or_default("a");
+    /// *entry += 1;
+    /// assert_eq!(entry.remove(), 1);
+    /// assert_eq!(m.get("a"), None);
+    /// ```
     #[inline]
     pub fn remove(self) -> V {
         match self {
@@ -80,10 +108,10 @@ where
     }
 }
 
-impl<K, V, VE, OE> Deref for DefaultEntry<K, V, VE, OE>
+impl<'a, K, V, VE, OE> Deref for DefaultEntry<'a, K, V, VE, OE>
 where
     V: Default + Eq,
-    VE: VacantEntry<K, V>,
+    VE: VacantEntry<'a, K, V>,
     OE: OccupiedEntry<K, V>,
 {
     type Target = V;
@@ -97,10 +125,10 @@ where
     }
 }
 
-impl<K, V, VE, OE> DerefMut for DefaultEntry<K, V, VE, OE>
+impl<'a, K, V, VE, OE> DerefMut for DefaultEntry<'a, K, V, VE, OE>
 where
     V: Default + Eq,
-    VE: VacantEntry<K, V>,
+    VE: VacantEntry<'a, K, V>,
     OE: OccupiedEntry<K, V>,
 {
     #[inline]
@@ -112,22 +140,22 @@ where
     }
 }
 
-impl<K, V, VE, OE> From<DefaultVacantEntry<K, V, VE>> for DefaultEntry<K, V, VE, OE>
+impl<'a, K, V, VE, OE> From<DefaultVacantEntry<'a, K, V, VE>> for DefaultEntry<'a, K, V, VE, OE>
 where
     V: Default + Eq,
-    VE: VacantEntry<K, V>,
+    VE: VacantEntry<'a, K, V>,
     OE: OccupiedEntry<K, V>,
 {
     #[inline]
-    fn from(entry: DefaultVacantEntry<K, V, VE>) -> Self {
+    fn from(entry: DefaultVacantEntry<'a, K, V, VE>) -> Self {
         Self::Vacant(entry)
     }
 }
 
-impl<K, V, VE, OE> From<DefaultOccupiedEntry<K, V, OE>> for DefaultEntry<K, V, VE, OE>
+impl<'a, K, V, VE, OE> From<DefaultOccupiedEntry<K, V, OE>> for DefaultEntry<'a, K, V, VE, OE>
 where
     V: Default + Eq,
-    VE: VacantEntry<K, V>,
+    VE: VacantEntry<'a, K, V>,
     OE: OccupiedEntry<K, V>,
 {
     #[inline]
@@ -136,15 +164,16 @@ where
     }
 }
 
-pub struct DefaultVacantEntry<K, V, E>(Option<(V, E)>, PhantomData<K>)
+#[derive(Debug)]
+pub struct DefaultVacantEntry<'a, K, V: 'a, E>(Option<(V, E)>, PhantomData<&'a K>)
 where
     V: Default + Eq,
-    E: VacantEntry<K, V>;
+    E: VacantEntry<'a, K, V>;
 
-impl<K, V, E> DefaultVacantEntry<K, V, E>
+impl<'a, K, V: 'a, E> DefaultVacantEntry<'a, K, V, E>
 where
     V: Default + Eq,
-    E: VacantEntry<K, V>,
+    E: VacantEntry<'a, K, V>,
 {
     #[inline]
     pub fn new(entry: E) -> Self {
@@ -162,10 +191,10 @@ where
     }
 }
 
-impl<K, V, E> Deref for DefaultVacantEntry<K, V, E>
+impl<'a, K, V: 'a, E> Deref for DefaultVacantEntry<'a, K, V, E>
 where
     V: Default + Eq,
-    E: VacantEntry<K, V>,
+    E: VacantEntry<'a, K, V>,
 {
     type Target = V;
 
@@ -175,10 +204,10 @@ where
     }
 }
 
-impl<K, V, E> DerefMut for DefaultVacantEntry<K, V, E>
+impl<'a, K, V: 'a, E> DerefMut for DefaultVacantEntry<'a, K, V, E>
 where
     V: Default + Eq,
-    E: VacantEntry<K, V>,
+    E: VacantEntry<'a, K, V>,
 {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -186,10 +215,10 @@ where
     }
 }
 
-impl<K, V, E> Drop for DefaultVacantEntry<K, V, E>
+impl<'a, K, V: 'a, E> Drop for DefaultVacantEntry<'a, K, V, E>
 where
     V: Default + Eq,
-    E: VacantEntry<K, V>,
+    E: VacantEntry<'a, K, V>,
 {
     #[inline]
     fn drop(&mut self) {
@@ -202,10 +231,11 @@ where
     }
 }
 
-pub struct DefaultOccupiedEntry<K, T, O>(Option<O>, PhantomData<(K, T)>)
+#[derive(Debug)]
+pub struct DefaultOccupiedEntry<K, V, E>(Option<E>, PhantomData<(K, V)>)
 where
-    T: Default + Eq,
-    O: OccupiedEntry<K, T>;
+    V: Default + Eq,
+    E: OccupiedEntry<K, V>;
 
 impl<K, V, E> DefaultOccupiedEntry<K, V, E>
 where
@@ -268,10 +298,10 @@ where
     }
 }
 
-pub trait VacantEntry<K, V> {
+pub trait VacantEntry<'a, K, V> {
     fn key(&self) -> &K;
     fn into_key(self) -> K;
-    fn insert(self, value: V);
+    fn insert(self, value: V) -> &'a mut V;
 }
 
 pub trait OccupiedEntry<K, V> {
@@ -300,7 +330,7 @@ where
     fn entry_or_default(
         &mut self,
         key: K,
-    ) -> DefaultEntry<K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
+    ) -> DefaultEntry<'_, K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
         match self.entry(key) {
             hash_map::Entry::Occupied(entry) => DefaultOccupiedEntry::new(entry).into(),
             hash_map::Entry::Vacant(entry) => DefaultVacantEntry::new(entry).into(),
@@ -308,7 +338,7 @@ where
     }
 }
 
-impl<'a, K, V> VacantEntry<K, V> for hash_map::VacantEntry<'a, K, V> {
+impl<'a, K, V> VacantEntry<'a, K, V> for hash_map::VacantEntry<'a, K, V> {
     #[inline]
     fn key(&self) -> &K {
         self.key()
@@ -320,8 +350,8 @@ impl<'a, K, V> VacantEntry<K, V> for hash_map::VacantEntry<'a, K, V> {
     }
 
     #[inline]
-    fn insert(self, value: V) {
-        self.insert(value);
+    fn insert(self, value: V) -> &'a mut V {
+        self.insert(value)
     }
 }
 
@@ -367,7 +397,7 @@ where
     fn entry_or_default(
         &mut self,
         key: K,
-    ) -> DefaultEntry<K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
+    ) -> DefaultEntry<'_, K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
         match self.entry(key) {
             btree_map::Entry::Occupied(entry) => DefaultOccupiedEntry::new(entry).into(),
             btree_map::Entry::Vacant(entry) => DefaultVacantEntry::new(entry).into(),
@@ -375,7 +405,7 @@ where
     }
 }
 
-impl<'a, K, V> VacantEntry<K, V> for btree_map::VacantEntry<'a, K, V>
+impl<'a, K, V> VacantEntry<'a, K, V> for btree_map::VacantEntry<'a, K, V>
 where
     K: Ord,
 {
@@ -390,14 +420,90 @@ where
     }
 
     #[inline]
-    fn insert(self, value: V) {
-        self.insert(value);
+    fn insert(self, value: V) -> &'a mut V {
+        self.insert(value)
     }
 }
 
 impl<'a, K, V> OccupiedEntry<K, V> for btree_map::OccupiedEntry<'a, K, V>
 where
     K: Ord,
+{
+    #[inline]
+    fn key(&self) -> &K {
+        self.key()
+    }
+
+    #[inline]
+    fn get(&self) -> &V {
+        self.get()
+    }
+
+    #[inline]
+    fn get_mut(&mut self) -> &mut V {
+        self.get_mut()
+    }
+
+    #[inline]
+    fn remove(self) -> V {
+        self.remove()
+    }
+}
+
+impl<K, V, H> DefaultMap for LookupMap<K, V, H>
+where
+    K: Ord + Clone + BorshSerialize,
+    V: Default + Eq + BorshSerialize + BorshDeserialize,
+    H: ToKey,
+{
+    type Key = K;
+    type Value = V;
+
+    type VacantEntry<'a> = lookup_map::VacantEntry<'a, K, V>
+    where
+        Self: 'a;
+
+    type OccupiedEntry<'a> = lookup_map::OccupiedEntry<'a, K, V>
+    where
+        Self: 'a;
+
+    #[inline]
+    fn entry_or_default(
+        &mut self,
+        key: K,
+    ) -> DefaultEntry<'_, K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
+        match self.entry(key) {
+            lookup_map::Entry::Occupied(entry) => DefaultOccupiedEntry::new(entry).into(),
+            lookup_map::Entry::Vacant(entry) => DefaultVacantEntry::new(entry).into(),
+        }
+    }
+}
+
+impl<'a, K, V> VacantEntry<'a, K, V> for lookup_map::VacantEntry<'a, K, V>
+where
+    K: Ord + Clone + BorshSerialize,
+    V: BorshSerialize + BorshDeserialize,
+{
+    #[inline]
+    fn key(&self) -> &K {
+        self.key()
+    }
+
+    #[inline]
+    fn into_key(self) -> K {
+        self.into_key()
+    }
+
+    #[inline]
+    fn insert(self, value: V) -> &'a mut V {
+        self.insert(value)
+    }
+}
+
+impl<'a, K, V> OccupiedEntry<K, V> for lookup_map::OccupiedEntry<'a, K, V>
+where
+    K: Ord + Clone + BorshSerialize,
+    V: BorshSerialize + BorshDeserialize,
 {
     #[inline]
     fn key(&self) -> &K {
@@ -441,7 +547,7 @@ where
     fn entry_or_default(
         &mut self,
         key: K,
-    ) -> DefaultEntry<K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
+    ) -> DefaultEntry<'_, K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
         match self.entry(key) {
             iterable_map::Entry::Occupied(entry) => DefaultOccupiedEntry::new(entry).into(),
             iterable_map::Entry::Vacant(entry) => DefaultVacantEntry::new(entry).into(),
@@ -449,7 +555,7 @@ where
     }
 }
 
-impl<'a, K, V, H> VacantEntry<K, V> for iterable_map::VacantEntry<'a, K, V, H>
+impl<'a, K, V, H> VacantEntry<'a, K, V> for iterable_map::VacantEntry<'a, K, V, H>
 where
     K: Ord + Clone + BorshSerialize + BorshDeserialize,
     V: BorshSerialize + BorshDeserialize,
@@ -466,8 +572,8 @@ where
     }
 
     #[inline]
-    fn insert(self, value: V) {
-        self.insert(value);
+    fn insert(self, value: V) -> &'a mut V {
+        self.insert(value)
     }
 }
 
