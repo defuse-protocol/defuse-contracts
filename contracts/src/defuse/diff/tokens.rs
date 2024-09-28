@@ -40,10 +40,9 @@ impl TokenDeltas {
 
     #[inline]
     pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Result<i128> {
-        self.0.try_apply_cleanup_default(token_id, |d| {
-            *d = d.checked_add(delta).ok_or(DefuseError::BalanceOverflow)?;
-            Ok(())
-        })
+        let mut d = self.0.entry_or_default(token_id);
+        *d = d.checked_add(delta).ok_or(DefuseError::BalanceOverflow)?;
+        Ok(*d)
     }
 
     #[inline]
