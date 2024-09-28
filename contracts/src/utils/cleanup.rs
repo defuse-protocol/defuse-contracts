@@ -13,7 +13,7 @@ use near_sdk::{
     store::{iterable_map, key::ToKey, IterableMap},
 };
 
-/// A mapping where non-existent entries considered to be [`Default`] values
+/// A mapping where non-existing keys considered to have [`Default`] values
 pub trait DefaultMap<K, V>
 where
     V: Default + Eq,
