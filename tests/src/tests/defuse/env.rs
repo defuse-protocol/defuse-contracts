@@ -10,11 +10,13 @@ pub struct Env {
 
     pub user1: Account,
     pub user2: Account,
+    pub user3: Account,
 
     pub defuse: Contract,
 
     pub ft1: Contract,
     pub ft2: Contract,
+    pub ft3: Contract,
 }
 
 impl Env {
@@ -25,16 +27,29 @@ impl Env {
         let s = Self {
             user1: sandbox.create_account("user1").await,
             user2: sandbox.create_account("user2").await,
+            user3: sandbox.create_account("user3").await,
             defuse: root.deploy_defuse("defuse").await?,
             ft1: root.deploy_ft_token("ft1").await?,
             ft2: root.deploy_ft_token("ft2").await?,
+            ft3: root.deploy_ft_token("ft3").await?,
             sandbox,
         };
 
-        s.ft_storage_deposit(s.ft1.id(), &[s.user1.id(), s.user2.id(), s.defuse.id()])
-            .await?;
-        s.ft_storage_deposit(s.ft2.id(), &[s.user1.id(), s.user2.id(), s.defuse.id()])
-            .await?;
+        s.ft_storage_deposit(
+            s.ft1.id(),
+            &[s.user1.id(), s.user2.id(), s.user3.id(), s.defuse.id()],
+        )
+        .await?;
+        s.ft_storage_deposit(
+            s.ft2.id(),
+            &[s.user1.id(), s.user2.id(), s.user3.id(), s.defuse.id()],
+        )
+        .await?;
+        s.ft_storage_deposit(
+            s.ft3.id(),
+            &[s.user1.id(), s.user2.id(), s.user3.id(), s.defuse.id()],
+        )
+        .await?;
 
         // NOTE: near_workspaces uses the same signer all subaccounts
         s.user1
@@ -48,6 +63,12 @@ impl Env {
             .add_public_key(
                 s.defuse.id(),
                 s.user2.secret_key().public_key().to_string().parse()?,
+            )
+            .await?;
+        s.user3
+            .add_public_key(
+                s.defuse.id(),
+                s.user3.secret_key().public_key().to_string().parse()?,
             )
             .await?;
 

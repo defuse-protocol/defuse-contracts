@@ -236,6 +236,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50202def95bf36cb7d1d7a7962cea1c36a3f8ad42425e5d2b71d7acb8041b5b8"
 dependencies = [
  "borsh",
+ "rand",
 ]
 
 [[package]]
@@ -640,12 +641,14 @@ name = "defuse-contracts-tests"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bnum",
  "defuse-contracts",
  "impl-tools",
  "near-contract-standards",
  "near-crypto",
  "near-sdk",
  "near-workspaces",
+ "rand",
  "rstest",
  "serde_json",
  "tokio",

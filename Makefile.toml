@@ -107,7 +107,7 @@ run_task = "run-tests"
 
 [tasks.run-tests]
 command = "cargo"
-args = ["test", "--workspace", "${@}"]
+args = ["test", "--workspace", "--all-targets", "${@}"]
 
 [tasks.clean]
 dependencies = ["rm-contracts"]
