@@ -18,10 +18,10 @@ pub trait DefaultMap {
     type Key;
     type Value: Default + Eq;
 
-    type VacantEntry<'a>: VacantEntry<Self::Value>
+    type VacantEntry<'a>: VacantEntry<Self::Key, Self::Value>
     where
         Self: 'a;
-    type OccupiedEntry<'a>: OccupiedEntry<Self::Value>
+    type OccupiedEntry<'a>: OccupiedEntry<Self::Key, Self::Value>
     where
         Self: 'a;
 
@@ -44,158 +44,41 @@ pub trait DefaultMap {
     fn entry_or_default(
         &mut self,
         key: Self::Key,
-    ) -> DefaultEntry<Self::Value, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>>;
+    ) -> DefaultEntry<Self::Key, Self::Value, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>>;
 }
 
-pub enum DefaultEntry<T, V, O>
+pub enum DefaultEntry<K, V, VE, OE>
 where
-    T: Default + Eq,
-    V: VacantEntry<T>,
-    O: OccupiedEntry<T>,
+    V: Default + Eq,
+    VE: VacantEntry<K, V>,
+    OE: OccupiedEntry<K, V>,
 {
-    Vacant(DefaultVacantEntry<T, V>),
-    Occupied(DefaultOccupiedEntry<T, O>),
+    Vacant(DefaultVacantEntry<K, V, VE>),
+    Occupied(DefaultOccupiedEntry<K, V, OE>),
 }
 
-impl<T, V, O> From<DefaultVacantEntry<T, V>> for DefaultEntry<T, V, O>
+impl<K, V, VE, OE> DefaultEntry<K, V, VE, OE>
 where
-    T: Default + Eq,
-    V: VacantEntry<T>,
-    O: OccupiedEntry<T>,
-{
-    #[inline]
-    fn from(entry: DefaultVacantEntry<T, V>) -> Self {
-        Self::Vacant(entry)
-    }
-}
-
-impl<T, V, O> From<DefaultOccupiedEntry<T, O>> for DefaultEntry<T, V, O>
-where
-    T: Default + Eq,
-    V: VacantEntry<T>,
-    O: OccupiedEntry<T>,
+    V: Default + Eq,
+    VE: VacantEntry<K, V>,
+    OE: OccupiedEntry<K, V>,
 {
     #[inline]
-    fn from(entry: DefaultOccupiedEntry<T, O>) -> Self {
-        Self::Occupied(entry)
-    }
-}
-
-pub struct DefaultVacantEntry<T, V>(Option<(T, V)>)
-where
-    T: Default + Eq,
-    V: VacantEntry<T>;
-
-impl<T, V> DefaultVacantEntry<T, V>
-where
-    T: Default + Eq,
-    V: VacantEntry<T>,
-{
-    #[inline]
-    pub fn new(entry: V) -> Self {
-        Self(Some((T::default(), entry)))
-    }
-}
-
-impl<T, V> Deref for DefaultVacantEntry<T, V>
-where
-    T: Default + Eq,
-    V: VacantEntry<T>,
-{
-    type Target = T;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0.as_ref().unwrap_or_else(|| unreachable!()).0
-    }
-}
-
-impl<T, V> DerefMut for DefaultVacantEntry<T, V>
-where
-    T: Default + Eq,
-    V: VacantEntry<T>,
-{
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0.as_mut().unwrap_or_else(|| unreachable!()).0
-    }
-}
-
-impl<T, V> Drop for DefaultVacantEntry<T, V>
-where
-    T: Default + Eq,
-    V: VacantEntry<T>,
-{
-    #[inline]
-    fn drop(&mut self) {
-        let (v, entry) = self.0.take().unwrap_or_else(|| unreachable!());
-        if v != Default::default() {
-            entry.insert(v);
+    pub fn key(&self) -> &K {
+        match self {
+            Self::Vacant(entry) => entry.key(),
+            Self::Occupied(entry) => entry.key(),
         }
     }
 }
 
-pub struct DefaultOccupiedEntry<T, O>(Option<O>, PhantomData<T>)
+impl<K, V, VE, OE> Deref for DefaultEntry<K, V, VE, OE>
 where
-    T: Default + Eq,
-    O: OccupiedEntry<T>;
-
-impl<T, O> DefaultOccupiedEntry<T, O>
-where
-    T: Default + Eq,
-    O: OccupiedEntry<T>,
+    V: Default + Eq,
+    VE: VacantEntry<K, V>,
+    OE: OccupiedEntry<K, V>,
 {
-    #[inline]
-    pub fn new(entry: O) -> Self {
-        Self(Some(entry), PhantomData)
-    }
-}
-
-impl<T, O> Deref for DefaultOccupiedEntry<T, O>
-where
-    T: Default + Eq,
-    O: OccupiedEntry<T>,
-{
-    type Target = T;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        self.0.as_ref().unwrap_or_else(|| unreachable!()).get()
-    }
-}
-
-impl<T, O> DerefMut for DefaultOccupiedEntry<T, O>
-where
-    T: Default + Eq,
-    O: OccupiedEntry<T>,
-{
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.as_mut().unwrap_or_else(|| unreachable!()).get_mut()
-    }
-}
-
-impl<T, O> Drop for DefaultOccupiedEntry<T, O>
-where
-    T: Default + Eq,
-    O: OccupiedEntry<T>,
-{
-    #[inline]
-    fn drop(&mut self) {
-        let mut entry = self.0.take().unwrap_or_else(|| unreachable!());
-        if entry.get_mut() == &Default::default() {
-            entry.remove();
-        }
-    }
-}
-
-impl<T, V, O> Deref for DefaultEntry<T, V, O>
-where
-    T: Default + Eq,
-    V: VacantEntry<T>,
-    O: OccupiedEntry<T>,
-{
-    type Target = T;
+    type Target = V;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -206,11 +89,11 @@ where
     }
 }
 
-impl<T, V, O> DerefMut for DefaultEntry<T, V, O>
+impl<K, V, VE, OE> DerefMut for DefaultEntry<K, V, VE, OE>
 where
-    T: Default + Eq,
-    V: VacantEntry<T>,
-    O: OccupiedEntry<T>,
+    V: Default + Eq,
+    VE: VacantEntry<K, V>,
+    OE: OccupiedEntry<K, V>,
 {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -221,13 +104,158 @@ where
     }
 }
 
-pub trait VacantEntry<T> {
-    fn insert(self, value: T);
+impl<K, V, VE, OE> From<DefaultVacantEntry<K, V, VE>> for DefaultEntry<K, V, VE, OE>
+where
+    V: Default + Eq,
+    VE: VacantEntry<K, V>,
+    OE: OccupiedEntry<K, V>,
+{
+    #[inline]
+    fn from(entry: DefaultVacantEntry<K, V, VE>) -> Self {
+        Self::Vacant(entry)
+    }
 }
 
-pub trait OccupiedEntry<T> {
-    fn get(&self) -> &T;
-    fn get_mut(&mut self) -> &mut T;
+impl<K, V, VE, OE> From<DefaultOccupiedEntry<K, V, OE>> for DefaultEntry<K, V, VE, OE>
+where
+    V: Default + Eq,
+    VE: VacantEntry<K, V>,
+    OE: OccupiedEntry<K, V>,
+{
+    #[inline]
+    fn from(entry: DefaultOccupiedEntry<K, V, OE>) -> Self {
+        Self::Occupied(entry)
+    }
+}
+
+pub struct DefaultVacantEntry<K, V, E>(Option<(V, E)>, PhantomData<K>)
+where
+    V: Default + Eq,
+    E: VacantEntry<K, V>;
+
+impl<K, V, E> DefaultVacantEntry<K, V, E>
+where
+    V: Default + Eq,
+    E: VacantEntry<K, V>,
+{
+    #[inline]
+    pub fn new(entry: E) -> Self {
+        Self(Some((V::default(), entry)), PhantomData)
+    }
+
+    #[inline]
+    fn key(&self) -> &K {
+        self.0.as_ref().unwrap_or_else(|| unreachable!()).1.key()
+    }
+}
+
+impl<K, V, E> Deref for DefaultVacantEntry<K, V, E>
+where
+    V: Default + Eq,
+    E: VacantEntry<K, V>,
+{
+    type Target = V;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0.as_ref().unwrap_or_else(|| unreachable!()).0
+    }
+}
+
+impl<K, V, E> DerefMut for DefaultVacantEntry<K, V, E>
+where
+    V: Default + Eq,
+    E: VacantEntry<K, V>,
+{
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0.as_mut().unwrap_or_else(|| unreachable!()).0
+    }
+}
+
+impl<K, V, E> Drop for DefaultVacantEntry<K, V, E>
+where
+    V: Default + Eq,
+    E: VacantEntry<K, V>,
+{
+    #[inline]
+    fn drop(&mut self) {
+        let (v, entry) = self.0.take().unwrap_or_else(|| unreachable!());
+        if v != Default::default() {
+            entry.insert(v);
+        }
+    }
+}
+
+pub struct DefaultOccupiedEntry<K, T, O>(Option<O>, PhantomData<(K, T)>)
+where
+    T: Default + Eq,
+    O: OccupiedEntry<K, T>;
+
+impl<K, V, E> DefaultOccupiedEntry<K, V, E>
+where
+    V: Default + Eq,
+    E: OccupiedEntry<K, V>,
+{
+    #[inline]
+    pub fn new(entry: E) -> Self {
+        Self(Some(entry), PhantomData)
+    }
+
+    #[inline]
+    fn key(&self) -> &K {
+        self.0.as_ref().unwrap_or_else(|| unreachable!()).key()
+    }
+}
+
+impl<K, V, E> Deref for DefaultOccupiedEntry<K, V, E>
+where
+    V: Default + Eq,
+    E: OccupiedEntry<K, V>,
+{
+    type Target = V;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.0.as_ref().unwrap_or_else(|| unreachable!()).get()
+    }
+}
+
+impl<K, V, E> DerefMut for DefaultOccupiedEntry<K, V, E>
+where
+    V: Default + Eq,
+    E: OccupiedEntry<K, V>,
+{
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.as_mut().unwrap_or_else(|| unreachable!()).get_mut()
+    }
+}
+
+impl<K, V, E> Drop for DefaultOccupiedEntry<K, V, E>
+where
+    V: Default + Eq,
+    E: OccupiedEntry<K, V>,
+{
+    #[inline]
+    fn drop(&mut self) {
+        let mut entry = self.0.take().unwrap_or_else(|| unreachable!());
+        if entry.get_mut() == &Default::default() {
+            entry.remove();
+        }
+    }
+}
+
+pub trait VacantEntry<K, V> {
+    fn key(&self) -> &K;
+    fn into_key(self) -> K;
+    fn insert(self, value: V);
+}
+
+pub trait OccupiedEntry<K, V> {
+    fn key(&self) -> &K;
+    fn get(&self) -> &V;
+    fn get_mut(&mut self) -> &mut V;
     fn remove(self);
 }
 
@@ -250,7 +278,7 @@ where
     fn entry_or_default(
         &mut self,
         key: K,
-    ) -> DefaultEntry<V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
+    ) -> DefaultEntry<K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
         match self.entry(key) {
             hash_map::Entry::Occupied(entry) => DefaultOccupiedEntry::new(entry).into(),
             hash_map::Entry::Vacant(entry) => DefaultVacantEntry::new(entry).into(),
@@ -258,14 +286,29 @@ where
     }
 }
 
-impl<'a, K, V> VacantEntry<V> for hash_map::VacantEntry<'a, K, V> {
+impl<'a, K, V> VacantEntry<K, V> for hash_map::VacantEntry<'a, K, V> {
+    #[inline]
+    fn key(&self) -> &K {
+        self.key()
+    }
+
+    #[inline]
+    fn into_key(self) -> K {
+        self.into_key()
+    }
+
     #[inline]
     fn insert(self, value: V) {
         self.insert(value);
     }
 }
 
-impl<'a, K, V> OccupiedEntry<V> for hash_map::OccupiedEntry<'a, K, V> {
+impl<'a, K, V> OccupiedEntry<K, V> for hash_map::OccupiedEntry<'a, K, V> {
+    #[inline]
+    fn key(&self) -> &K {
+        self.key()
+    }
+
     #[inline]
     fn get(&self) -> &V {
         self.get()
@@ -302,7 +345,7 @@ where
     fn entry_or_default(
         &mut self,
         key: K,
-    ) -> DefaultEntry<V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
+    ) -> DefaultEntry<K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
         match self.entry(key) {
             btree_map::Entry::Occupied(entry) => DefaultOccupiedEntry::new(entry).into(),
             btree_map::Entry::Vacant(entry) => DefaultVacantEntry::new(entry).into(),
@@ -310,20 +353,35 @@ where
     }
 }
 
-impl<'a, K, V> VacantEntry<V> for btree_map::VacantEntry<'a, K, V>
+impl<'a, K, V> VacantEntry<K, V> for btree_map::VacantEntry<'a, K, V>
 where
     K: Ord,
 {
+    #[inline]
+    fn key(&self) -> &K {
+        self.key()
+    }
+
+    #[inline]
+    fn into_key(self) -> K {
+        self.into_key()
+    }
+
     #[inline]
     fn insert(self, value: V) {
         self.insert(value);
     }
 }
 
-impl<'a, K, V> OccupiedEntry<V> for btree_map::OccupiedEntry<'a, K, V>
+impl<'a, K, V> OccupiedEntry<K, V> for btree_map::OccupiedEntry<'a, K, V>
 where
     K: Ord,
 {
+    #[inline]
+    fn key(&self) -> &K {
+        self.key()
+    }
+
     #[inline]
     fn get(&self) -> &V {
         self.get()
@@ -361,7 +419,7 @@ where
     fn entry_or_default(
         &mut self,
         key: K,
-    ) -> DefaultEntry<V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
+    ) -> DefaultEntry<K, V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>> {
         match self.entry(key) {
             iterable_map::Entry::Occupied(entry) => DefaultOccupiedEntry::new(entry).into(),
             iterable_map::Entry::Vacant(entry) => DefaultVacantEntry::new(entry).into(),
@@ -369,24 +427,39 @@ where
     }
 }
 
-impl<'a, K, V, H> VacantEntry<V> for iterable_map::VacantEntry<'a, K, V, H>
+impl<'a, K, V, H> VacantEntry<K, V> for iterable_map::VacantEntry<'a, K, V, H>
 where
     K: Ord + Clone + BorshSerialize + BorshDeserialize,
     V: BorshSerialize + BorshDeserialize,
     H: ToKey,
 {
     #[inline]
+    fn key(&self) -> &K {
+        self.key()
+    }
+
+    #[inline]
+    fn into_key(self) -> K {
+        self.into_key()
+    }
+
+    #[inline]
     fn insert(self, value: V) {
         self.insert(value);
     }
 }
 
-impl<'a, K, V, H> OccupiedEntry<V> for iterable_map::OccupiedEntry<'a, K, V, H>
+impl<'a, K, V, H> OccupiedEntry<K, V> for iterable_map::OccupiedEntry<'a, K, V, H>
 where
     K: Ord + Clone + BorshSerialize + BorshDeserialize,
     V: BorshSerialize + BorshDeserialize,
     H: ToKey,
 {
+    #[inline]
+    fn key(&self) -> &K {
+        self.key()
+    }
+
     #[inline]
     fn get(&self) -> &V {
         self.get()
