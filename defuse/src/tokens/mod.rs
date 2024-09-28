@@ -4,7 +4,7 @@ mod nep245;
 
 use defuse_contracts::{
     defuse::{tokens::TokenId, DefuseError, Result},
-    utils::cleanup::CleanupMap,
+    utils::cleanup::DefaultMap,
 };
 use near_sdk::{near, store::IterableMap, AccountId, IntoStorageKey};
 

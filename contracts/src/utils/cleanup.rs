@@ -12,7 +12,7 @@ use near_sdk::{
     store::{iterable_map, IterableMap},
 };
 
-pub trait CleanupMap<K, V> {
+pub trait DefaultMap<K, V> {
     #[inline]
     fn apply_cleanup_default<T>(&mut self, k: K, f: impl FnOnce(&mut V)) -> V
     where
@@ -34,7 +34,7 @@ pub trait CleanupMap<K, V> {
         V: Default + Eq + Clone;
 }
 
-impl<K, V> CleanupMap<K, V> for HashMap<K, V>
+impl<K, V> DefaultMap<K, V> for HashMap<K, V>
 where
     K: Hash + Eq,
 {
@@ -69,7 +69,7 @@ where
     }
 }
 
-impl<K, V> CleanupMap<K, V> for BTreeMap<K, V>
+impl<K, V> DefaultMap<K, V> for BTreeMap<K, V>
 where
     K: Hash + Ord,
 {
@@ -104,7 +104,7 @@ where
     }
 }
 
-impl<K, V> CleanupMap<K, V> for IterableMap<K, V>
+impl<K, V> DefaultMap<K, V> for IterableMap<K, V>
 where
     K: Ord + Clone + BorshSerialize + BorshDeserialize,
     V: BorshSerialize + BorshDeserialize,

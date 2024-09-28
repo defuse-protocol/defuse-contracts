@@ -6,7 +6,7 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
     defuse::{tokens::TokenId, DefuseError, Result},
-    utils::cleanup::CleanupMap,
+    utils::cleanup::DefaultMap,
 };
 
 #[derive(Debug, Clone, Default)]
