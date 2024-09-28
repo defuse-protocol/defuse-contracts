@@ -14,14 +14,14 @@ use near_sdk::{
 };
 
 /// A mapping where non-existing keys considered to have [`Default`] values
-pub trait DefaultMap<K, V>
-where
-    V: Default + Eq,
-{
-    type VacantEntry<'a>: VacantEntry<V>
+pub trait DefaultMap {
+    type Key;
+    type Value: Default + Eq;
+
+    type VacantEntry<'a>: VacantEntry<Self::Value>
     where
         Self: 'a;
-    type OccupiedEntry<'a>: OccupiedEntry<V>
+    type OccupiedEntry<'a>: OccupiedEntry<Self::Value>
     where
         Self: 'a;
 
@@ -35,7 +35,7 @@ where
     /// ```rust
     /// # use std::collections::HashMap;
     /// # use defuse_contracts::utils::cleanup::DefaultMap;
-    /// let mut m: HashMap<&str, i32> = HashMap::new();
+    /// let mut m = HashMap::new();
     /// *m.entry_or_default("a") += 1;
     /// assert_eq!(m.get("a"), Some(&1));
     /// *m.entry_or_default("a") -= 1;
@@ -43,8 +43,8 @@ where
     /// ```
     fn entry_or_default(
         &mut self,
-        key: K,
-    ) -> DefaultEntry<V, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>>;
+        key: Self::Key,
+    ) -> DefaultEntry<Self::Value, Self::VacantEntry<'_>, Self::OccupiedEntry<'_>>;
 }
 
 pub enum DefaultEntry<T, V, O>
@@ -231,11 +231,13 @@ pub trait OccupiedEntry<T> {
     fn remove(self);
 }
 
-impl<K, V> DefaultMap<K, V> for HashMap<K, V>
+impl<K, V> DefaultMap for HashMap<K, V>
 where
     K: Hash + Eq,
     V: Default + Eq,
 {
+    type Key = K;
+    type Value = V;
     type VacantEntry<'a> = hash_map::VacantEntry<'a, K, V>
     where
         Self: 'a;
@@ -280,11 +282,14 @@ impl<'a, K, V> OccupiedEntry<V> for hash_map::OccupiedEntry<'a, K, V> {
     }
 }
 
-impl<K, V> DefaultMap<K, V> for BTreeMap<K, V>
+impl<K, V> DefaultMap for BTreeMap<K, V>
 where
     K: Ord,
     V: Default + Eq,
 {
+    type Key = K;
+    type Value = V;
+
     type VacantEntry<'a> = btree_map::VacantEntry<'a, K, V>
     where
         Self: 'a;
@@ -335,12 +340,15 @@ where
     }
 }
 
-impl<K, V, H> DefaultMap<K, V> for IterableMap<K, V, H>
+impl<K, V, H> DefaultMap for IterableMap<K, V, H>
 where
     K: Ord + Clone + BorshSerialize + BorshDeserialize,
     V: Default + Eq + BorshSerialize + BorshDeserialize,
     H: ToKey,
 {
+    type Key = K;
+    type Value = V;
+
     type VacantEntry<'a> = iterable_map::VacantEntry<'a, K, V, H>
     where
         Self: 'a;
