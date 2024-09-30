@@ -48,14 +48,10 @@ impl MultiTokenResolver for DefuseImpl {
         require!(approvals.is_none(), "approvals are not supported");
 
         let refund = match env::promise_result(0) {
-            PromiseResult::Successful(value) => {
-                if let Ok(refund) = serde_json::from_slice::<Vec<U128>>(&value) {
-                    require!(refund.len() == amounts.len(), "invalid response length");
-                    refund
-                } else {
-                    amounts.clone()
-                }
-            }
+            PromiseResult::Successful(value) => serde_json::from_slice::<Vec<U128>>(&value)
+                .ok()
+                .filter(|refund| refund.len() == amounts.len())
+                .unwrap_or_else(|| amounts.clone()),
             PromiseResult::Failed => amounts.clone(),
         };
 

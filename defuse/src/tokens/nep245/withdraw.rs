@@ -131,12 +131,10 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
             PromiseResult::Successful(value) => {
                 if is_call {
                     // `mt_batch_transfer_call` returns successfully transferred amounts
-                    if let Ok(used) = serde_json::from_slice::<Vec<U128>>(&value) {
-                        require!(used.len() == amounts.len(), "invalid response length");
-                        used
-                    } else {
-                        vec![U128(0); amounts.len()]
-                    }
+                    serde_json::from_slice::<Vec<U128>>(&value)
+                        .ok()
+                        .filter(|used| used.len() == amounts.len())
+                        .unwrap_or_else(|| vec![U128(0); amounts.len()])
                 } else {
                     // `mt_batch_transfer` returns empty result on success
                     amounts.clone()
