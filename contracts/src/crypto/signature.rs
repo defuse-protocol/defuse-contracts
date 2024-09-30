@@ -32,7 +32,7 @@ pub enum Signature {
 }
 
 impl Signature {
-    /// Veirifies the signature and returns public counterpart of the key
+    /// Veirify the signature and return the public counterpart of the key
     /// that was used to sign given hash or `None` if the signature is
     /// invalid
     #[must_use]
