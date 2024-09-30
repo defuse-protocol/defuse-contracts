@@ -1,5 +1,8 @@
 use near_sdk::near;
 
+/// A persistent lock, which stores its state (whether it's locked or unlocked)
+/// on-chain, so that the inner value can be accessed depending on
+/// the current state of the lock.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
 pub struct Lock<T> {
@@ -23,19 +26,13 @@ impl<T> Lock<T> {
     #[must_use]
     #[inline]
     pub const fn unlocked(value: T) -> Self {
-        Self {
-            value,
-            locked: false,
-        }
+        Self::new(value, false)
     }
 
     #[must_use]
     #[inline]
     pub const fn locked(value: T) -> Self {
-        Self {
-            value,
-            locked: true,
-        }
+        Self::new(value, true)
     }
 
     #[inline]
