@@ -28,7 +28,7 @@ impl Nonces {
     }
 
     #[inline]
-    pub fn iter_unused(&self, start: Nonce) -> impl Iterator<Item = Nonce> + '_ {
+    fn iter_unused(&self, start: Nonce) -> impl Iterator<Item = Nonce> + '_ {
         iter::successors(Some(start), |n| n.checked_add(Nonce::ONE)).filter(|n| !self.is_used(*n))
     }
 

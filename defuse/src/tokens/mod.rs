@@ -41,8 +41,8 @@ impl DefuseImpl {
             .get_mut(account_id)
             .ok_or(DefuseError::AccountNotFound)?;
         for (token_id, amount) in token_amounts {
-            self.total_supplies.withdraw(token_id.clone(), amount)?;
-            account.token_balances.withdraw(token_id, amount)?;
+            account.token_balances.withdraw(token_id.clone(), amount)?;
+            self.total_supplies.withdraw(token_id, amount)?;
         }
         Ok(())
     }
