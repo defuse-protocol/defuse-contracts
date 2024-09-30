@@ -13,7 +13,8 @@ use defuse_contracts::{
 };
 use near_contract_standards::non_fungible_token::{self, core::ext_nft_core};
 use near_sdk::{
-    assert_one_yocto, env, near, serde_json, AccountId, NearToken, PromiseOrValue, PromiseResult,
+    assert_one_yocto, env, near, serde_json, AccountId, Gas, NearToken, PromiseOrValue,
+    PromiseResult,
 };
 
 use crate::{DefuseImpl, DefuseImplExt};
@@ -43,6 +44,9 @@ impl NonFungibleTokenWithdrawer for DefuseImpl {
 }
 
 impl DefuseImpl {
+    /// Value is taken from [`near_contract_standards`](https://github.com/near/near-sdk-rs/blob/f179a289528fbec5cd85077314e29deec198d0f3/near-contract-standards/src/non_fungible_token/core/core_impl.rs#L19)
+    const NFT_RESOLVE_WITHDRAW_GAS: Gas = Gas::from_tgas(5);
+
     fn internal_nft_withdraw(
         &mut self,
         sender_id: AccountId,
@@ -67,7 +71,7 @@ impl DefuseImpl {
         }
         .then(
             Self::ext(CURRENT_ACCOUNT_ID.clone())
-                // TODO: with static gas
+                .with_static_gas(Self::NFT_RESOLVE_WITHDRAW_GAS)
                 .nft_resolve_withdraw(token, sender_id, token_id, is_call),
         )
         .into())

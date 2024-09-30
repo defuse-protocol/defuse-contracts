@@ -13,7 +13,7 @@ use defuse_contracts::{
     },
 };
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, require, serde_json, AccountId, NearToken,
+    assert_one_yocto, env, json_types::U128, near, require, serde_json, AccountId, Gas, NearToken,
     PromiseOrValue, PromiseResult,
 };
 
@@ -46,6 +46,10 @@ impl MultiTokenWithdrawer for DefuseImpl {
 }
 
 impl DefuseImpl {
+    // TODO: more accurate numbers
+    const MT_RESOLVE_WITHDRAW_GAS_BASE: Gas = Gas::from_tgas(5);
+    const MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID: Gas = Gas::from_tgas(1);
+
     #[allow(clippy::too_many_arguments)]
     fn internal_mt_withdraw(
         &mut self,
@@ -88,10 +92,22 @@ impl DefuseImpl {
         }
         .then(
             Self::ext(CURRENT_ACCOUNT_ID.clone())
-                // TODO: with static gas
+                .with_static_gas(Self::mt_resolve_withdraw_gas(&token_ids))
                 .mt_resolve_withdraw(token, sender_id, token_ids, amounts, is_call),
         )
         .into())
+    }
+
+    fn mt_resolve_withdraw_gas(#[allow(clippy::ptr_arg)] token_ids: &Vec<String>) -> Gas {
+        // if this conversios overflow, then
+        // it should have exceeded gas before
+        Self::MT_RESOLVE_WITHDRAW_GAS_BASE
+            .checked_add(
+                Self::MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID
+                    .checked_mul(token_ids.len() as u64)
+                    .unwrap_or_else(|| unreachable!()),
+            )
+            .unwrap_or_else(|| unreachable!())
     }
 }
 

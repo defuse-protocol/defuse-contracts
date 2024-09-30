@@ -2,9 +2,29 @@ use defuse_contracts::{
     nep245::{resolver::MultiTokenResolver, ClearedApproval, TokenId},
     utils::UnwrapOrPanic,
 };
-use near_sdk::{env, json_types::U128, near, require, serde_json, AccountId, PromiseResult};
+use near_sdk::{env, json_types::U128, near, require, serde_json, AccountId, Gas, PromiseResult};
 
 use crate::{DefuseImpl, DefuseImplExt};
+
+impl DefuseImpl {
+    // TODO: more accurate numbers
+    const MT_RESOLVE_TRANSFER_GAS_BASE: Gas = Gas::from_tgas(5);
+    const MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID: Gas = Gas::from_tgas(1);
+
+    pub(super) fn mt_resolve_transfer_gas(
+        #[allow(clippy::ptr_arg)] token_ids: &Vec<String>,
+    ) -> Gas {
+        // if this conversios overflow, then
+        // it should have exceeded gas before
+        Self::MT_RESOLVE_TRANSFER_GAS_BASE
+            .checked_add(
+                Self::MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID
+                    .checked_mul(token_ids.len() as u64)
+                    .unwrap_or_else(|| unreachable!()),
+            )
+            .unwrap_or_else(|| unreachable!())
+    }
+}
 
 #[near]
 impl MultiTokenResolver for DefuseImpl {
@@ -49,7 +69,6 @@ impl MultiTokenResolver for DefuseImpl {
                 // no need to refund anything
                 continue;
             }
-            // TODO: move out of the loop
             let Some(receiver) = self.accounts.get_mut(&receiver_id) else {
                 // receiver doesn't have an account anymore
                 continue;

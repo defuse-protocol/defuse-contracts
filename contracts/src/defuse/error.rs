@@ -1,4 +1,4 @@
-use std::convert::Infallible;
+use core::convert::Infallible;
 
 use near_sdk::{serde_json, FunctionError};
 use thiserror::Error as ThisError;

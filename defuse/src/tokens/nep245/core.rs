@@ -119,7 +119,7 @@ impl MultiTokenCore for DefuseImpl {
             )
             .then(
                 Self::ext(CURRENT_ACCOUNT_ID.clone())
-                    // TODO: with static gas
+                    .with_static_gas(Self::mt_resolve_transfer_gas(&token_ids))
                     .mt_resolve_transfer(previous_owner_ids, receiver_id, token_ids, amounts, None),
             )
             .into()

@@ -13,7 +13,7 @@ use defuse_contracts::{
 };
 use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, require, serde_json, AccountId, NearToken,
+    assert_one_yocto, env, json_types::U128, near, require, serde_json, AccountId, Gas, NearToken,
     PromiseOrValue, PromiseResult,
 };
 
@@ -44,6 +44,9 @@ impl FungibleTokenWithdrawer for DefuseImpl {
 }
 
 impl DefuseImpl {
+    /// Value is taken from [`near_contract_standards`](https://github.com/near/near-sdk-rs/blob/f179a289528fbec5cd85077314e29deec198d0f3/near-contract-standards/src/fungible_token/core_impl.rs#L12)
+    const FT_RESOLVE_WITHDRAW_GAS: Gas = Gas::from_tgas(5);
+
     fn internal_ft_withdraw(
         &mut self,
         sender_id: AccountId,
@@ -67,7 +70,7 @@ impl DefuseImpl {
         }
         .then(
             Self::ext(CURRENT_ACCOUNT_ID.clone())
-                // TODO: with static gas
+                .with_static_gas(Self::FT_RESOLVE_WITHDRAW_GAS)
                 .ft_resolve_withdraw(token, sender_id, amount, is_call),
         )
         .into())

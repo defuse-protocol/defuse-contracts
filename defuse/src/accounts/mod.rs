@@ -59,7 +59,6 @@ impl AccountManager for DefuseImpl {
 #[derive(Debug)]
 #[near(serializers = [borsh])]
 pub struct Accounts {
-    // TODO: cow
     accounts: IterableMap<AccountId, Account>,
     prefix: Vec<u8>,
 }
