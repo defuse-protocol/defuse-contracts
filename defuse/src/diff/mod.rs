@@ -11,13 +11,8 @@ use crate::{accounts::AccountState, tokens::TokensBalances, DefuseImpl, DefuseIm
 
 #[near]
 impl SignedDiffer for DefuseImpl {
-    fn apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>) {
-        self.internal_apply_signed_diffs(diffs).unwrap()
-    }
-}
-
-impl DefuseImpl {
-    fn internal_apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>) -> Result<()> {
+    #[handle_result]
+    fn apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>) -> Result<()> {
         let mut differ = Differ::default();
 
         for (signer, payloads) in diffs {

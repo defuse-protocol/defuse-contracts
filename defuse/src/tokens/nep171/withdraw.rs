@@ -6,7 +6,10 @@ use defuse_contracts::{
         },
         Result,
     },
-    utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+    utils::{
+        cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+        UnwrapOrPanic,
+    },
 };
 use near_contract_standards::non_fungible_token::{self, core::ext_nft_core};
 use near_sdk::{
@@ -35,7 +38,7 @@ impl NonFungibleTokenWithdrawer for DefuseImpl {
             memo,
             msg,
         )
-        .unwrap()
+        .unwrap_or_panic()
     }
 }
 
@@ -95,12 +98,14 @@ impl NonFungibleTokenWithdrawResolver for DefuseImpl {
         };
         if !used {
             let token = TokenId::Nep171(token, token_id);
-            self.total_supplies.deposit(token.clone(), 1).unwrap();
+            self.total_supplies
+                .deposit(token.clone(), 1)
+                .unwrap_or_panic();
             self.accounts
                 .get_or_create(sender_id)
                 .token_balances
                 .deposit(token, 1)
-                .unwrap();
+                .unwrap_or_panic();
         }
         used
     }

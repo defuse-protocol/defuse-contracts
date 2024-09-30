@@ -1,4 +1,7 @@
-use defuse_contracts::{defuse::tokens::TokenId, utils::cache::PREDECESSOR_ACCOUNT_ID};
+use defuse_contracts::{
+    defuse::tokens::TokenId,
+    utils::{cache::PREDECESSOR_ACCOUNT_ID, UnwrapOrPanic},
+};
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, near, AccountId, PromiseOrValue};
 
@@ -16,7 +19,7 @@ impl FungibleTokenReceiver for DefuseImpl {
         msg: String,
     ) -> PromiseOrValue<U128> {
         let receiver_id = if !msg.is_empty() {
-            msg.parse().unwrap()
+            msg.parse().unwrap_or_panic_display()
         } else {
             sender_id
         };
@@ -25,7 +28,7 @@ impl FungibleTokenReceiver for DefuseImpl {
             receiver_id,
             [(TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone()), amount.0)],
         )
-        .unwrap();
+        .unwrap_or_panic();
 
         PromiseOrValue::Value(U128(0))
     }

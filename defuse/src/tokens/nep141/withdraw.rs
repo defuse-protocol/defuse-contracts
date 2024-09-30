@@ -6,7 +6,10 @@ use defuse_contracts::{
         },
         Result,
     },
-    utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+    utils::{
+        cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+        UnwrapOrPanic,
+    },
 };
 use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::{
@@ -36,7 +39,7 @@ impl FungibleTokenWithdrawer for DefuseImpl {
             memo,
             msg,
         )
-        .unwrap()
+        .unwrap_or_panic()
     }
 }
 
@@ -100,12 +103,14 @@ impl FungibleTokenWithdrawResolver for DefuseImpl {
         let refund = amount.0 - used;
         if refund > 0 {
             let token = TokenId::Nep141(token);
-            self.total_supplies.deposit(token.clone(), refund).unwrap();
+            self.total_supplies
+                .deposit(token.clone(), refund)
+                .unwrap_or_panic();
             self.accounts
                 .get_or_create(sender_id)
                 .token_balances
                 .deposit(token, refund)
-                .unwrap();
+                .unwrap_or_panic();
         }
         U128(used)
     }

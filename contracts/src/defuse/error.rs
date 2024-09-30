@@ -1,11 +1,11 @@
 use std::convert::Infallible;
 
-use near_sdk::serde_json;
+use near_sdk::{serde_json, FunctionError};
 use thiserror::Error as ThisError;
 
 pub type Result<T, E = DefuseError> = ::core::result::Result<T, E>;
 
-#[derive(Debug, ThisError)]
+#[derive(Debug, ThisError, FunctionError)]
 pub enum DefuseError {
     #[error("account not found")]
     AccountNotFound,

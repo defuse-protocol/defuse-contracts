@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use near_sdk::env;
+use near_sdk::{env, FunctionError};
 
 pub trait PanicError {
     #[inline]
@@ -30,6 +30,10 @@ pub trait PanicError {
 impl<E> PanicError for E {}
 
 pub trait UnwrapOrPanic<T, E> {
+    fn unwrap_or_panic(self) -> T
+    where
+        E: FunctionError;
+
     fn unwrap_or_panic_str(self) -> T
     where
         E: AsRef<str>;
@@ -44,6 +48,14 @@ pub trait UnwrapOrPanic<T, E> {
 }
 
 impl<T, E> UnwrapOrPanic<T, E> for Result<T, E> {
+    #[inline]
+    fn unwrap_or_panic(self) -> T
+    where
+        E: FunctionError,
+    {
+        self.unwrap_or_else(|err| err.panic())
+    }
+
     #[inline]
     fn unwrap_or_panic_str(self) -> T
     where

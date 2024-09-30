@@ -1,6 +1,7 @@
 use defuse_contracts::{
-    defuse::tokens::TokenId, nep245::receiver::MultiTokenReceiver,
-    utils::cache::PREDECESSOR_ACCOUNT_ID,
+    defuse::tokens::TokenId,
+    nep245::receiver::MultiTokenReceiver,
+    utils::{cache::PREDECESSOR_ACCOUNT_ID, UnwrapOrPanic},
 };
 use near_sdk::{json_types::U128, near, require, AccountId, PromiseOrValue};
 
@@ -27,7 +28,7 @@ impl MultiTokenReceiver for DefuseImpl {
         );
 
         let receiver_id = if !msg.is_empty() {
-            msg.parse().unwrap()
+            msg.parse().unwrap_or_panic_display()
         } else {
             sender_id
         };
@@ -40,7 +41,7 @@ impl MultiTokenReceiver for DefuseImpl {
                 .map(|token_id| TokenId::Nep245(PREDECESSOR_ACCOUNT_ID.clone(), token_id))
                 .zip(amounts.into_iter().map(|a| a.0)),
         )
-        .unwrap();
+        .unwrap_or_panic();
 
         PromiseOrValue::Value(vec![U128(0); n])
     }

@@ -10,7 +10,8 @@ use self::tokens::TokenDeltas;
 
 #[ext_contract(ext_signed_differ)]
 pub trait SignedDiffer {
-    fn apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>);
+    #[handle_result]
+    fn apply_signed_diffs(&mut self, diffs: SignedPayloads<AccountDiff>) -> Result<()>;
 }
 
 #[derive(Debug, Clone)]

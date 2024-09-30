@@ -7,7 +7,10 @@ use defuse_contracts::{
         Result,
     },
     nep245::{self, ext_mt_core},
-    utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+    utils::{
+        cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+        UnwrapOrPanic,
+    },
 };
 use near_sdk::{
     assert_one_yocto, env, json_types::U128, near, require, serde_json, AccountId, NearToken,
@@ -38,7 +41,7 @@ impl MultiTokenWithdrawer for DefuseImpl {
             memo,
             msg,
         )
-        .unwrap()
+        .unwrap_or_panic()
     }
 }
 
@@ -139,8 +142,11 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
                 let token_id = TokenId::Nep245(token.clone(), token_id);
                 self.total_supplies
                     .deposit(token_id.clone(), refund)
-                    .unwrap();
-                account.token_balances.deposit(token_id, refund).unwrap();
+                    .unwrap_or_panic();
+                account
+                    .token_balances
+                    .deposit(token_id, refund)
+                    .unwrap_or_panic();
             }
         }
 

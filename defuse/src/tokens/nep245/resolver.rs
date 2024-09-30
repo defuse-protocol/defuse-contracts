@@ -1,4 +1,7 @@
-use defuse_contracts::nep245::{resolver::MultiTokenResolver, ClearedApproval, TokenId};
+use defuse_contracts::{
+    nep245::{resolver::MultiTokenResolver, ClearedApproval, TokenId},
+    utils::UnwrapOrPanic,
+};
 use near_sdk::{env, json_types::U128, near, require, serde_json, AccountId, PromiseResult};
 
 use crate::{DefuseImpl, DefuseImplExt};
@@ -51,7 +54,7 @@ impl MultiTokenResolver for DefuseImpl {
                 // receiver doesn't have an account anymore
                 continue;
             };
-            let token_id = token_id.parse().unwrap();
+            let token_id = token_id.parse().unwrap_or_panic_display();
             let receiver_balance = receiver.token_balances.balance_of(&token_id);
             if receiver_balance == 0 {
                 // receiver doesn't have any balance anymore
@@ -63,14 +66,14 @@ impl MultiTokenResolver for DefuseImpl {
             receiver
                 .token_balances
                 .withdraw(token_id.clone(), refund)
-                .unwrap();
+                .unwrap_or_panic();
 
             // deposit refund
             let previous_owner = self.accounts.get_or_create(previous_owner_id);
             previous_owner
                 .token_balances
                 .deposit(token_id, refund)
-                .unwrap();
+                .unwrap_or_panic();
 
             // update as used amount in-place
             amount.0 -= refund;

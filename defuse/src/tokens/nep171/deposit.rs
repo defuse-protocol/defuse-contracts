@@ -1,4 +1,7 @@
-use defuse_contracts::{defuse::tokens::TokenId, utils::cache::PREDECESSOR_ACCOUNT_ID};
+use defuse_contracts::{
+    defuse::tokens::TokenId,
+    utils::{cache::PREDECESSOR_ACCOUNT_ID, UnwrapOrPanic},
+};
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenReceiver;
 use near_sdk::{near, AccountId, PromiseOrValue};
 
@@ -19,7 +22,7 @@ impl NonFungibleTokenReceiver for DefuseImpl {
         msg: String,
     ) -> PromiseOrValue<bool> {
         let receiver_id = if !msg.is_empty() {
-            msg.parse().unwrap()
+            msg.parse().unwrap_or_panic_display()
         } else {
             sender_id
         };
@@ -28,7 +31,7 @@ impl NonFungibleTokenReceiver for DefuseImpl {
             receiver_id,
             [(TokenId::Nep171(PREDECESSOR_ACCOUNT_ID.clone(), token_id), 1)],
         )
-        .unwrap();
+        .unwrap_or_panic();
 
         PromiseOrValue::Value(false)
     }

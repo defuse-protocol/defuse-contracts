@@ -1,6 +1,9 @@
 use defuse_contracts::{
     nep245::{self, receiver::ext_mt_receiver, MultiTokenCore},
-    utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+    utils::{
+        cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+        UnwrapOrPanic,
+    },
 };
 use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, PromiseOrValue};
 
@@ -47,12 +50,12 @@ impl MultiTokenCore for DefuseImpl {
             receiver_id,
             token_ids
                 .into_iter()
-                .map(|token_id| token_id.parse().unwrap())
+                .map(|token_id| token_id.parse().unwrap_or_panic_display())
                 .zip(amounts.into_iter().map(|a| a.0))
                 .collect(),
             memo,
         )
-        .unwrap()
+        .unwrap_or_panic()
     }
 
     #[payable]
@@ -97,12 +100,12 @@ impl MultiTokenCore for DefuseImpl {
             receiver_id.clone(),
             token_ids
                 .iter()
-                .map(|token_id| token_id.parse().unwrap())
+                .map(|token_id| token_id.parse().unwrap_or_panic_display())
                 .zip(amounts.iter().map(|a| a.0))
                 .collect(),
             memo,
         )
-        .unwrap();
+        .unwrap_or_panic();
 
         let previous_owner_ids = vec![PREDECESSOR_ACCOUNT_ID.clone(); token_ids.len()];
 
