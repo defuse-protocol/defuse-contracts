@@ -62,6 +62,14 @@ pub trait FtExt: StorageManagementExt {
         account_id: &AccountId,
         amount: u128,
     ) -> anyhow::Result<()>;
+
+    async fn ft_mint_call(
+        &self,
+        token: &AccountId,
+        account_id: &AccountId,
+        amount: u128,
+        msg: &str,
+    ) -> anyhow::Result<u128>;
 }
 
 impl FtExt for Account {
@@ -160,6 +168,17 @@ impl FtExt for Account {
     ) -> anyhow::Result<()> {
         self.ft_transfer(token, account_id, amount, None).await
     }
+
+    async fn ft_mint_call(
+        &self,
+        token: &AccountId,
+        account_id: &AccountId,
+        amount: u128,
+        msg: &str,
+    ) -> anyhow::Result<u128> {
+        self.ft_transfer_call(token, account_id, amount, None, msg)
+            .await
+    }
 }
 
 impl FtExt for Contract {
@@ -213,5 +232,17 @@ impl FtExt for Contract {
         amount: u128,
     ) -> anyhow::Result<()> {
         self.as_account().ft_mint(token, account_id, amount).await
+    }
+
+    async fn ft_mint_call(
+        &self,
+        token: &AccountId,
+        account_id: &AccountId,
+        amount: u128,
+        msg: &str,
+    ) -> anyhow::Result<u128> {
+        self.as_account()
+            .ft_mint_call(token, account_id, amount, msg)
+            .await
     }
 }

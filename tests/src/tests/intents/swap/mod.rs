@@ -1,8 +1,11 @@
 use core::time::Duration;
 
-use defuse_contracts::intents::swap::{
-    Asset, AssetWithAccount, CreateSwapIntentAction, CrossChainAsset, Deadline,
-    ExecuteSwapIntentAction, FtAmount, GenericAccount, NearAsset, NftItem, SwapIntentAction,
+use defuse_contracts::{
+    intents::swap::{
+        Asset, AssetWithAccount, CreateSwapIntentAction, CrossChainAsset, ExecuteSwapIntentAction,
+        FtAmount, GenericAccount, NearAsset, NftItem, SwapIntentAction,
+    },
+    utils::Deadline,
 };
 use near_sdk::{json_types::U128, NearToken};
 use rstest::rstest;

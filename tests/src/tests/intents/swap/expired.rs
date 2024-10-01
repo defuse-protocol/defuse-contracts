@@ -1,6 +1,9 @@
-use defuse_contracts::intents::swap::{
-    Asset, AssetWithAccount, CreateSwapIntentAction, Deadline, ExecuteSwapIntentAction,
-    GenericAccount, NearAsset, SwapIntentAction, SwapIntentStatus,
+use defuse_contracts::{
+    intents::swap::{
+        Asset, AssetWithAccount, CreateSwapIntentAction, ExecuteSwapIntentAction, GenericAccount,
+        NearAsset, SwapIntentAction, SwapIntentStatus,
+    },
+    utils::Deadline,
 };
 use near_sdk::NearToken;
 

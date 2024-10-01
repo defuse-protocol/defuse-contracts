@@ -1,8 +1,11 @@
 use near_sdk::near;
 
-#[derive(Debug, PartialEq, Eq)]
+/// A persistent lock, which stores its state (whether it's locked or unlocked)
+/// on-chain, so that the inner value can be accessed depending on
+/// the current state of the lock.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
-pub struct Mutex<T> {
+pub struct Lock<T> {
     #[serde(flatten)]
     value: T,
     #[serde(
@@ -13,14 +16,28 @@ pub struct Mutex<T> {
     locked: bool,
 }
 
-impl<T> Mutex<T> {
+impl<T> Lock<T> {
     #[must_use]
     #[inline]
-    pub const fn new(value: T) -> Self {
-        Self {
-            value,
-            locked: false,
-        }
+    pub const fn new(value: T, locked: bool) -> Self {
+        Self { value, locked }
+    }
+
+    #[must_use]
+    #[inline]
+    pub const fn unlocked(value: T) -> Self {
+        Self::new(value, false)
+    }
+
+    #[must_use]
+    #[inline]
+    pub const fn locked(value: T) -> Self {
+        Self::new(value, true)
+    }
+
+    #[inline]
+    pub const fn is_locked(&self) -> bool {
+        self.locked
     }
 
     #[inline]
@@ -49,6 +66,17 @@ impl<T> Mutex<T> {
     }
 
     #[inline]
+    pub fn force_lock(&mut self) -> &mut T {
+        self.locked = true;
+        &mut self.value
+    }
+
+    #[inline]
+    pub const fn is_unlocked(&self) -> bool {
+        !self.locked
+    }
+
+    #[inline]
     pub const fn as_unlocked(&self) -> Option<&T> {
         if self.locked {
             return None;
@@ -72,10 +100,16 @@ impl<T> Mutex<T> {
         self.locked = false;
         Some(&mut self.value)
     }
+
+    #[inline]
+    pub fn force_unlock(&mut self) -> &mut T {
+        self.locked = false;
+        &mut self.value
+    }
 }
 
-impl<T> From<T> for Mutex<T> {
+impl<T> From<T> for Lock<T> {
     fn from(value: T) -> Self {
-        Self::new(value)
+        Self::unlocked(value)
     }
 }

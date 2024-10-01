@@ -14,3 +14,6 @@ defuse-contracts = { workspace = true, features = ["intents"] }
 
 near-sdk.workspace = true
 near-contract-standards.workspace = true
+
+[features]
+abi = ["defuse-contracts/abi"]

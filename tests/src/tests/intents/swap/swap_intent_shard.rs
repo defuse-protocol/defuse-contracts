@@ -1,12 +1,13 @@
+use std::sync::LazyLock;
+
 use anyhow::anyhow;
 use defuse_contracts::{
     intents::swap::{
         Asset, CrossChainAsset, FtAmount, IntentId, NearAsset, NftItem, SwapIntent,
         SwapIntentAction,
     },
-    utils::Mutex,
+    utils::Lock,
 };
-use lazy_static::lazy_static;
 use near_sdk::{AccountId, NearToken};
 use near_workspaces::Contract;
 use serde_json::json;
@@ -16,9 +17,8 @@ use crate::utils::{
     nft::NftExt, read_wasm,
 };
 
-lazy_static! {
-    static ref SWAP_INTENT_WASM: Vec<u8> = read_wasm("defuse_swap_intent_contract");
-}
+static SWAP_INTENT_WASM: LazyLock<Vec<u8>> =
+    LazyLock::new(|| read_wasm("defuse_swap_intent_contract"));
 
 pub trait SwapIntentShard {
     async fn deploy_swap_intent_shard(
@@ -33,7 +33,7 @@ pub trait SwapIntentShard {
         action: SwapIntentAction,
     ) -> anyhow::Result<bool>;
 
-    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>>;
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Lock<SwapIntent>>>;
 
     async fn rollback_intent(
         &self,
@@ -118,7 +118,7 @@ impl SwapIntentShard for near_workspaces::Account {
         }
     }
 
-    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Lock<SwapIntent>>> {
         self.view(self.id(), "get_intent")
             .args_json(json!({
                 "id": id,
@@ -179,7 +179,7 @@ impl SwapIntentShard for Contract {
             .await
     }
 
-    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Mutex<SwapIntent>>> {
+    async fn get_intent(&self, id: &IntentId) -> anyhow::Result<Option<Lock<SwapIntent>>> {
         self.as_account().get_intent(id).await
     }
 

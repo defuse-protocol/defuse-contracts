@@ -3,17 +3,37 @@ name = "defuse-contracts"
 version = "0.1.0"
 edition.workspace = true
 
+[lib]
+doctest = true
+
 [lints]
 workspace = true
 
 [dependencies]
-near-sdk.workspace = true
+bnum.workspace = true
+hex.workspace = true
+impl-tools.workspace = true
+near-account-id.workspace = true
 near-contract-standards.workspace = true
+near-sdk.workspace = true
+serde_with = { workspace = true, features = ["base64"] }
+strum.workspace = true
 thiserror.workspace = true
 
 [features]
-default = ["account", "controller", "intents", "mpc"]
+default = ["account", "controller", "defuse", "intents", "mpc"]
+
 account = []
 controller = []
+crypto = []
+defuse = ["nep245", "nep413"]
 intents = []
 mpc = []
+nep245 = []
+nep413 = ["crypto"]
+
+unit-testing = ["near-sdk/unit-testing"]
+# HACK: Semi-feature to enable `#[derive(JsonSchema)]` only when
+# `not(target_arch = "wasm32"))`. This is needed to make
+# `cargo near abi` work as it doesn't allow to pass `--features abi`.
+abi = ["serde_with/schemars_0_8"]

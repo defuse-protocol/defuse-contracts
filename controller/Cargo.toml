@@ -13,3 +13,6 @@ workspace = true
 defuse-contracts = { workspace = true, features = ["account", "controller"] }
 
 near-sdk.workspace = true
+
+[features]
+abi = ["defuse-contracts/abi"]

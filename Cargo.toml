@@ -4,6 +4,7 @@ members = [
     "account",
     "contracts",
     "controller",
+    "defuse",
     "intents/swap",
     "intents/swap-ft",
     "tests",
@@ -17,16 +18,21 @@ edition = "2021"
 defuse-account-contract.path = "account"
 defuse-contracts = { path = "contracts", default-features = false }
 defuse-controller-contract.path = "controller"
+defuse-contract.path = "defuse"
 defuse-swap-intent-contract.path = "intents/swap"
 defuse-swap-ft-intent-contract.path = "intents/swap-ft"
 
 anyhow = "1"
+bnum = { version = "0.12", features = ["borsh"] }
+hex = "0.4"
 impl-tools = "0.10"
-lazy_static = "1.4"
-near-contract-standards = "5.2"
-near-sdk = "5.2"
-near-workspaces = "0.11"
+near-account-id = "1.0"
+near-contract-standards = "5.5"
+near-sdk = { version = "5.5", features = ["unstable"] }
+near-workspaces = "0.14"
 serde_json = "1"
+serde_with = "3.9"
+strum = { version = "0.26", features = ["derive"] }
 thiserror = "1"
 tokio = { version = "1.38", default-features = false }
 

@@ -1,6 +1,8 @@
 use near_sdk::{near, AccountId};
 
-use super::{AssetWithAccount, Deadline, GenericAccount, IntentId};
+use crate::utils::Deadline;
+
+use super::{AssetWithAccount, GenericAccount, IntentId};
 
 #[derive(Debug, Clone)]
 #[near(serializers = [json, borsh])]

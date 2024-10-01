@@ -1,13 +1,13 @@
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
+
 use near_sdk::AccountId;
 use near_workspaces::Contract;
 use serde_json::json;
 
 use crate::utils::{account::AccountExt, read_wasm, Sandbox};
 
-lazy_static! {
-    static ref CONTROLLER_WASM: Vec<u8> = read_wasm("defuse_controller_contract");
-}
+static CONTROLLER_WASM: LazyLock<Vec<u8>> =
+    LazyLock::new(|| read_wasm("defuse_controller_contract"));
 
 pub trait ControllerExt {
     async fn deploy_controller(
