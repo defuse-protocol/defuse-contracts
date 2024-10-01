@@ -46,7 +46,7 @@ impl Account {
     }
 
     #[inline]
-    pub fn add_public_key(&mut self, me: &AccountId, public_key: PublicKey) -> &mut Nonces {
+    pub fn add_public_key(&mut self, me: &AccountId, public_key: PublicKey) {
         if me == &public_key.to_implicit_account_id() {
             &mut self.implicit_nonces
         } else {
@@ -61,7 +61,7 @@ impl Account {
                     .into()
                 })
         }
-        .force_unlock()
+        .force_unlock();
     }
 
     #[inline]
@@ -75,8 +75,15 @@ impl Account {
     }
 
     #[inline]
-    pub fn iter_public_keys(&self) -> impl Iterator<Item = &'_ PublicKey> {
-        self.public_keys.keys()
+    pub fn is_public_key_active(&self, me: &AccountId, public_key: &PublicKey) -> bool {
+        self.public_key_nonces(me, public_key).is_some()
+    }
+
+    #[inline]
+    pub fn iter_active_public_keys(&self) -> impl Iterator<Item = &'_ PublicKey> {
+        self.public_keys
+            .iter()
+            .filter_map(|(public_key, nonces)| nonces.is_unlocked().then_some(public_key))
     }
 
     #[must_use]

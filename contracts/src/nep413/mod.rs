@@ -3,12 +3,15 @@ use core::fmt::Display;
 use impl_tools::autoimpl;
 use near_sdk::{
     borsh::{self, BorshSerialize},
-    env::{self, sha256_array},
+    env::sha256_array,
     near,
 };
 use serde_with::{serde_as, DisplayFromStr};
 
-use crate::{crypto::Payload, utils::integer::U256};
+use crate::{
+    crypto::Payload,
+    utils::{integer::U256, UnwrapOrPanic},
+};
 
 pub type Nonce = U256;
 
@@ -84,9 +87,6 @@ where
         /// [NEP-461](https://github.com/near/NEPs/pull/461) prefix_tag
         const PREFIX_TAG: u32 = (1u32 << 31) + NEP_NUMBER;
 
-        let mut serialized = borsh::to_vec(&PREFIX_TAG).unwrap_or_else(|_| env::abort());
-        self.serialize(&mut serialized)
-            .unwrap_or_else(|_| env::abort());
-        sha256_array(&serialized)
+        sha256_array(&borsh::to_vec(&(PREFIX_TAG, self)).unwrap_or_panic_display())
     }
 }

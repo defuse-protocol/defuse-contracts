@@ -24,8 +24,8 @@ impl AccountManager for DefuseImpl {
         self.accounts
             .get(account_id)
             .into_iter()
-            .flat_map(Account::iter_public_keys)
-            .copied()
+            .flat_map(Account::iter_active_public_keys)
+            .cloned()
             .collect()
     }
 
@@ -50,8 +50,8 @@ impl AccountManager for DefuseImpl {
     ) -> Option<DisplayFromStr<Nonce>> {
         self.accounts
             .get(account_id)
-            .and_then(move |account| account.public_key_nonces(account_id, public_key))
-            .and_then(move |nonces| nonces.next_unused(start.map(DisplayFromStr::into_inner)))
+            .and_then(|account| account.public_key_nonces(account_id, public_key))
+            .and_then(|nonces| nonces.next_unused(start.map(DisplayFromStr::into_inner)))
             .map(Into::into)
     }
 }

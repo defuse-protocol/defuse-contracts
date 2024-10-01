@@ -14,7 +14,7 @@ impl DefuseImpl {
     pub(super) fn mt_resolve_transfer_gas(
         #[allow(clippy::ptr_arg)] token_ids: &Vec<String>,
     ) -> Gas {
-        // if this conversios overflow, then
+        // if these conversions overflow, then
         // it should have exceeded gas before
         Self::MT_RESOLVE_TRANSFER_GAS_BASE
             .checked_add(
