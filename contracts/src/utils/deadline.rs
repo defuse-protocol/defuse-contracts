@@ -12,14 +12,6 @@ pub enum Deadline {
     BlockNumber(u64),
 }
 
-#[cfg(feature = "unit-testing")]
-impl Default for Deadline {
-    #[inline]
-    fn default() -> Self {
-        Self::BlockNumber(u64::MAX)
-    }
-}
-
 impl PartialOrd for Deadline {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
@@ -33,6 +25,10 @@ impl PartialOrd for Deadline {
 }
 
 impl Deadline {
+    pub const fn infinity() -> Self {
+        Self::BlockNumber(u64::MAX)
+    }
+
     #[must_use]
     #[inline]
     pub fn has_expired(self) -> bool {

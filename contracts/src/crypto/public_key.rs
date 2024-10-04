@@ -49,6 +49,7 @@ impl PublicKey {
     pub fn to_implicit_account_id(&self) -> AccountId {
         match self {
             Self::Ed25519(pk) => hex::encode(pk),
+            // TODO: solana?
             Self::Secp256k1(pk) => {
                 // https://ethereum.org/en/developers/docs/accounts/#account-creation
                 format!("0x{}", hex::encode(&env::keccak256_array(pk)[12..]))

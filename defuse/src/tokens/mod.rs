@@ -105,30 +105,36 @@ impl TokensBalances {
     }
 
     #[inline]
+    fn try_apply<E>(
+        &mut self,
+        token_id: TokenId,
+        f: impl FnOnce(u128) -> Result<u128, E>,
+    ) -> Result<u128, E> {
+        let mut d = self.0.entry_or_default(token_id);
+        *d = f(*d)?;
+        Ok(*d)
+    }
+
+    #[inline]
     pub fn deposit(&mut self, token_id: TokenId, amount: u128) -> Result<u128> {
-        let mut balance = self.0.entry_or_default(token_id);
-        *balance = balance
-            .checked_add(amount)
-            .ok_or(DefuseError::BalanceOverflow)?;
-        Ok(*balance)
+        self.try_apply(token_id, |b| {
+            b.checked_add(amount).ok_or(DefuseError::BalanceOverflow)
+        })
     }
 
     #[inline]
     pub fn withdraw(&mut self, token_id: TokenId, amount: u128) -> Result<u128>
 where {
-        let mut balance = self.0.entry_or_default(token_id);
-        *balance = balance
-            .checked_sub(amount)
-            .ok_or(DefuseError::BalanceOverflow)?;
-        Ok(*balance)
+        self.try_apply(token_id, |b| {
+            b.checked_sub(amount).ok_or(DefuseError::BalanceOverflow)
+        })
     }
 
     #[inline]
     pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Result<u128> {
-        let mut balance = self.0.entry_or_default(token_id);
-        *balance = balance
-            .checked_add_signed(delta)
-            .ok_or(DefuseError::BalanceOverflow)?;
-        Ok(*balance)
+        self.try_apply(token_id, |b| {
+            b.checked_add_signed(delta)
+                .ok_or(DefuseError::BalanceOverflow)
+        })
     }
 }

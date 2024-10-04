@@ -18,6 +18,9 @@ impl FungibleTokenReceiver for DefuseImpl {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
+        #[cfg(feature = "beta")]
+        crate::beta::beta_access!(self, sender_id.clone());
+
         let receiver_id = if !msg.is_empty() {
             msg.parse().unwrap_or_panic_display()
         } else {
@@ -29,6 +32,10 @@ impl FungibleTokenReceiver for DefuseImpl {
             [(TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone()), amount.0)],
         )
         .unwrap_or_panic();
+
+        // TODO: signed actions
+
+        // TODO: log deposited
 
         PromiseOrValue::Value(U128(0))
     }

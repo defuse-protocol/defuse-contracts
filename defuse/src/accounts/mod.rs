@@ -2,16 +2,24 @@ mod account;
 mod nonces;
 mod state;
 
-use std::collections::HashSet;
-
 pub use self::{account::*, nonces::*, state::*};
+
+use std::collections::HashSet;
 
 use defuse_contracts::{
     crypto::PublicKey,
-    defuse::accounts::AccountManager,
-    nep413::Nonce,
-    utils::{cache::PREDECESSOR_ACCOUNT_ID, prefix::NestPrefix, serde::wrappers::DisplayFromStr},
+    defuse::{
+        accounts::AccountManager, message::SignedDefuseMessage, payload::ValidatePayloadAs,
+        DefuseError, Result,
+    },
+    nep413::{Nep413Payload, Nonce},
+    utils::{
+        cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+        prefix::NestPrefix,
+        serde::wrappers::DisplayFromStr,
+    },
 };
+
 use near_sdk::{
     borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey, IntoStorageKey,
 };
@@ -20,39 +28,67 @@ use crate::{DefuseImpl, DefuseImplExt};
 
 #[near]
 impl AccountManager for DefuseImpl {
+    fn has_public_key(&self, account_id: &AccountId, public_key: &PublicKey) -> bool {
+        self.accounts
+            .get(account_id)
+            .map(|account| account.has_public_key(account_id, public_key))
+            .unwrap_or_else(|| account_id == &public_key.to_implicit_account_id())
+    }
+
     fn public_keys_of(&self, account_id: &AccountId) -> HashSet<PublicKey> {
         self.accounts
             .get(account_id)
             .into_iter()
-            .flat_map(Account::iter_active_public_keys)
+            .flat_map(Account::iter_public_keys)
             .cloned()
             .collect()
     }
 
     fn add_public_key(&mut self, public_key: PublicKey) {
+        #[cfg(feature = "beta")]
+        crate::beta::beta_access!(self);
+
         self.accounts
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
             .add_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
     }
 
-    fn deactivate_public_key(&mut self, public_key: &PublicKey) {
+    fn remove_public_key(&mut self, public_key: &PublicKey) {
         self.accounts
             // create account if doesn't exist, so the user can opt out of implicit public key
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
-            .deactivate_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
+            .remove_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
     }
 
-    fn next_nonce_available(
-        &self,
-        account_id: &AccountId,
-        public_key: &PublicKey,
-        start: Option<DisplayFromStr<Nonce>>,
-    ) -> Option<DisplayFromStr<Nonce>> {
+    fn is_nonce_used(&self, account_id: &AccountId, nonce: DisplayFromStr<Nonce>) -> bool {
         self.accounts
             .get(account_id)
-            .and_then(|account| account.public_key_nonces(account_id, public_key))
-            .and_then(|nonces| nonces.next_unused(start.map(DisplayFromStr::into_inner)))
-            .map(Into::into)
+            .map(move |account| account.is_nonce_used(nonce.into_inner()))
+            .unwrap_or_default()
+    }
+
+    fn find_unused_nonce(
+        &self,
+        account_id: &AccountId,
+        start: Option<DisplayFromStr<Nonce>>,
+    ) -> Option<DisplayFromStr<Nonce>> {
+        let start = start.map(DisplayFromStr::into_inner);
+        if let Some(account) = self.accounts.get(account_id) {
+            account.find_unused_nonce(start)
+        } else {
+            Some(start.unwrap_or_default())
+        }
+        .map(Into::into)
+    }
+
+    #[handle_result]
+    fn invalidate_nonce(&mut self, nonce: DisplayFromStr<Nonce>) -> Result<()> {
+        #[cfg(feature = "beta")]
+        crate::beta::beta_access!(self);
+
+        self.accounts
+            .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
+            .commit_nonce(nonce.into_inner())
     }
 }
 
@@ -98,6 +134,41 @@ impl Accounts {
                     account_id,
                 )
             })
+    }
+
+    #[inline]
+    pub fn verify_signed_message<T>(
+        &mut self,
+        signed: SignedDefuseMessage<T>,
+    ) -> Result<(AccountId, &mut Account, T)>
+    where
+        T: BorshSerialize,
+    {
+        // verify signature and derive its public key
+        let public_key = signed.verify().ok_or(DefuseError::InvalidSignature)?;
+
+        // extract NEP-413 payload
+        let payload: Nep413Payload<_> = signed.payload.validate_as()?;
+
+        // check recipient
+        if payload.recipient != *CURRENT_ACCOUNT_ID {
+            return Err(DefuseError::WrongRecipient);
+        }
+        // check deadline
+        if payload.deadline.has_expired() {
+            return Err(DefuseError::DeadlineExpired);
+        }
+
+        let signer_id = payload.message.signer_id;
+        let account = self.get_or_create(signer_id.clone());
+        // make sure the account has this public key
+        if !account.has_public_key(&signer_id, &public_key) {
+            return Err(DefuseError::InvalidSignature);
+        }
+        // commit nonce
+        account.commit_nonce(payload.nonce)?;
+
+        Ok((signer_id, account, payload.message.message))
     }
 }
 

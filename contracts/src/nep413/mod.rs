@@ -26,6 +26,7 @@ pub type Nonce = U256;
 )]
 #[near(serializers = [borsh, json])]
 #[autoimpl(Deref using self.message)]
+#[autoimpl(DerefMut using self.message)]
 pub struct Nep413Payload<T = String> {
     #[borsh(
         serialize_with = "crate::utils::borsh::as_base64",

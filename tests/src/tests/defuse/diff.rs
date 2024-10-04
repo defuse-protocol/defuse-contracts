@@ -1,22 +1,19 @@
 use std::collections::BTreeMap;
 
 use defuse_contracts::{
-    crypto::SignedPayload,
     defuse::{
-        diff::{tokens::TokenDeltas, AccountDiff},
-        payload::{MultiStandardPayload, SignedPayloads},
-        tokens::TokenId,
+        intents::{token_diff::TokenDiff, DefuseIntents},
+        message::SignedDefuseMessage,
+        tokens::{TokenAmounts, TokenId},
     },
-    nep413::Nep413Payload,
+    utils::Deadline,
 };
 use near_sdk::AccountId;
 use near_workspaces::Account;
 use rand::{thread_rng, Rng};
 use serde_json::json;
 
-use crate::utils::crypto::Signer;
-
-use super::{accounts::AccountManagerExt, env::Env, DefuseExt};
+use super::{accounts::AccountManagerExt, env::Env, DefuseExt, DefuseSigner};
 
 #[tokio::test]
 async fn test_swap_p2p() {
@@ -24,32 +21,30 @@ async fn test_swap_p2p() {
     test_ft_diffs(
         &env,
         [
-            (
-                &env.user1,
-                AccountFtDiff {
-                    init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
-                    deltas: [TokenDeltas::default()
-                        .with_add_delta(env.ft1.id(), -100)
-                        .unwrap()
-                        .with_add_delta(env.ft2.id(), 200)
-                        .unwrap()]
-                    .into(),
-                    result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
-                },
-            ),
-            (
-                &env.user2,
-                AccountFtDiff {
-                    init_balances: [(env.ft2.id(), 200)].into_iter().collect(),
-                    deltas: [TokenDeltas::default()
-                        .with_add_delta(env.ft1.id(), 100)
-                        .unwrap()
-                        .with_add_delta(env.ft2.id(), -200)
-                        .unwrap()]
-                    .into(),
-                    result_balances: [(env.ft1.id(), 100)].into_iter().collect(),
-                },
-            ),
+            AccountFtDiff {
+                account: &env.user1,
+                init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
+                diff: [TokenAmounts::<i128>::default()
+                    .with_add::<i128>([
+                        (TokenId::Nep141(env.ft1.id().clone()), -100),
+                        (TokenId::Nep141(env.ft2.id().clone()), 200),
+                    ])
+                    .unwrap()]
+                .into(),
+                result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
+            },
+            AccountFtDiff {
+                account: &env.user2,
+                init_balances: [(env.ft2.id(), 200)].into_iter().collect(),
+                diff: [TokenAmounts::<i128>::default()
+                    .with_add::<i128>([
+                        (TokenId::Nep141(env.ft1.id().clone()), 100),
+                        (TokenId::Nep141(env.ft2.id().clone()), -200),
+                    ])
+                    .unwrap()]
+                .into(),
+                result_balances: [(env.ft1.id(), 100)].into_iter().collect(),
+            },
         ]
         .into(),
     )
@@ -62,54 +57,53 @@ async fn test_swap_many() {
     test_ft_diffs(
         &env,
         [
-            (
-                &env.user1,
-                AccountFtDiff {
-                    init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
-                    deltas: [TokenDeltas::default()
-                        .with_add_delta(env.ft1.id(), -100)
-                        .unwrap()
-                        .with_add_delta(env.ft2.id(), 200)
-                        .unwrap()]
-                    .into(),
-                    result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
-                },
-            ),
-            (
-                &env.user2,
-                AccountFtDiff {
-                    init_balances: [(env.ft2.id(), 500)].into_iter().collect(),
-                    deltas: [
-                        TokenDeltas::default()
-                            .with_add_delta(env.ft1.id(), 100)
-                            .unwrap()
-                            .with_add_delta(env.ft2.id(), -200)
-                            .unwrap(),
-                        TokenDeltas::default()
-                            .with_add_delta(env.ft3.id(), 500)
-                            .unwrap()
-                            .with_add_delta(env.ft2.id(), -300)
-                            .unwrap(),
-                    ]
-                    .into(),
-                    result_balances: [(env.ft1.id(), 100), (env.ft2.id(), 0), (env.ft3.id(), 500)]
-                        .into_iter()
-                        .collect(),
-                },
-            ),
-            (
-                &env.user3,
-                AccountFtDiff {
-                    init_balances: [(env.ft3.id(), 500)].into_iter().collect(),
-                    deltas: [TokenDeltas::default()
-                        .with_add_delta(env.ft2.id(), 300)
-                        .unwrap()
-                        .with_add_delta(env.ft3.id(), -500)
-                        .unwrap()]
-                    .into(),
-                    result_balances: [(env.ft2.id(), 300)].into_iter().collect(),
-                },
-            ),
+            AccountFtDiff {
+                account: &env.user1,
+                init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
+                diff: [TokenAmounts::<i128>::default()
+                    .with_add::<i128>([
+                        (TokenId::Nep141(env.ft1.id().clone()), -100),
+                        (TokenId::Nep141(env.ft2.id().clone()), 200),
+                    ])
+                    .unwrap()]
+                .into(),
+                result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
+            },
+            AccountFtDiff {
+                account: &env.user2,
+
+                init_balances: [(env.ft2.id(), 500)].into_iter().collect(),
+                diff: [
+                    TokenAmounts::<i128>::default()
+                        .with_add::<i128>([
+                            (TokenId::Nep141(env.ft1.id().clone()), 100),
+                            (TokenId::Nep141(env.ft2.id().clone()), -200),
+                        ])
+                        .unwrap(),
+                    TokenAmounts::<i128>::default()
+                        .with_add::<i128>([
+                            (TokenId::Nep141(env.ft3.id().clone()), 500),
+                            (TokenId::Nep141(env.ft2.id().clone()), -300),
+                        ])
+                        .unwrap(),
+                ]
+                .into(),
+                result_balances: [(env.ft1.id(), 100), (env.ft2.id(), 0), (env.ft3.id(), 500)]
+                    .into_iter()
+                    .collect(),
+            },
+            AccountFtDiff {
+                account: &env.user3,
+                init_balances: [(env.ft3.id(), 500)].into_iter().collect(),
+                diff: [TokenAmounts::<i128>::default()
+                    .with_add::<i128>([
+                        (TokenId::Nep141(env.ft2.id().clone()), 300),
+                        (TokenId::Nep141(env.ft3.id().clone()), -500),
+                    ])
+                    .unwrap()]
+                .into(),
+                result_balances: [(env.ft2.id(), 300)].into_iter().collect(),
+            },
         ]
         .into(),
     )
@@ -120,16 +114,17 @@ type FtBalances<'a> = BTreeMap<&'a AccountId, u128>;
 
 #[derive(Debug)]
 struct AccountFtDiff<'a> {
+    account: &'a Account,
     init_balances: FtBalances<'a>,
-    deltas: Vec<TokenDeltas<&'a AccountId>>,
+    diff: Vec<TokenAmounts<i128>>,
     result_balances: FtBalances<'a>,
 }
 
-async fn test_ft_diffs(env: &Env, accounts: Vec<(&Account, AccountFtDiff<'_>)>) {
+async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
     // deposit
-    for (account, t) in &accounts {
-        for (token_id, balance) in &t.init_balances {
-            env.defuse_ft_mint(token_id, *balance, account.id())
+    for account in &accounts {
+        for (token_id, balance) in &account.init_balances {
+            env.defuse_ft_mint(token_id, *balance, account.account.id())
                 .await
                 .unwrap();
         }
@@ -137,40 +132,32 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<(&Account, AccountFtDiff<'_>)>) 
 
     // verify
     env.defuse
-        .apply_signed_diffs(accounts.iter().map(move |(account, t)| {
-            (
-                account.id(),
-                t.deltas.iter().map(|deltas| {
-                    account.sign_payload(
-                        Nep413Payload::new(
-                            AccountDiff::default()
-                                .with_tokens(
-                                    deltas
-                                        .iter()
-                                        .map(|(t, d)| (TokenId::Nep141((*t).clone()), *d)),
-                                )
-                                .unwrap(),
-                        )
-                        .with_nonce(thread_rng().gen())
-                        .with_recipient(env.defuse.id())
-                        .into(),
-                    )
-                }),
-            )
+        .execute_signed_intents(accounts.iter().flat_map(move |account| {
+            account.diff.iter().cloned().map(|diff| {
+                account.account.sign_defuse_message(
+                    env.defuse.id(),
+                    DefuseIntents {
+                        intents: [TokenDiff { diff }.into()].into(),
+                        ..Default::default()
+                    },
+                    thread_rng().gen(),
+                    Deadline::infinity(),
+                )
+            })
         }))
         .await
         .unwrap();
 
     // check balances
-    for (account, t) in accounts {
-        let (tokens, balances): (Vec<_>, Vec<_>) = t
+    for account in accounts {
+        let (tokens, balances): (Vec<_>, Vec<_>) = account
             .result_balances
             .into_iter()
             .map(|(t, b)| (TokenId::Nep141(t.clone()), b))
             .unzip();
         assert_eq!(
             env.defuse
-                .mt_batch_balance_of(account.id(), &tokens)
+                .mt_batch_balance_of(account.account.id(), &tokens)
                 .await
                 .unwrap(),
             balances
@@ -194,30 +181,38 @@ async fn test_invariant_violated() {
         .unwrap();
 
     env.defuse
-        .apply_signed_diffs([
-            (
-                env.user1.id(),
-                [env.user1.sign_payload(
-                    Nep413Payload::new(
-                        AccountDiff::default()
-                            .with_tokens([(ft1.clone(), -1000), (ft2.clone(), 2000)])
-                            .unwrap(),
-                    )
-                    .with_recipient(env.defuse.id())
+        .execute_signed_intents([
+            env.user1.sign_defuse_message(
+                env.defuse.id(),
+                DefuseIntents {
+                    intents: [TokenDiff {
+                        diff: TokenAmounts::default()
+                            .with_add::<i128>([(ft1.clone(), -1000), (ft2.clone(), 2000)])
+                            .unwrap()
+                            .into(),
+                    }
+                    .into()]
                     .into(),
-                )],
+                    ..Default::default()
+                },
+                thread_rng().gen(),
+                Deadline::infinity(),
             ),
-            (
-                env.user2.id(),
-                [env.user2.sign_payload(
-                    Nep413Payload::new(
-                        AccountDiff::default()
-                            .with_tokens([(ft1.clone(), 1000), (ft2.clone(), -1999)])
-                            .unwrap(),
-                    )
-                    .with_recipient(env.defuse.id())
+            env.user1.sign_defuse_message(
+                env.defuse.id(),
+                DefuseIntents {
+                    intents: [TokenDiff {
+                        diff: TokenAmounts::default()
+                            .with_add::<i128>([(ft1.clone(), 1000), (ft2.clone(), -1999)])
+                            .unwrap()
+                            .into(),
+                    }
+                    .into()]
                     .into(),
-                )],
+                    ..Default::default()
+                },
+                thread_rng().gen(),
+                Deadline::infinity(),
             ),
         ])
         .await
@@ -240,36 +235,21 @@ async fn test_invariant_violated() {
     );
 }
 
-pub trait SignedDifferExt: AccountManagerExt {
-    async fn apply_signed_diffs(
+pub trait SignedIntentsExt: AccountManagerExt {
+    async fn execute_signed_intents(
         &self,
-        diffs: impl IntoIterator<
-            Item = (
-                &AccountId,
-                impl IntoIterator<Item = SignedPayload<MultiStandardPayload<AccountDiff>>>,
-            ),
-        >,
+        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
     ) -> anyhow::Result<()>;
 }
 
-impl SignedDifferExt for near_workspaces::Account {
-    async fn apply_signed_diffs(
+impl SignedIntentsExt for near_workspaces::Account {
+    async fn execute_signed_intents(
         &self,
-        diffs: impl IntoIterator<
-            Item = (
-                &AccountId,
-                impl IntoIterator<Item = SignedPayload<MultiStandardPayload<AccountDiff>>>,
-            ),
-        >,
+        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
     ) -> anyhow::Result<()> {
-        self.call(self.id(), "apply_signed_diffs")
+        self.call(self.id(), "execute_signed_intents")
             .args_json(json!({
-                "diffs": diffs
-                    .into_iter()
-                    .map(|(account_id, diffs)| (
-                        account_id.clone(),
-                        diffs.into_iter().collect(),
-                    )).collect::<SignedPayloads<_>>(),
+                "signed": intents.into_iter().collect::<Vec<_>>(),
             }))
             .max_gas()
             .transact()
@@ -280,16 +260,11 @@ impl SignedDifferExt for near_workspaces::Account {
     }
 }
 
-impl SignedDifferExt for near_workspaces::Contract {
-    async fn apply_signed_diffs(
+impl SignedIntentsExt for near_workspaces::Contract {
+    async fn execute_signed_intents(
         &self,
-        diffs: impl IntoIterator<
-            Item = (
-                &AccountId,
-                impl IntoIterator<Item = SignedPayload<MultiStandardPayload<AccountDiff>>>,
-            ),
-        >,
+        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
     ) -> anyhow::Result<()> {
-        self.as_account().apply_signed_diffs(diffs).await
+        self.as_account().execute_signed_intents(intents).await
     }
 }

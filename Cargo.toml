@@ -24,10 +24,12 @@ defuse-swap-ft-intent-contract.path = "intents/swap-ft"
 
 anyhow = "1"
 bnum = { version = "0.12", features = ["borsh"] }
+derive_more = "1.0"
 hex = "0.4"
 impl-tools = "0.10"
 near-account-id = "1.0"
 near-contract-standards = "5.5"
+near-plugins = { git = "https://github.com/Near-One/near-plugins" }
 near-sdk = { version = "5.5", features = ["unstable"] }
 near-workspaces = "0.14"
 serde_json = "1"

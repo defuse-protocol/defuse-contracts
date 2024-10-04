@@ -13,6 +13,7 @@ impl NonFungibleTokenReceiver for DefuseImpl {
     ///
     /// `msg` contains [`AccountId`] of the internal recipient.
     /// Empty `msg` means deposit to `sender_id`
+
     #[allow(unused_variables)]
     fn nft_on_transfer(
         &mut self,
@@ -21,6 +22,9 @@ impl NonFungibleTokenReceiver for DefuseImpl {
         token_id: near_contract_standards::non_fungible_token::TokenId,
         msg: String,
     ) -> PromiseOrValue<bool> {
+        #[cfg(feature = "beta")]
+        crate::beta::beta_access!(self, sender_id.clone());
+
         let receiver_id = if !msg.is_empty() {
             msg.parse().unwrap_or_panic_display()
         } else {

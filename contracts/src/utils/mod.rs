@@ -8,5 +8,6 @@ mod deadline;
 mod error;
 pub mod integer;
 mod lock;
+pub mod math;
 pub mod prefix;
 pub mod serde;

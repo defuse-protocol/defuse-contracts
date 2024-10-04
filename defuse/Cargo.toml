@@ -15,7 +15,12 @@ defuse-contracts = { workspace = true, features = ["defuse"] }
 impl-tools.workspace = true
 near-account-id.workspace = true
 near-contract-standards.workspace = true
+near-plugins.workspace = true
 near-sdk.workspace = true
 
 [features]
+# default = ["beta"]
+
 abi = ["defuse-contracts/abi"]
+
+beta = [] # TODO: remove

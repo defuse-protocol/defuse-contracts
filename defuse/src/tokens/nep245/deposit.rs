@@ -22,6 +22,9 @@ impl MultiTokenReceiver for DefuseImpl {
         amounts: Vec<U128>,
         msg: String,
     ) -> PromiseOrValue<Vec<U128>> {
+        #[cfg(feature = "beta")]
+        crate::beta::beta_access!(self, sender_id.clone());
+
         require!(
             token_ids.len() == amounts.len(),
             "token_ids should be the same length as amounts"
