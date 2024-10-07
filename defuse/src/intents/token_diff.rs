@@ -1,4 +1,4 @@
-use defuse_contracts::defuse::{intents::token_diff::TokenDiff, Result};
+use defuse_contracts::defuse::{intents::token_diff::TokenDiff, DefuseError, Result};
 use near_sdk::AccountId;
 
 use crate::accounts::Account;
@@ -23,8 +23,9 @@ impl<'a> IntentExecutor<TokenDiff> for Runtime<'a> {
 
             self.total_supply_deltas.add(
                 token_id.clone(),
-                // TODO: overflows?
-                delta + delta.signum() * fee as i128,
+                delta
+                    .checked_add_unsigned(fee)
+                    .ok_or(DefuseError::IntegerOverflow)?,
             )?;
         }
 

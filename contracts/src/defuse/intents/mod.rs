@@ -56,7 +56,7 @@ pub enum Intent {
         nonces: Vec<Nonce>,
     },
     TokenTransfer(TokenTransfer),
-    TokensDiff(TokenDiff),
     TokenWithdraw(TokenWithdraw),
+    TokensDiff(TokenDiff),
     // TODO: condition: if-then-intent1-else-intent2
 }

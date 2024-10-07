@@ -21,11 +21,66 @@ pub struct Env {
 }
 
 impl Env {
+    pub fn builder() -> EnvBuilder {
+        EnvBuilder::default()
+    }
+
     pub async fn new() -> anyhow::Result<Self> {
+        Self::builder().build().await
+    }
+
+    pub async fn ft_storage_deposit(
+        &self,
+        token: &AccountId,
+        accounts: &[&AccountId],
+    ) -> anyhow::Result<()> {
+        self.sandbox
+            .root_account()
+            .ft_storage_deposit_many(token, accounts)
+            .await
+    }
+
+    pub async fn ft_mint(
+        &self,
+        token: &AccountId,
+        account_id: &AccountId,
+        amount: u128,
+    ) -> anyhow::Result<()> {
+        self.sandbox
+            .root_account()
+            .ft_mint(token, account_id, amount)
+            .await
+    }
+
+    pub async fn defuse_ft_mint(
+        &self,
+        token_id: &AccountId,
+        amount: u128,
+        to: &AccountId,
+    ) -> anyhow::Result<()> {
+        self.sandbox
+            .root_account()
+            .defuse_ft_deposit(self.defuse.id(), token_id, amount, to)
+            .await
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct EnvBuilder {
+    fee: u32,
+}
+
+impl EnvBuilder {
+    pub fn fee(mut self, fee: u32) -> Self {
+        self.fee = fee;
+        self
+    }
+
+    pub async fn build(self) -> anyhow::Result<Env> {
         let sandbox = Sandbox::new().await?;
         let root = sandbox.root_account();
 
-        let s = Self {
+        let s = Env {
             user1: sandbox.create_account("user1").await,
             user2: sandbox.create_account("user2").await,
             user3: sandbox.create_account("user3").await,
@@ -33,7 +88,7 @@ impl Env {
                 .deploy_defuse(
                     "defuse",
                     Fees {
-                        fee: 0,
+                        fee: self.fee,
                         collector: root.id().clone(),
                     },
                 )
@@ -82,40 +137,5 @@ impl Env {
             .await?;
 
         Ok(s)
-    }
-
-    pub async fn ft_storage_deposit(
-        &self,
-        token: &AccountId,
-        accounts: &[&AccountId],
-    ) -> anyhow::Result<()> {
-        self.sandbox
-            .root_account()
-            .ft_storage_deposit_many(token, accounts)
-            .await
-    }
-
-    pub async fn ft_mint(
-        &self,
-        token: &AccountId,
-        account_id: &AccountId,
-        amount: u128,
-    ) -> anyhow::Result<()> {
-        self.sandbox
-            .root_account()
-            .ft_mint(token, account_id, amount)
-            .await
-    }
-
-    pub async fn defuse_ft_mint(
-        &self,
-        token_id: &AccountId,
-        amount: u128,
-        to: &AccountId,
-    ) -> anyhow::Result<()> {
-        self.sandbox
-            .root_account()
-            .defuse_ft_deposit(self.defuse.id(), token_id, amount, to)
-            .await
     }
 }

@@ -102,7 +102,7 @@ impl TokensBalances {
     #[inline]
     pub fn deposit(&mut self, token_id: TokenId, amount: u128) -> Result<u128> {
         self.try_apply(token_id, |b| {
-            b.checked_add(amount).ok_or(DefuseError::BalanceOverflow)
+            b.checked_add(amount).ok_or(DefuseError::IntegerOverflow)
         })
     }
 
@@ -110,7 +110,7 @@ impl TokensBalances {
     pub fn withdraw(&mut self, token_id: TokenId, amount: u128) -> Result<u128>
 where {
         self.try_apply(token_id, |b| {
-            b.checked_sub(amount).ok_or(DefuseError::BalanceOverflow)
+            b.checked_sub(amount).ok_or(DefuseError::IntegerOverflow)
         })
     }
 
@@ -118,7 +118,7 @@ where {
     pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Result<u128> {
         self.try_apply(token_id, |b| {
             b.checked_add_signed(delta)
-                .ok_or(DefuseError::BalanceOverflow)
+                .ok_or(DefuseError::IntegerOverflow)
         })
     }
 }

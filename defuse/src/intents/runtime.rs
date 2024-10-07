@@ -97,8 +97,8 @@ impl<'a> IntentExecutor<Intent> for Runtime<'a> {
                 Ok(())
             }
             Intent::TokenTransfer(intent) => self.execute_intent(account_id, account, intent),
-            Intent::TokensDiff(intent) => self.execute_intent(account_id, account, intent),
             Intent::TokenWithdraw(intent) => self.execute_intent(account_id, account, intent),
+            Intent::TokensDiff(intent) => self.execute_intent(account_id, account, intent),
         }
     }
 }
