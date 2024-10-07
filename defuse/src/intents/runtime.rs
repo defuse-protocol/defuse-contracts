@@ -1,11 +1,16 @@
-use defuse_contracts::defuse::{fees::Fees, intents::Intent, Result};
+use std::collections::HashMap;
+
+use defuse_contracts::defuse::{
+    fees::Fees,
+    intents::{DefuseIntents, Intent},
+    tokens::TokenAmounts,
+    DefuseError, Result,
+};
 use near_sdk::AccountId;
 
-use crate::accounts::{Account, Accounts};
-
-use super::{
-    fees::FeesTracker,
-    tokens::{TokenTracker, TransferTracker},
+use crate::{
+    accounts::{Account, Accounts},
+    tokens::TokensBalances,
 };
 
 pub trait IntentExecutor<T> {
@@ -14,41 +19,67 @@ pub trait IntentExecutor<T> {
         account_id: &AccountId,
         account: &mut Account,
         intent: T,
-        referral: Option<&AccountId>,
     ) -> Result<()>;
 }
 
-pub struct Runtime {
-    pub(super) fees: FeesTracker,
-    pub(super) transfers: TransferTracker,
-    pub(super) tokens: TokenTracker,
+pub struct Runtime<'a> {
+    pub fees: &'a Fees,
+    pub total_supplies: &'a mut TokensBalances,
+
+    pub postponed_deposits: HashMap<AccountId, TokenAmounts<u128>>,
+    // TODO: bigint
+    pub total_supply_deltas: TokenAmounts<i128>,
 }
 
-impl Runtime {
+impl<'a> Runtime<'a> {
     #[inline]
-    pub fn new(fees: Fees) -> Self {
+    pub fn new(fees: &'a Fees, total_supplies: &'a mut TokensBalances) -> Self {
         Self {
-            fees: FeesTracker::new(fees),
-            transfers: TransferTracker::default(),
-            tokens: TokenTracker::default(),
+            fees,
+            total_supplies,
+            postponed_deposits: Default::default(),
+            total_supply_deltas: Default::default(),
         }
     }
 
+    // TODO: simulate
+
     #[inline]
-    pub fn finalize(mut self, accounts: &mut Accounts) -> Result<()> {
-        self.transfers.finalize(accounts)?;
-        self.fees.finalize(accounts, &mut self.tokens)?;
-        self.tokens.finalize()
+    pub fn finalize(self, accounts: &mut Accounts) -> Result<()> {
+        for (receiver_id, tokens) in self.postponed_deposits {
+            let receiver = accounts.get_or_create(receiver_id);
+            for (token_id, amount) in tokens {
+                receiver.token_balances.deposit(token_id, amount)?;
+            }
+        }
+
+        if !self.total_supply_deltas.is_empty() {
+            return Err(DefuseError::InvariantViolated);
+        }
+        Ok(())
     }
 }
 
-impl IntentExecutor<Intent> for Runtime {
+impl<'a> IntentExecutor<DefuseIntents> for Runtime<'a> {
+    fn execute_intent(
+        &mut self,
+        account_id: &AccountId,
+        account: &mut Account,
+        intent: DefuseIntents,
+    ) -> Result<()> {
+        intent
+            .intents
+            .into_iter()
+            .try_for_each(|intent| self.execute_intent(account_id, account, intent))
+    }
+}
+
+impl<'a> IntentExecutor<Intent> for Runtime<'a> {
     fn execute_intent(
         &mut self,
         account_id: &AccountId,
         account: &mut Account,
         intent: Intent,
-        referral: Option<&AccountId>,
     ) -> Result<()> {
         match intent {
             Intent::AddPublicKey { public_key } => {
@@ -65,15 +96,9 @@ impl IntentExecutor<Intent> for Runtime {
                 }
                 Ok(())
             }
-            Intent::TokenTransfer(intent) => self.transfers.transfer(
-                &mut account.token_balances,
-                intent.recipient_id,
-                intent.tokens,
-            ),
-            Intent::TokensDiff(intent) => {
-                self.execute_intent(account_id, account, intent, referral)
-            }
-            Intent::TokenWithdraw(intent) => todo!(),
+            Intent::TokenTransfer(intent) => self.execute_intent(account_id, account, intent),
+            Intent::TokensDiff(intent) => self.execute_intent(account_id, account, intent),
+            Intent::TokenWithdraw(intent) => self.execute_intent(account_id, account, intent),
         }
     }
 }

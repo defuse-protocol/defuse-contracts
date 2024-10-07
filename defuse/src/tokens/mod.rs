@@ -3,12 +3,12 @@ mod nep171;
 mod nep245;
 
 use defuse_contracts::{
-    defuse::{tokens::TokenId, DefuseError, Result},
+    defuse::{intents::tokens::TokenWithdraw, tokens::TokenId, DefuseError, Result},
     utils::cleanup::DefaultMap,
 };
-use near_sdk::{near, store::IterableMap, AccountId, IntoStorageKey};
+use near_sdk::{near, store::IterableMap, AccountId, IntoStorageKey, Promise};
 
-use crate::DefuseImpl;
+use crate::{accounts::Account, intents::runtime::Runtime, DefuseImpl};
 
 impl DefuseImpl {
     pub(crate) fn internal_balance_of(&self, account_id: &AccountId, token_id: &TokenId) -> u128 {
@@ -27,22 +27,6 @@ impl DefuseImpl {
         for (token_id, amount) in token_amounts {
             self.total_supplies.deposit(token_id.clone(), amount)?;
             account.token_balances.deposit(token_id, amount)?;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn internal_withdraw(
-        &mut self,
-        account_id: &AccountId,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
-    ) -> Result<()> {
-        let account = self
-            .accounts
-            .get_mut(account_id)
-            .ok_or(DefuseError::AccountNotFound)?;
-        for (token_id, amount) in token_amounts {
-            account.token_balances.withdraw(token_id.clone(), amount)?;
-            self.total_supplies.withdraw(token_id, amount)?;
         }
         Ok(())
     }
@@ -136,5 +120,33 @@ where {
             b.checked_add_signed(delta)
                 .ok_or(DefuseError::BalanceOverflow)
         })
+    }
+}
+
+impl<'a> Runtime<'a> {
+    #[inline]
+    pub fn token_withdraw(
+        &mut self,
+        sender_id: AccountId,
+        sender: &mut Account,
+        withdraw: TokenWithdraw,
+    ) -> Result<Promise> {
+        match withdraw {
+            TokenWithdraw::Nep141(withdraw) => self.ft_withdraw(sender_id, sender, withdraw),
+            TokenWithdraw::Nep171(withdraw) => self.nft_withdraw(sender_id, sender, withdraw),
+            TokenWithdraw::Nep245(withdraw) => self.mt_withdraw(sender_id, sender, withdraw),
+        }
+    }
+
+    fn internal_withdraw(
+        &mut self,
+        account: &mut Account,
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+    ) -> Result<()> {
+        for (token_id, amount) in token_amounts {
+            account.token_balances.withdraw(token_id.clone(), amount)?;
+            self.total_supplies.withdraw(token_id, amount)?;
+        }
+        Ok(())
     }
 }

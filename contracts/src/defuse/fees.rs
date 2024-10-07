@@ -1,5 +1,4 @@
-use std::num::NonZeroU32;
-
+use bnum::{cast::As, BUint};
 use near_plugins::AccessControllable;
 use near_sdk::{ext_contract, near, AccountId};
 
@@ -10,37 +9,22 @@ pub trait FeesManager: AccessControllable {
     fn fees(&self) -> &Fees;
 }
 
-pub const FEE_DENOMINATOR: u32 = 1_000_000;
-
 #[near(serializers = [borsh, json])]
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Fees {
     /// Expressed in pips, i.e. 1/100th of bip, i.e. 0.0001%
     #[serde(default)]
     pub fee: u32,
 
-    #[serde(default)]
-    pub referral_shares: u32,
-
-    #[serde(default)]
-    pub governance: Option<(
-        // shares
-        NonZeroU32,
-        // collector
-        AccountId,
-    )>,
+    pub collector: AccountId,
 }
 
 impl Fees {
-    pub fn ref_gov(&self, amount: u128) -> (u128, u128) {
-        (0, 0)
-        //
-        // // TODO: overflows
-        // amount
-        // // TODO: muldiv https://docs.uniswap.org/contracts/v3/reference/core/libraries/FullMath#muldiv
-        // .checked_mul(self.fee as u128)
-        // // TODO
-        // .unwrap()
-        // .div_ceil(FEE_DENOMINATOR as u128);
+    pub const FEE_DENOMINATOR: u32 = 1_000_000;
+
+    pub fn apply(&self, amount: u128) -> u128 {
+        type U256 = BUint<4>;
+
+        (amount.as_::<U256>() * self.fee.as_::<U256>() / Self::FEE_DENOMINATOR.as_::<U256>()).as_()
     }
 }

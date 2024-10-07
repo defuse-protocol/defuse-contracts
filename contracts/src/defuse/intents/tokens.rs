@@ -1,6 +1,6 @@
 use near_contract_standards::non_fungible_token;
+use near_sdk::json_types::U128;
 use near_sdk::{near, AccountId, Gas};
-use serde_with::{serde_as, DisplayFromStr};
 
 use crate::nep245;
 
@@ -23,25 +23,14 @@ pub enum TokenWithdraw {
     Nep245(Nep245Withdraw),
 }
 
-#[cfg_attr(
-    all(feature = "abi", not(target_arch = "wasm32")),
-    serde_as(schemars = true)
-)]
-#[cfg_attr(
-    not(all(feature = "abi", not(target_arch = "wasm32"))),
-    serde_as(schemars = false)
-)]
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
 pub struct Nep141Withdraw {
     pub token: AccountId,
     pub receiver_id: AccountId,
-    #[serde_as(as = "DisplayFromStr")]
-    pub amount: u128,
+    pub amount: U128,
     pub memo: Option<String>,
     pub msg: Option<String>,
-
-    // TODO
     pub gas: Option<Gas>,
 }
 
@@ -53,29 +42,16 @@ pub struct Nep171Withdraw {
     pub token_id: non_fungible_token::TokenId,
     pub memo: Option<String>,
     pub msg: Option<String>,
-
-    // TODO
     pub gas: Option<Gas>,
 }
 
-#[cfg_attr(
-    all(feature = "abi", not(target_arch = "wasm32")),
-    serde_as(schemars = true)
-)]
-#[cfg_attr(
-    not(all(feature = "abi", not(target_arch = "wasm32"))),
-    serde_as(schemars = false)
-)]
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
 pub struct Nep245Withdraw {
     pub token: AccountId,
     pub receiver_id: AccountId,
-    #[serde_as(as = "Vec<(_, DisplayFromStr)>")]
-    pub amounts: Vec<(nep245::TokenId, u128)>,
+    pub token_id_amounts: Vec<(nep245::TokenId, U128)>,
     pub memo: Option<String>,
     pub msg: Option<String>,
-
-    // TODO
     pub gas: Option<Gas>,
 }

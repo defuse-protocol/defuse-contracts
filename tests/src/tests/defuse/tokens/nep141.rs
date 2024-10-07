@@ -4,8 +4,8 @@ use near_sdk::{json_types::U128, AccountId, NearToken};
 use serde_json::json;
 
 use crate::{
-    tests::defuse::{env::Env, DefuseExt},
-    utils::ft::FtExt,
+    tests::defuse::env::Env,
+    utils::{ft::FtExt, mt::MtExt},
 };
 
 #[tokio::test]
@@ -20,7 +20,7 @@ async fn test_deposit_withdraw() {
 
     assert_eq!(
         env.defuse
-            .mt_balance_of(env.user1.id(), &ft1)
+            .mt_balance_of(env.user1.id(), &ft1.to_string())
             .await
             .unwrap(),
         1000
@@ -36,7 +36,7 @@ async fn test_deposit_withdraw() {
 
     assert_eq!(
         env.defuse
-            .mt_balance_of(env.user1.id(), &ft1)
+            .mt_balance_of(env.user1.id(), &ft1.to_string())
             .await
             .unwrap(),
         0

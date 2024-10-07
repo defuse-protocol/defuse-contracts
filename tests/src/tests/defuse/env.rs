@@ -1,3 +1,4 @@
+use defuse_contracts::defuse::fees::Fees;
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
 
@@ -28,7 +29,15 @@ impl Env {
             user1: sandbox.create_account("user1").await,
             user2: sandbox.create_account("user2").await,
             user3: sandbox.create_account("user3").await,
-            defuse: root.deploy_defuse("defuse").await?,
+            defuse: root
+                .deploy_defuse(
+                    "defuse",
+                    Fees {
+                        fee: 0,
+                        collector: root.id().clone(),
+                    },
+                )
+                .await?,
             ft1: root.deploy_ft_token("ft1").await?,
             ft2: root.deploy_ft_token("ft2").await?,
             ft3: root.deploy_ft_token("ft3").await?,

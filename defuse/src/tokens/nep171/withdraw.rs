@@ -1,10 +1,11 @@
 use defuse_contracts::{
     defuse::{
+        intents::tokens::Nep171Withdraw,
         tokens::{
             nep171::{NonFungibleTokenWithdrawResolver, NonFungibleTokenWithdrawer},
             TokenId,
         },
-        Result,
+        DefuseError, Result,
     },
     utils::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
@@ -13,11 +14,11 @@ use defuse_contracts::{
 };
 use near_contract_standards::non_fungible_token::{self, core::ext_nft_core};
 use near_sdk::{
-    assert_one_yocto, env, near, serde_json, AccountId, Gas, NearToken, PromiseOrValue,
+    assert_one_yocto, env, near, serde_json, AccountId, Gas, NearToken, Promise, PromiseOrValue,
     PromiseResult,
 };
 
-use crate::{DefuseImpl, DefuseImplExt};
+use crate::{accounts::Account, intents::runtime::Runtime, DefuseImpl, DefuseImplExt};
 
 #[near]
 impl NonFungibleTokenWithdrawer for DefuseImpl {
@@ -25,19 +26,23 @@ impl NonFungibleTokenWithdrawer for DefuseImpl {
     fn nft_withdraw(
         &mut self,
         token: AccountId,
-        sender_id: AccountId,
+        receiver_id: AccountId,
         token_id: non_fungible_token::TokenId,
         memo: Option<String>,
         msg: Option<String>,
+        gas: Option<Gas>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
         self.internal_nft_withdraw(
             PREDECESSOR_ACCOUNT_ID.clone(),
-            sender_id,
-            token,
-            token_id,
-            memo,
-            msg,
+            Nep171Withdraw {
+                token,
+                receiver_id,
+                token_id,
+                memo,
+                msg,
+                gas,
+            },
         )
         .unwrap_or_panic()
     }
@@ -50,19 +55,43 @@ impl DefuseImpl {
     fn internal_nft_withdraw(
         &mut self,
         sender_id: AccountId,
-        receiver_id: AccountId,
-        token: AccountId,
-        token_id: non_fungible_token::TokenId,
-        memo: Option<String>,
-        msg: Option<String>,
+        withdraw: Nep171Withdraw,
     ) -> Result<PromiseOrValue<bool>> {
+        let sender = self
+            .accounts
+            .get_mut(&sender_id)
+            .ok_or(DefuseError::AccountNotFound)?;
+
+        Runtime::new(&self.fees, &mut self.total_supplies)
+            .nft_withdraw(sender_id, sender, withdraw)
+            .map(Into::into)
+    }
+}
+
+impl<'a> Runtime<'a> {
+    pub fn nft_withdraw(
+        &mut self,
+        sender_id: AccountId,
+        sender: &mut Account,
+        Nep171Withdraw {
+            token,
+            receiver_id,
+            token_id,
+            memo,
+            msg,
+            gas,
+        }: Nep171Withdraw,
+    ) -> Result<Promise> {
         self.internal_withdraw(
-            &sender_id,
+            sender,
             [(TokenId::Nep171(token.clone(), token_id.clone()), 1)],
         )?;
 
-        let ext =
+        let mut ext =
             ext_nft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
+        if let Some(gas) = gas {
+            ext = ext.with_static_gas(gas);
+        }
         let is_call = msg.is_some();
         Ok(if let Some(msg) = msg {
             ext.nft_transfer_call(receiver_id, token_id.clone(), None, memo, msg)
@@ -70,11 +99,10 @@ impl DefuseImpl {
             ext.nft_transfer(receiver_id, token_id.clone(), None, memo)
         }
         .then(
-            Self::ext(CURRENT_ACCOUNT_ID.clone())
-                .with_static_gas(Self::NFT_RESOLVE_WITHDRAW_GAS)
+            DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
+                .with_static_gas(DefuseImpl::NFT_RESOLVE_WITHDRAW_GAS)
                 .nft_resolve_withdraw(token, sender_id, token_id, is_call),
-        )
-        .into())
+        ))
     }
 }
 

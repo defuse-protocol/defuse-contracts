@@ -31,12 +31,11 @@ pub struct DefuseImpl {
 #[near]
 impl DefuseImpl {
     #[init]
-    pub fn new() -> Self {
+    pub fn new(fees: Fees) -> Self {
         Self {
             accounts: Accounts::new(Prefix::Accounts),
             total_supplies: TokensBalances::new(Prefix::TokenSupplies),
-            // TODO
-            fees: Default::default(),
+            fees,
         }
     }
 }

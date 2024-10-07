@@ -1,5 +1,5 @@
 mod fees;
-mod runtime;
+pub mod runtime;
 mod token_diff;
 mod tokens;
 
@@ -25,14 +25,12 @@ impl SignedIntentExecutor for DefuseImpl {
         #[cfg(feature = "beta")]
         crate::beta::beta_access!(self);
 
-        let mut rt = Runtime::new(self.fees.clone());
+        let mut rt = Runtime::new(&self.fees, &mut self.total_supplies);
 
         for signed in signed {
             let (signer_id, signer, intents) = self.accounts.verify_signed_message(signed)?;
 
-            for intent in intents.intents {
-                rt.execute_intent(&signer_id, signer, intent, intents.referral.as_ref())?;
-            }
+            rt.execute_intent(&signer_id, signer, intents)?;
             // TODO: log intent hash?
         }
 

@@ -649,6 +649,7 @@ dependencies = [
 name = "defuse-contract"
 version = "0.1.0"
 dependencies = [
+ "bnum",
  "defuse-contracts",
  "impl-tools",
  "near-account-id",

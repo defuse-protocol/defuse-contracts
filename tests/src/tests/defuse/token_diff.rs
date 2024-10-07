@@ -13,7 +13,9 @@ use near_workspaces::Account;
 use rand::{thread_rng, Rng};
 use serde_json::json;
 
-use super::{accounts::AccountManagerExt, env::Env, DefuseExt, DefuseSigner};
+use crate::utils::mt::MtExt;
+
+use super::{accounts::AccountManagerExt, env::Env, DefuseSigner};
 
 #[tokio::test]
 async fn test_swap_p2p() {
@@ -138,7 +140,6 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
                     env.defuse.id(),
                     DefuseIntents {
                         intents: [TokenDiff { diff }.into()].into(),
-                        ..Default::default()
                     },
                     thread_rng().gen(),
                     Deadline::infinity(),
@@ -153,7 +154,7 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
         let (tokens, balances): (Vec<_>, Vec<_>) = account
             .result_balances
             .into_iter()
-            .map(|(t, b)| (TokenId::Nep141(t.clone()), b))
+            .map(|(t, b)| (TokenId::Nep141(t.clone()).to_string(), b))
             .unzip();
         assert_eq!(
             env.defuse
@@ -188,12 +189,10 @@ async fn test_invariant_violated() {
                     intents: [TokenDiff {
                         diff: TokenAmounts::default()
                             .with_add::<i128>([(ft1.clone(), -1000), (ft2.clone(), 2000)])
-                            .unwrap()
-                            .into(),
+                            .unwrap(),
                     }
                     .into()]
                     .into(),
-                    ..Default::default()
                 },
                 thread_rng().gen(),
                 Deadline::infinity(),
@@ -204,12 +203,10 @@ async fn test_invariant_violated() {
                     intents: [TokenDiff {
                         diff: TokenAmounts::default()
                             .with_add::<i128>([(ft1.clone(), 1000), (ft2.clone(), -1999)])
-                            .unwrap()
-                            .into(),
+                            .unwrap(),
                     }
                     .into()]
                     .into(),
-                    ..Default::default()
                 },
                 thread_rng().gen(),
                 Deadline::infinity(),
@@ -221,14 +218,14 @@ async fn test_invariant_violated() {
     // balances should stay the same
     assert_eq!(
         env.defuse
-            .mt_batch_balance_of(env.user1.id(), [&ft1, &ft2])
+            .mt_batch_balance_of(env.user1.id(), [&ft1.to_string(), &ft2.to_string()])
             .await
             .unwrap(),
         [1000, 0]
     );
     assert_eq!(
         env.defuse
-            .mt_batch_balance_of(env.user2.id(), [&ft1, &ft2])
+            .mt_batch_balance_of(env.user2.id(), [&ft1.to_string(), &ft2.to_string()])
             .await
             .unwrap(),
         [0, 2000]

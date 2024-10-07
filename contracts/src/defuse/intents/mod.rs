@@ -2,8 +2,7 @@ pub mod token_diff;
 pub mod tokens;
 
 use derive_more::derive::From;
-use impl_tools::autoimpl;
-use near_sdk::{ext_contract, near, AccountId};
+use near_sdk::{ext_contract, near};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{crypto::PublicKey, nep413::Nonce};
@@ -22,6 +21,13 @@ pub trait SignedIntentExecutor: FeesManager {
         &mut self,
         signed: Vec<SignedDefuseMessage<DefuseIntents>>,
     ) -> Result<()>;
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Debug, Clone, Default)]
+pub struct DefuseIntents {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub intents: Vec<Intent>,
 }
 
 #[cfg_attr(
@@ -52,41 +58,5 @@ pub enum Intent {
     TokenTransfer(TokenTransfer),
     TokensDiff(TokenDiff),
     TokenWithdraw(TokenWithdraw),
-}
-
-#[near(serializers = [borsh, json])]
-#[autoimpl(Deref using self.intents)]
-#[autoimpl(DerefMut using self.intents)]
-#[derive(Debug, Clone, Default)]
-pub struct DefuseIntents {
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub intents: Vec<Intent>,
-
-    // TODO: remove
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub referral: Option<AccountId>,
-}
-
-impl DefuseIntents {
-    pub fn with_referral(mut self, referral: impl Into<Option<AccountId>>) -> Self {
-        self.referral = referral.into();
-        self
-    }
-}
-
-impl FromIterator<Intent> for DefuseIntents {
-    #[inline]
-    fn from_iter<T: IntoIterator<Item = Intent>>(iter: T) -> Self {
-        Self {
-            intents: iter.into_iter().collect(),
-            referral: None,
-        }
-    }
-}
-
-impl Extend<Intent> for DefuseIntents {
-    #[inline]
-    fn extend<T: IntoIterator<Item = Intent>>(&mut self, iter: T) {
-        self.intents.extend(iter);
-    }
+    // TODO: condition: if-then-intent1-else-intent2
 }
