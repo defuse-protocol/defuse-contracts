@@ -22,9 +22,6 @@ pub enum DefuseError {
     #[error("invalid signature")]
     InvalidSignature,
 
-    #[error("invariant violated")]
-    InvariantViolated,
-
     #[error("JSON: {0}")]
     JSON(#[from] serde_json::Error),
 

@@ -168,13 +168,6 @@ impl<A> TokenAmounts<A> {
     }
 
     #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-impl<A> TokenAmounts<A> {
-    #[inline]
     pub fn add<T>(&mut self, token_id: TokenId, amount: T) -> Result<A>
     where
         A: CheckedAdd<T> + Default + Eq + Copy,
@@ -195,7 +188,10 @@ impl<A> TokenAmounts<A> {
     }
 
     #[inline]
-    pub fn with_add<T>(mut self, amounts: impl IntoIterator<Item = (TokenId, T)>) -> Result<Self>
+    pub fn try_extend<T>(
+        &mut self,
+        amounts: impl IntoIterator<Item = (TokenId, T)>,
+    ) -> Result<&mut Self>
     where
         A: CheckedAdd<T> + Default + Eq + Copy,
     {
@@ -204,12 +200,41 @@ impl<A> TokenAmounts<A> {
         }
         Ok(self)
     }
+
+    #[inline]
+    pub fn with_try_extend<T>(
+        mut self,
+        amounts: impl IntoIterator<Item = (TokenId, T)>,
+    ) -> Result<Self>
+    where
+        A: CheckedAdd<T> + Default + Eq + Copy,
+    {
+        self.try_extend(amounts)?;
+        Ok(self)
+    }
+
+    #[inline]
+    pub fn try_from_iter<T>(iter: impl IntoIterator<Item = (TokenId, T)>) -> Result<Self>
+    where
+        A: CheckedAdd<T> + Default + Eq + Copy,
+    {
+        iter.into_iter()
+            .try_fold(Self::default(), |mut amounts, (token_id, amount)| {
+                amounts.add(token_id, amount)?;
+                Ok(amounts)
+            })
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
-impl<T> IntoIterator for TokenAmounts<T> {
-    type Item = (TokenId, T);
+impl<A> IntoIterator for TokenAmounts<A> {
+    type Item = (TokenId, A);
 
-    type IntoIter = btree_map::IntoIter<TokenId, T>;
+    type IntoIter = btree_map::IntoIter<TokenId, A>;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -239,32 +264,32 @@ mod tests {
 
         assert!(TokenAmounts::<()>::default().is_empty());
         assert!(TokenAmounts::<i32>::default()
-            .with_add([(t1.clone(), 0)])
+            .with_try_extend([(t1.clone(), 0)])
             .unwrap()
             .is_empty());
 
         assert!(!TokenAmounts::<i32>::default()
-            .with_add([(t1.clone(), 1)])
+            .with_try_extend([(t1.clone(), 1)])
             .unwrap()
             .is_empty());
 
         assert!(!TokenAmounts::<i32>::default()
-            .with_add([(t1.clone(), -1)])
+            .with_try_extend([(t1.clone(), -1)])
             .unwrap()
             .is_empty());
 
         assert!(TokenAmounts::<i32>::default()
-            .with_add([(t1.clone(), 1), (t1.clone(), -1)])
+            .with_try_extend([(t1.clone(), 1), (t1.clone(), -1)])
             .unwrap()
             .is_empty());
 
         assert!(!TokenAmounts::<i32>::default()
-            .with_add([(t1.clone(), 1), (t1.clone(), -1), (t2.clone(), -1)])
+            .with_try_extend([(t1.clone(), 1), (t1.clone(), -1), (t2.clone(), -1)])
             .unwrap()
             .is_empty());
 
         assert!(TokenAmounts::<i32>::default()
-            .with_add([
+            .with_try_extend([
                 (t1.clone(), 1),
                 (t1.clone(), -1),
                 (t2.clone(), -1),

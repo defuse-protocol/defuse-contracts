@@ -1,10 +1,9 @@
+use core::mem;
 use std::collections::HashMap;
 
-use defuse_contracts::defuse::{
-    fees::Fees,
-    intents::{DefuseIntents, Intent},
-    tokens::TokenAmounts,
-    DefuseError, Result,
+use defuse_contracts::{
+    defuse::{fees::Fees, intents::Intent, tokens::TokenAmounts, Result},
+    utils::PanicError,
 };
 use near_sdk::AccountId;
 
@@ -22,10 +21,12 @@ pub trait IntentExecutor<T> {
     ) -> Result<()>;
 }
 
+#[derive(Debug)]
 pub struct Runtime<'a> {
     pub fees: &'a Fees,
     pub total_supplies: &'a mut TokensBalances,
 
+    /// Deposits postponed until [`.finalize()`](Self::finalize)
     pub postponed_deposits: HashMap<AccountId, TokenAmounts<u128>>,
     // TODO: bigint
     pub total_supply_deltas: TokenAmounts<i128>,
@@ -42,35 +43,26 @@ impl<'a> Runtime<'a> {
         }
     }
 
-    // TODO: simulate
-
     #[inline]
-    pub fn finalize(self, accounts: &mut Accounts) -> Result<()> {
-        for (receiver_id, tokens) in self.postponed_deposits {
+    pub fn finalize(mut self, accounts: &mut Accounts) -> Result<()> {
+        for (receiver_id, tokens) in mem::take(&mut self.postponed_deposits) {
             let receiver = accounts.get_or_create(receiver_id);
             for (token_id, amount) in tokens {
                 receiver.token_balances.deposit(token_id, amount)?;
             }
         }
-
-        if !self.total_supply_deltas.is_empty() {
-            return Err(DefuseError::InvariantViolated);
-        }
         Ok(())
     }
 }
 
-impl<'a> IntentExecutor<DefuseIntents> for Runtime<'a> {
-    fn execute_intent(
-        &mut self,
-        account_id: &AccountId,
-        account: &mut Account,
-        intent: DefuseIntents,
-    ) -> Result<()> {
-        intent
-            .intents
-            .into_iter()
-            .try_for_each(|intent| self.execute_intent(account_id, account, intent))
+impl<'a> Drop for Runtime<'a> {
+    fn drop(&mut self) {
+        if !self.postponed_deposits.is_empty() {
+            "runtime was not finalized".panic_static_str()
+        }
+        if !self.total_supply_deltas.is_empty() {
+            "invariant violated".panic_display()
+        }
     }
 }
 

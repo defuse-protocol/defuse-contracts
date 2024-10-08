@@ -1,8 +1,8 @@
 use defuse_contracts::defuse::{
-    intents::tokens::{TokenTransfer, TokenWithdraw},
-    Result,
+    intents::tokens::{TokenTransfer, TokenTransferCall, TokenWithdraw},
+    DefuseError, Result,
 };
-use near_sdk::AccountId;
+use near_sdk::{AccountId, Promise};
 
 use crate::accounts::Account;
 
@@ -11,19 +11,38 @@ use super::runtime::{IntentExecutor, Runtime};
 impl<'a> IntentExecutor<TokenTransfer> for Runtime<'a> {
     fn execute_intent(
         &mut self,
-        _sender_id: &AccountId,
+        sender_id: &AccountId,
         sender: &mut Account,
-        intent: TokenTransfer,
+        transfer: TokenTransfer,
     ) -> Result<()> {
+        if sender_id == &transfer.receiver_id {
+            return Err(DefuseError::InvalidSenderReceiver);
+        }
+
         let receiver_deposit = self
             .postponed_deposits
-            .entry(intent.recipient_id)
+            .entry(transfer.receiver_id)
             .or_default();
-        for (token_id, amount) in intent.tokens {
+        for (token_id, amount) in transfer.token_id_amounts {
             sender.token_balances.withdraw(token_id.clone(), amount)?;
             receiver_deposit.add(token_id, amount)?;
         }
+
+        // TODO: log with memo
+
         Ok(())
+    }
+}
+
+impl<'a> IntentExecutor<TokenTransferCall> for Runtime<'a> {
+    fn execute_intent(
+        &mut self,
+        sender_id: &AccountId,
+        sender: &mut Account,
+        intent: TokenTransferCall,
+    ) -> Result<()> {
+        self.internal_transfer_call(sender_id, sender, intent)
+            .map(|_promise| ())
     }
 }
 
@@ -37,5 +56,21 @@ impl<'a> IntentExecutor<TokenWithdraw> for Runtime<'a> {
         self.token_withdraw(account_id.clone(), account, intent)
             // detach promise
             .map(|_promise| ())
+    }
+}
+
+impl<'a> Runtime<'a> {
+    #[inline]
+    fn token_withdraw(
+        &mut self,
+        sender_id: AccountId,
+        sender: &mut Account,
+        withdraw: TokenWithdraw,
+    ) -> Result<Promise> {
+        match withdraw {
+            TokenWithdraw::Nep141(withdraw) => self.ft_withdraw(sender_id, sender, withdraw),
+            TokenWithdraw::Nep171(withdraw) => self.nft_withdraw(sender_id, sender, withdraw),
+            TokenWithdraw::Nep245(withdraw) => self.mt_withdraw(sender_id, sender, withdraw),
+        }
     }
 }

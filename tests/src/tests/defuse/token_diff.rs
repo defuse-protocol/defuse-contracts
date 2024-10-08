@@ -27,7 +27,7 @@ async fn test_swap_p2p() {
                 account: &env.user1,
                 init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
-                    .with_add::<i128>([
+                    .with_try_extend::<i128>([
                         (TokenId::Nep141(env.ft1.id().clone()), -100),
                         (TokenId::Nep141(env.ft2.id().clone()), 200),
                     ])
@@ -39,7 +39,7 @@ async fn test_swap_p2p() {
                 account: &env.user2,
                 init_balances: [(env.ft2.id(), 200)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
-                    .with_add::<i128>([
+                    .with_try_extend::<i128>([
                         (TokenId::Nep141(env.ft1.id().clone()), 100),
                         (TokenId::Nep141(env.ft2.id().clone()), -200),
                     ])
@@ -63,7 +63,7 @@ async fn test_swap_many() {
                 account: &env.user1,
                 init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
-                    .with_add::<i128>([
+                    .with_try_extend::<i128>([
                         (TokenId::Nep141(env.ft1.id().clone()), -100),
                         (TokenId::Nep141(env.ft2.id().clone()), 200),
                     ])
@@ -77,13 +77,13 @@ async fn test_swap_many() {
                 init_balances: [(env.ft2.id(), 500)].into_iter().collect(),
                 diff: [
                     TokenAmounts::<i128>::default()
-                        .with_add::<i128>([
+                        .with_try_extend::<i128>([
                             (TokenId::Nep141(env.ft1.id().clone()), 100),
                             (TokenId::Nep141(env.ft2.id().clone()), -200),
                         ])
                         .unwrap(),
                     TokenAmounts::<i128>::default()
-                        .with_add::<i128>([
+                        .with_try_extend::<i128>([
                             (TokenId::Nep141(env.ft3.id().clone()), 500),
                             (TokenId::Nep141(env.ft2.id().clone()), -300),
                         ])
@@ -98,7 +98,7 @@ async fn test_swap_many() {
                 account: &env.user3,
                 init_balances: [(env.ft3.id(), 500)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
-                    .with_add::<i128>([
+                    .with_try_extend::<i128>([
                         (TokenId::Nep141(env.ft2.id().clone()), 300),
                         (TokenId::Nep141(env.ft3.id().clone()), -500),
                     ])
@@ -188,7 +188,7 @@ async fn test_invariant_violated() {
                 DefuseIntents {
                     intents: [TokenDiff {
                         diff: TokenAmounts::default()
-                            .with_add::<i128>([(ft1.clone(), -1000), (ft2.clone(), 2000)])
+                            .with_try_extend::<i128>([(ft1.clone(), -1000), (ft2.clone(), 2000)])
                             .unwrap(),
                     }
                     .into()]
@@ -202,7 +202,7 @@ async fn test_invariant_violated() {
                 DefuseIntents {
                     intents: [TokenDiff {
                         diff: TokenAmounts::default()
-                            .with_add::<i128>([(ft1.clone(), 1000), (ft2.clone(), -1999)])
+                            .with_try_extend::<i128>([(ft1.clone(), 1000), (ft2.clone(), -1999)])
                             .unwrap(),
                     }
                     .into()]

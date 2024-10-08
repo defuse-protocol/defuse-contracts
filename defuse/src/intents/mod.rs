@@ -1,4 +1,3 @@
-mod fees;
 pub mod runtime;
 mod token_diff;
 mod tokens;
@@ -30,7 +29,9 @@ impl SignedIntentExecutor for DefuseImpl {
         for signed in signed {
             let (signer_id, signer, intents) = self.accounts.verify_signed_message(signed)?;
 
-            rt.execute_intent(&signer_id, signer, intents)?;
+            for intent in intents.intents {
+                rt.execute_intent(&signer_id, signer, intent)?;
+            }
             // TODO: log intent hash?
         }
 

@@ -1,6 +1,7 @@
 mod accounts;
 #[cfg(feature = "beta")]
 mod beta;
+mod fees;
 mod intents;
 mod tokens;
 

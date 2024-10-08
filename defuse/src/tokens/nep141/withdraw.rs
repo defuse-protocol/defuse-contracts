@@ -84,10 +84,6 @@ impl<'a> Runtime<'a> {
             gas,
         }: Nep141Withdraw,
     ) -> Result<Promise> {
-        if amount.0 == 0 {
-            return Err(DefuseError::ZeroAmount);
-        }
-
         self.internal_withdraw(sender, [(TokenId::Nep141(token.clone()), amount.0)])?;
 
         let mut ext =
