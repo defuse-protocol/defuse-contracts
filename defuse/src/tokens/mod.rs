@@ -8,7 +8,7 @@ use defuse_contracts::{
 };
 use near_sdk::{near, store::IterableMap, AccountId, IntoStorageKey};
 
-use crate::{accounts::Account, intents::runtime::Runtime, DefuseImpl};
+use crate::{accounts::Account, state::State, DefuseImpl};
 
 impl DefuseImpl {
     pub(crate) fn internal_balance_of(&self, account_id: &AccountId, token_id: &TokenId) -> u128 {
@@ -25,7 +25,9 @@ impl DefuseImpl {
     ) -> Result<()> {
         let account = self.accounts.get_or_create(account_id);
         for (token_id, amount) in token_amounts {
-            self.total_supplies.deposit(token_id.clone(), amount)?;
+            self.state
+                .total_supplies
+                .deposit(token_id.clone(), amount)?;
             account.token_balances.deposit(token_id, amount)?;
         }
         Ok(())
@@ -93,7 +95,7 @@ where {
     }
 }
 
-impl<'a> Runtime<'a> {
+impl State {
     pub fn internal_withdraw(
         &mut self,
         account: &mut Account,

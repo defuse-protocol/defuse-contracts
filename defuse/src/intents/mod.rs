@@ -1,18 +1,14 @@
-pub mod runtime;
 mod token_diff;
 mod tokens;
 
 use defuse_contracts::defuse::{
-    intents::{DefuseIntents, SignedIntentExecutor},
+    intents::{DefuseIntents, Intent, SignedIntentExecutor},
     message::SignedDefuseMessage,
     Result,
 };
-use near_sdk::near;
-use runtime::IntentExecutor;
+use near_sdk::{near, AccountId};
 
-use crate::{DefuseImpl, DefuseImplExt};
-
-use self::runtime::Runtime;
+use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 
 #[near]
 impl SignedIntentExecutor for DefuseImpl {
@@ -24,17 +20,54 @@ impl SignedIntentExecutor for DefuseImpl {
         #[cfg(feature = "beta")]
         crate::beta::beta_access!(self);
 
-        let mut rt = Runtime::new(&self.fees, &mut self.total_supplies);
-
         for signed in signed {
             let (signer_id, signer, intents) = self.accounts.verify_signed_message(signed)?;
 
             for intent in intents.intents {
-                rt.execute_intent(&signer_id, signer, intent)?;
+                self.state.execute_intent(&signer_id, signer, intent)?;
             }
             // TODO: log intent hash?
         }
 
-        rt.finalize(&mut self.accounts)
+        Ok(())
+    }
+}
+
+pub trait IntentExecutor<T> {
+    fn execute_intent(
+        &mut self,
+        account_id: &AccountId,
+        account: &mut Account,
+        intent: T,
+    ) -> Result<()>;
+}
+
+impl IntentExecutor<Intent> for State {
+    fn execute_intent(
+        &mut self,
+        account_id: &AccountId,
+        account: &mut Account,
+        intent: Intent,
+    ) -> Result<()> {
+        match intent {
+            Intent::AddPublicKey { public_key } => {
+                account.add_public_key(account_id, public_key);
+                Ok(())
+            }
+            Intent::RemovePublicKey { public_key } => {
+                account.remove_public_key(account_id, &public_key);
+                Ok(())
+            }
+            Intent::InvalidateNonces { nonces } => {
+                for n in nonces {
+                    let _ = account.commit_nonce(n);
+                }
+                Ok(())
+            }
+            Intent::TokenTransfer(intent) => self.execute_intent(account_id, account, intent),
+            Intent::TokenTransferCall(intent) => self.execute_intent(account_id, account, intent),
+            Intent::TokenWithdraw(intent) => self.execute_intent(account_id, account, intent),
+            Intent::TokensDiff(intent) => self.execute_intent(account_id, account, intent),
+        }
     }
 }

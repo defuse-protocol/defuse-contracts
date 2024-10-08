@@ -18,7 +18,7 @@ use near_sdk::{
     PromiseResult,
 };
 
-use crate::{accounts::Account, intents::runtime::Runtime, DefuseImpl, DefuseImplExt};
+use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 
 #[near]
 impl NonFungibleTokenWithdrawer for DefuseImpl {
@@ -61,14 +61,13 @@ impl DefuseImpl {
             .accounts
             .get_mut(&sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
-
-        Runtime::new(&self.fees, &mut self.total_supplies)
+        self.state
             .nft_withdraw(sender_id, sender, withdraw)
             .map(Into::into)
     }
 }
 
-impl<'a> Runtime<'a> {
+impl State {
     pub fn nft_withdraw(
         &mut self,
         sender_id: AccountId,

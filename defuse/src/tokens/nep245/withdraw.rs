@@ -18,7 +18,7 @@ use near_sdk::{
     PromiseOrValue, PromiseResult,
 };
 
-use crate::{accounts::Account, intents::runtime::Runtime, DefuseImpl, DefuseImplExt};
+use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 
 #[near]
 impl MultiTokenWithdrawer for DefuseImpl {
@@ -62,8 +62,7 @@ impl DefuseImpl {
             .accounts
             .get_mut(&sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
-
-        Runtime::new(&self.fees, &mut self.total_supplies)
+        self.state
             .mt_withdraw(sender_id, sender, withdraw)
             .map(Into::into)
     }
@@ -84,7 +83,7 @@ impl DefuseImpl {
     }
 }
 
-impl<'a> Runtime<'a> {
+impl State {
     pub fn mt_withdraw(
         &mut self,
         sender_id: AccountId,
@@ -165,7 +164,8 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
             let refund = amount.0 - used.0;
             if refund > 0 {
                 let token_id = TokenId::Nep245(token.clone(), token_id);
-                self.total_supplies
+                self.state
+                    .total_supplies
                     .deposit(token_id.clone(), refund)
                     .unwrap_or_panic();
                 account

@@ -12,11 +12,7 @@ use defuse_contracts::{
 };
 use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, PromiseOrValue};
 
-use crate::{
-    accounts::Account,
-    intents::runtime::{IntentExecutor, Runtime},
-    DefuseImpl, DefuseImplExt,
-};
+use crate::{accounts::Account, intents::IntentExecutor, state::State, DefuseImpl, DefuseImplExt};
 
 #[near]
 impl MultiTokenCore for DefuseImpl {
@@ -179,10 +175,7 @@ impl DefuseImpl {
             .accounts
             .get_mut(sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
-
-        let mut rt = Runtime::new(&self.fees, &mut self.total_supplies);
-        rt.execute_intent(sender_id, sender, transfer)?;
-        rt.finalize(&mut self.accounts)
+        self.state.execute_intent(sender_id, sender, transfer)
     }
 
     fn internal_transfer_call(
@@ -194,11 +187,8 @@ impl DefuseImpl {
             .accounts
             .get_mut(sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
-
-        let mut rt = Runtime::new(&self.fees, &mut self.total_supplies);
-        let p = rt.internal_transfer_call(sender_id, sender, transfer)?;
-        rt.finalize(&mut self.accounts)?;
-        Ok(p)
+        self.state
+            .internal_transfer_call(sender_id, sender, transfer)
     }
 
     fn internal_mt_balance_of(&self, account_id: &AccountId, token_id: &nep245::TokenId) -> u128 {
@@ -209,7 +199,7 @@ impl DefuseImpl {
     }
 }
 
-impl<'a> Runtime<'a> {
+impl State {
     pub fn internal_transfer_call(
         &mut self,
         sender_id: &AccountId,

@@ -6,9 +6,9 @@ use near_sdk::{AccountId, Promise};
 
 use crate::accounts::Account;
 
-use super::runtime::{IntentExecutor, Runtime};
+use super::{IntentExecutor, State};
 
-impl<'a> IntentExecutor<TokenTransfer> for Runtime<'a> {
+impl IntentExecutor<TokenTransfer> for State {
     fn execute_intent(
         &mut self,
         sender_id: &AccountId,
@@ -34,7 +34,7 @@ impl<'a> IntentExecutor<TokenTransfer> for Runtime<'a> {
     }
 }
 
-impl<'a> IntentExecutor<TokenTransferCall> for Runtime<'a> {
+impl IntentExecutor<TokenTransferCall> for State {
     fn execute_intent(
         &mut self,
         sender_id: &AccountId,
@@ -46,7 +46,7 @@ impl<'a> IntentExecutor<TokenTransferCall> for Runtime<'a> {
     }
 }
 
-impl<'a> IntentExecutor<TokenWithdraw> for Runtime<'a> {
+impl IntentExecutor<TokenWithdraw> for State {
     fn execute_intent(
         &mut self,
         account_id: &AccountId,
@@ -59,9 +59,9 @@ impl<'a> IntentExecutor<TokenWithdraw> for Runtime<'a> {
     }
 }
 
-impl<'a> Runtime<'a> {
+impl State {
     #[inline]
-    fn token_withdraw(
+    pub fn token_withdraw(
         &mut self,
         sender_id: AccountId,
         sender: &mut Account,

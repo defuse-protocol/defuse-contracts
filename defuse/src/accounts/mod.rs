@@ -82,13 +82,14 @@ impl AccountManager for DefuseImpl {
     }
 
     #[handle_result]
-    fn invalidate_nonce(&mut self, nonce: DisplayFromStr<Nonce>) -> Result<()> {
+    fn invalidate_nonces(&mut self, nonces: Vec<DisplayFromStr<Nonce>>) {
         #[cfg(feature = "beta")]
         crate::beta::beta_access!(self);
 
-        self.accounts
-            .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
-            .commit_nonce(nonce.into_inner())
+        let account = self.accounts.get_or_create(PREDECESSOR_ACCOUNT_ID.clone());
+        for n in nonces.into_iter().map(DisplayFromStr::into_inner) {
+            let _ = account.commit_nonce(n);
+        }
     }
 }
 

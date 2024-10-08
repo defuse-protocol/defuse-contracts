@@ -3,13 +3,19 @@ mod accounts;
 mod beta;
 mod fees;
 mod intents;
+mod state;
 mod tokens;
 
 use accounts::Accounts;
-use defuse_contracts::defuse::{fees::Fees, Defuse};
+use defuse_contracts::{
+    defuse::{fees::Fees, Defuse, Result},
+    utils::UnwrapOrPanic,
+};
+use impl_tools::autoimpl;
 use near_plugins::{access_control, AccessControlRole};
 use near_sdk::{near, BorshStorageKey, PanicOnDefault};
-use tokens::TokensBalances;
+
+use self::state::State;
 
 #[derive(AccessControlRole, Clone, Copy)]
 enum Role {
@@ -20,13 +26,12 @@ enum Role {
 
 #[access_control(role_type(Role))]
 #[near(contract_state)]
+#[autoimpl(Deref using self.state)]
+#[autoimpl(DerefMut using self.state)]
 #[derive(PanicOnDefault)]
 pub struct DefuseImpl {
     accounts: Accounts,
-
-    total_supplies: TokensBalances,
-
-    fees: Fees,
+    state: State,
 }
 
 #[near]
@@ -35,9 +40,22 @@ impl DefuseImpl {
     pub fn new(fees: Fees) -> Self {
         Self {
             accounts: Accounts::new(Prefix::Accounts),
-            total_supplies: TokensBalances::new(Prefix::TokenSupplies),
-            fees,
+            state: State::new(Prefix::Runtime, fees),
         }
+    }
+}
+
+impl DefuseImpl {
+    #[inline]
+    pub fn finalize(&mut self) -> Result<()> {
+        self.state.runtime.finalize(&mut self.accounts)
+    }
+}
+
+impl Drop for DefuseImpl {
+    #[inline]
+    fn drop(&mut self) {
+        self.finalize().unwrap_or_panic()
     }
 }
 
@@ -48,5 +66,5 @@ impl Defuse for DefuseImpl {}
 #[near(serializers = [borsh])]
 enum Prefix {
     Accounts,
-    TokenSupplies,
+    Runtime,
 }

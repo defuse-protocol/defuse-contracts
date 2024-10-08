@@ -3,9 +3,9 @@ use near_sdk::AccountId;
 
 use crate::accounts::Account;
 
-use super::{runtime::IntentExecutor, Runtime};
+use super::{IntentExecutor, State};
 
-impl<'a> IntentExecutor<TokenDiff> for Runtime<'a> {
+impl IntentExecutor<TokenDiff> for State {
     fn execute_intent(
         &mut self,
         _account_id: &AccountId,
@@ -16,7 +16,8 @@ impl<'a> IntentExecutor<TokenDiff> for Runtime<'a> {
             account.token_balances.add_delta(token_id.clone(), delta)?;
 
             let fee = self.fees.apply(delta.unsigned_abs());
-            self.postponed_deposits
+            self.runtime
+                .postponed_deposits
                 .entry(self.fees.collector.clone())
                 .or_default()
                 .add(token_id.clone(), fee)?;

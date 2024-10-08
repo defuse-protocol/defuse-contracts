@@ -4,8 +4,6 @@ use near_sdk::{ext_contract, AccountId};
 
 use crate::{crypto::PublicKey, nep413::Nonce, utils::serde::wrappers::DisplayFromStr};
 
-use super::Result;
-
 #[ext_contract(ext_public_key_manager)]
 pub trait AccountManager {
     /// Check if account has given public key
@@ -36,6 +34,5 @@ pub trait AccountManager {
         start: Option<DisplayFromStr<Nonce>>,
     ) -> Option<DisplayFromStr<Nonce>>;
 
-    #[handle_result]
-    fn invalidate_nonce(&mut self, nonce: DisplayFromStr<Nonce>) -> Result<()>;
+    fn invalidate_nonces(&mut self, nonces: Vec<DisplayFromStr<Nonce>>);
 }

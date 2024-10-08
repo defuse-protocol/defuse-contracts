@@ -4,6 +4,7 @@ pub mod tokens;
 use derive_more::derive::From;
 use near_sdk::{ext_contract, near};
 use serde_with::{serde_as, DisplayFromStr};
+use tokens::TokenTransferCall;
 
 use crate::{crypto::PublicKey, nep413::Nonce};
 
@@ -56,6 +57,7 @@ pub enum Intent {
         nonces: Vec<Nonce>,
     },
     TokenTransfer(TokenTransfer),
+    TokenTransferCall(TokenTransferCall),
     TokenWithdraw(TokenWithdraw),
     TokensDiff(TokenDiff),
     // TODO: condition: if-then-intent1-else-intent2
