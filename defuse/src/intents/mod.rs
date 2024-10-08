@@ -68,7 +68,7 @@ impl IntentExecutor<Intent> for State {
             Intent::MtBatchTransfer(intent) => self.execute_intent(account_id, account, intent),
             Intent::MtBatchTransferCall(intent) => self.execute_intent(account_id, account, intent),
 
-            Intent::TokensDiff(intent) => self.execute_intent(account_id, account, intent),
+            Intent::TokenDiff(intent) => self.execute_intent(account_id, account, intent),
 
             Intent::FtWithdraw(intent) => self.execute_intent(account_id, account, intent),
             Intent::NftWithdraw(intent) => self.execute_intent(account_id, account, intent),

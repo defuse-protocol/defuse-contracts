@@ -59,7 +59,7 @@ pub enum Intent {
     MtBatchTransfer(MtBatchTransfer),
     MtBatchTransferCall(MtBatchTransferCall),
 
-    TokensDiff(TokenDiff),
+    TokenDiff(TokenDiff),
 
     FtWithdraw(FtWithdraw),
     NftWithdraw(NftWithdraw),
