@@ -2,9 +2,7 @@ use std::sync::LazyLock;
 
 use defuse_contracts::intents::swap_ft::{Action, DetailedIntent, Intent};
 use near_sdk::{json_types::U128, AccountId, Gas, NearToken};
-use near_workspaces::{
-    operations::TransactionStatus, result::ExecutionFinalResult, Account, Contract,
-};
+use near_workspaces::{operations::TransactionStatus, Account, Contract};
 use serde_json::json;
 
 use crate::utils::{account::AccountExt, read_wasm};
