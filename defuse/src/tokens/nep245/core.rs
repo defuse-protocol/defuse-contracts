@@ -1,6 +1,6 @@
 use defuse_contracts::{
     defuse::{
-        intents::tokens::{TokenTransfer, TokenTransferCall},
+        intents::tokens::{MtBatchTransfer, MtBatchTransferCall},
         tokens::TokenAmounts,
         DefuseError, Result,
     },
@@ -50,9 +50,9 @@ impl MultiTokenCore for DefuseImpl {
         );
         require!(approvals.is_none(), "approvals are not supported");
 
-        self.internal_transfer(
+        self.internal_mt_batch_transfer(
             &PREDECESSOR_ACCOUNT_ID,
-            TokenTransfer {
+            MtBatchTransfer {
                 receiver_id,
                 token_id_amounts: TokenAmounts::try_from_iter(
                     token_ids
@@ -104,10 +104,10 @@ impl MultiTokenCore for DefuseImpl {
         );
         require!(approvals.is_none(), "approvals are not supported");
 
-        self.internal_transfer_call(
+        self.internal_mt_batch_transfer_call(
             &PREDECESSOR_ACCOUNT_ID,
-            TokenTransferCall {
-                transfer: TokenTransfer {
+            MtBatchTransferCall {
+                transfer: MtBatchTransfer {
                     receiver_id,
                     token_id_amounts: TokenAmounts::try_from_iter(
                         token_ids
@@ -170,7 +170,11 @@ impl MultiTokenCore for DefuseImpl {
 }
 
 impl DefuseImpl {
-    fn internal_transfer(&mut self, sender_id: &AccountId, transfer: TokenTransfer) -> Result<()> {
+    fn internal_mt_batch_transfer(
+        &mut self,
+        sender_id: &AccountId,
+        transfer: MtBatchTransfer,
+    ) -> Result<()> {
         let sender = self
             .accounts
             .get_mut(sender_id)
@@ -178,17 +182,17 @@ impl DefuseImpl {
         self.state.execute_intent(sender_id, sender, transfer)
     }
 
-    fn internal_transfer_call(
+    fn internal_mt_batch_transfer_call(
         &mut self,
         sender_id: &AccountId,
-        transfer: TokenTransferCall,
+        transfer: MtBatchTransferCall,
     ) -> Result<PromiseOrValue<Vec<U128>>> {
         let sender = self
             .accounts
             .get_mut(sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
         self.state
-            .internal_transfer_call(sender_id, sender, transfer)
+            .internal_mt_batch_transfer_call(sender_id, sender, transfer)
     }
 
     fn internal_mt_balance_of(&self, account_id: &AccountId, token_id: &nep245::TokenId) -> u128 {
@@ -200,15 +204,15 @@ impl DefuseImpl {
 }
 
 impl State {
-    pub fn internal_transfer_call(
+    pub fn internal_mt_batch_transfer_call(
         &mut self,
         sender_id: &AccountId,
         sender: &mut Account,
-        TokenTransferCall {
+        MtBatchTransferCall {
             transfer,
             msg,
             gas_for_mt_on_transfer,
-        }: TokenTransferCall,
+        }: MtBatchTransferCall,
     ) -> Result<PromiseOrValue<Vec<U128>>> {
         self.execute_intent(sender_id, sender, transfer.clone())?;
 

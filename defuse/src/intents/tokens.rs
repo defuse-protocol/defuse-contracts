@@ -1,5 +1,5 @@
 use defuse_contracts::defuse::{
-    intents::tokens::{FtWithdraw, MtWithdraw, NftWithdraw, TokenTransfer, TokenTransferCall},
+    intents::tokens::{FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NftWithdraw},
     DefuseError, Result,
 };
 use near_sdk::AccountId;
@@ -8,12 +8,12 @@ use crate::accounts::Account;
 
 use super::{IntentExecutor, State};
 
-impl IntentExecutor<TokenTransfer> for State {
+impl IntentExecutor<MtBatchTransfer> for State {
     fn execute_intent(
         &mut self,
         sender_id: &AccountId,
         sender: &mut Account,
-        transfer: TokenTransfer,
+        transfer: MtBatchTransfer,
     ) -> Result<()> {
         if sender_id == &transfer.receiver_id {
             return Err(DefuseError::InvalidSenderReceiver);
@@ -34,15 +34,15 @@ impl IntentExecutor<TokenTransfer> for State {
     }
 }
 
-impl IntentExecutor<TokenTransferCall> for State {
+impl IntentExecutor<MtBatchTransferCall> for State {
     #[inline]
     fn execute_intent(
         &mut self,
         sender_id: &AccountId,
         sender: &mut Account,
-        intent: TokenTransferCall,
+        intent: MtBatchTransferCall,
     ) -> Result<()> {
-        self.internal_transfer_call(sender_id, sender, intent)
+        self.internal_mt_batch_transfer_call(sender_id, sender, intent)
             // detach
             .map(|_promise| ())
     }

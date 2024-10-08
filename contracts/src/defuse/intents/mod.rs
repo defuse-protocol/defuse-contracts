@@ -11,7 +11,7 @@ use super::{fees::FeesManager, message::SignedDefuseMessage, Result};
 
 use self::{
     token_diff::TokenDiff,
-    tokens::{FtWithdraw, MtWithdraw, NftWithdraw, TokenTransfer, TokenTransferCall},
+    tokens::{FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NftWithdraw},
 };
 
 #[ext_contract(ext_signed_executor)]
@@ -56,8 +56,8 @@ pub enum Intent {
         nonces: Vec<Nonce>,
     },
 
-    TokenTransfer(TokenTransfer),
-    TokenTransferCall(TokenTransferCall),
+    MtBatchTransfer(MtBatchTransfer),
+    MtBatchTransferCall(MtBatchTransferCall),
 
     TokensDiff(TokenDiff),
 

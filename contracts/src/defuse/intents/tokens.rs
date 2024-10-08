@@ -9,7 +9,7 @@ use crate::defuse::tokens::TokenAmounts;
 
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
-pub struct TokenTransfer {
+pub struct MtBatchTransfer {
     pub receiver_id: AccountId,
     pub token_id_amounts: TokenAmounts<u128>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -19,9 +19,9 @@ pub struct TokenTransfer {
 #[near(serializers = [borsh, json])]
 #[autoimpl(Deref using self.transfer)]
 #[derive(Debug, Clone)]
-pub struct TokenTransferCall {
+pub struct MtBatchTransferCall {
     #[serde(flatten)]
-    pub transfer: TokenTransfer,
+    pub transfer: MtBatchTransfer,
 
     /// `msg` to pass in `mt_on_transfer`
     pub msg: String,

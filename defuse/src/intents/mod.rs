@@ -64,8 +64,9 @@ impl IntentExecutor<Intent> for State {
                 }
                 Ok(())
             }
-            Intent::TokenTransfer(intent) => self.execute_intent(account_id, account, intent),
-            Intent::TokenTransferCall(intent) => self.execute_intent(account_id, account, intent),
+
+            Intent::MtBatchTransfer(intent) => self.execute_intent(account_id, account, intent),
+            Intent::MtBatchTransferCall(intent) => self.execute_intent(account_id, account, intent),
 
             Intent::TokensDiff(intent) => self.execute_intent(account_id, account, intent),
 
