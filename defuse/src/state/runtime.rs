@@ -9,7 +9,7 @@ use crate::accounts::Accounts;
 pub struct RuntimeState {
     /// Deposits postponed until [`.finalize()`](Self::finalize)
     pub postponed_deposits: HashMap<AccountId, TokenAmounts<u128>>,
-    // TODO: bigint
+    /// Total supply delta for each token
     pub total_supply_deltas: TokenAmounts<i128>,
 }
 
