@@ -1,6 +1,6 @@
 use defuse_contracts::{
     defuse::{
-        intents::tokens::Nep245Withdraw,
+        intents::tokens::MtWithdraw,
         tokens::{
             nep245::{MultiTokenWithdrawResolver, MultiTokenWithdrawer},
             TokenId,
@@ -14,7 +14,7 @@ use defuse_contracts::{
     },
 };
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, Gas, NearToken, Promise,
+    assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, Gas, NearToken,
     PromiseOrValue, PromiseResult,
 };
 
@@ -35,7 +35,7 @@ impl MultiTokenWithdrawer for DefuseImpl {
         assert_one_yocto();
         self.internal_mt_withdraw(
             PREDECESSOR_ACCOUNT_ID.clone(),
-            Nep245Withdraw {
+            MtWithdraw {
                 token,
                 receiver_id,
                 token_id_amounts,
@@ -56,15 +56,13 @@ impl DefuseImpl {
     fn internal_mt_withdraw(
         &mut self,
         sender_id: AccountId,
-        withdraw: Nep245Withdraw,
+        withdraw: MtWithdraw,
     ) -> Result<PromiseOrValue<Vec<U128>>> {
         let sender = self
             .accounts
             .get_mut(&sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
-        self.state
-            .mt_withdraw(sender_id, sender, withdraw)
-            .map(Into::into)
+        self.state.mt_withdraw(sender_id, sender, withdraw)
     }
 
     #[inline]
@@ -88,15 +86,15 @@ impl State {
         &mut self,
         sender_id: AccountId,
         sender: &mut Account,
-        Nep245Withdraw {
+        MtWithdraw {
             token,
             receiver_id,
             token_id_amounts,
             memo,
             msg,
             gas,
-        }: Nep245Withdraw,
-    ) -> Result<Promise> {
+        }: MtWithdraw,
+    ) -> Result<PromiseOrValue<Vec<U128>>> {
         self.internal_withdraw(
             sender,
             token_id_amounts
@@ -121,7 +119,8 @@ impl State {
             DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
                 .with_static_gas(DefuseImpl::mt_resolve_withdraw_gas(&token_id_amounts))
                 .mt_resolve_withdraw(token, sender_id, token_id_amounts, is_call),
-        ))
+        )
+        .into())
     }
 }
 

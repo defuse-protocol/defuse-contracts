@@ -4,7 +4,6 @@ pub mod tokens;
 use derive_more::derive::From;
 use near_sdk::{ext_contract, near};
 use serde_with::{serde_as, DisplayFromStr};
-use tokens::TokenTransferCall;
 
 use crate::{crypto::PublicKey, nep413::Nonce};
 
@@ -12,7 +11,7 @@ use super::{fees::FeesManager, message::SignedDefuseMessage, Result};
 
 use self::{
     token_diff::TokenDiff,
-    tokens::{TokenTransfer, TokenWithdraw},
+    tokens::{FtWithdraw, MtWithdraw, NftWithdraw, TokenTransfer, TokenTransferCall},
 };
 
 #[ext_contract(ext_signed_executor)]
@@ -56,9 +55,13 @@ pub enum Intent {
         #[serde_as(as = "Vec<DisplayFromStr>")]
         nonces: Vec<Nonce>,
     },
+
     TokenTransfer(TokenTransfer),
     TokenTransferCall(TokenTransferCall),
-    TokenWithdraw(TokenWithdraw),
+
     TokensDiff(TokenDiff),
-    // TODO: condition: if-then-intent1-else-intent2
+
+    FtWithdraw(FtWithdraw),
+    NftWithdraw(NftWithdraw),
+    MtWithdraw(MtWithdraw),
 }

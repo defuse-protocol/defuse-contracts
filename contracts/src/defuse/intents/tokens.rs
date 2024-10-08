@@ -32,17 +32,8 @@ pub struct TokenTransferCall {
 }
 
 #[near(serializers = [borsh, json])]
-#[serde(tag = "token_standard", rename_all = "snake_case")]
 #[derive(Debug, Clone)]
-pub enum TokenWithdraw {
-    Nep141(Nep141Withdraw),
-    Nep171(Nep171Withdraw),
-    Nep245(Nep245Withdraw),
-}
-
-#[near(serializers = [borsh, json])]
-#[derive(Debug, Clone)]
-pub struct Nep141Withdraw {
+pub struct FtWithdraw {
     pub token: AccountId,
     pub receiver_id: AccountId,
     pub amount: U128,
@@ -60,7 +51,7 @@ pub struct Nep141Withdraw {
 
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
-pub struct Nep171Withdraw {
+pub struct NftWithdraw {
     pub token: AccountId,
     pub receiver_id: AccountId,
     pub token_id: non_fungible_token::TokenId,
@@ -78,7 +69,7 @@ pub struct Nep171Withdraw {
 
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
-pub struct Nep245Withdraw {
+pub struct MtWithdraw {
     pub token: AccountId,
     pub receiver_id: AccountId,
     pub token_id_amounts: Vec<(nep245::TokenId, U128)>,

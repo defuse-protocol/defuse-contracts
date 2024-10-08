@@ -1,6 +1,6 @@
 use defuse_contracts::{
     defuse::{
-        intents::tokens::Nep141Withdraw,
+        intents::tokens::FtWithdraw,
         tokens::{
             nep141::{FungibleTokenWithdrawResolver, FungibleTokenWithdrawer},
             TokenId,
@@ -14,7 +14,7 @@ use defuse_contracts::{
 };
 use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, Gas, NearToken, Promise,
+    assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, Gas, NearToken,
     PromiseOrValue, PromiseResult,
 };
 
@@ -35,7 +35,7 @@ impl FungibleTokenWithdrawer for DefuseImpl {
         assert_one_yocto();
         self.internal_ft_withdraw(
             PREDECESSOR_ACCOUNT_ID.clone(),
-            Nep141Withdraw {
+            FtWithdraw {
                 token,
                 receiver_id,
                 amount,
@@ -56,15 +56,13 @@ impl DefuseImpl {
     fn internal_ft_withdraw(
         &mut self,
         sender_id: AccountId,
-        withdraw: Nep141Withdraw,
+        withdraw: FtWithdraw,
     ) -> Result<PromiseOrValue<U128>> {
         let sender = self
             .accounts
             .get_mut(&sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
-        self.state
-            .ft_withdraw(sender_id, sender, withdraw)
-            .map(Into::into)
+        self.state.ft_withdraw(sender_id, sender, withdraw)
     }
 }
 
@@ -73,15 +71,15 @@ impl State {
         &mut self,
         sender_id: AccountId,
         sender: &mut Account,
-        Nep141Withdraw {
+        FtWithdraw {
             token,
             receiver_id,
             amount,
             memo,
             msg,
             gas,
-        }: Nep141Withdraw,
-    ) -> Result<Promise> {
+        }: FtWithdraw,
+    ) -> Result<PromiseOrValue<U128>> {
         self.internal_withdraw(sender, [(TokenId::Nep141(token.clone()), amount.0)])?;
 
         let mut ext =
@@ -99,7 +97,8 @@ impl State {
             DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
                 .with_static_gas(DefuseImpl::FT_RESOLVE_WITHDRAW_GAS)
                 .ft_resolve_withdraw(token, sender_id, amount, is_call),
-        ))
+        )
+        .into())
     }
 }
 

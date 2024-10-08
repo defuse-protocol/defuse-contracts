@@ -66,8 +66,12 @@ impl IntentExecutor<Intent> for State {
             }
             Intent::TokenTransfer(intent) => self.execute_intent(account_id, account, intent),
             Intent::TokenTransferCall(intent) => self.execute_intent(account_id, account, intent),
-            Intent::TokenWithdraw(intent) => self.execute_intent(account_id, account, intent),
+
             Intent::TokensDiff(intent) => self.execute_intent(account_id, account, intent),
+
+            Intent::FtWithdraw(intent) => self.execute_intent(account_id, account, intent),
+            Intent::NftWithdraw(intent) => self.execute_intent(account_id, account, intent),
+            Intent::MtWithdraw(intent) => self.execute_intent(account_id, account, intent),
         }
     }
 }

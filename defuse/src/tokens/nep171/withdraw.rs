@@ -1,6 +1,6 @@
 use defuse_contracts::{
     defuse::{
-        intents::tokens::Nep171Withdraw,
+        intents::tokens::NftWithdraw,
         tokens::{
             nep171::{NonFungibleTokenWithdrawResolver, NonFungibleTokenWithdrawer},
             TokenId,
@@ -14,7 +14,7 @@ use defuse_contracts::{
 };
 use near_contract_standards::non_fungible_token::{self, core::ext_nft_core};
 use near_sdk::{
-    assert_one_yocto, env, near, serde_json, AccountId, Gas, NearToken, Promise, PromiseOrValue,
+    assert_one_yocto, env, near, serde_json, AccountId, Gas, NearToken, PromiseOrValue,
     PromiseResult,
 };
 
@@ -35,7 +35,7 @@ impl NonFungibleTokenWithdrawer for DefuseImpl {
         assert_one_yocto();
         self.internal_nft_withdraw(
             PREDECESSOR_ACCOUNT_ID.clone(),
-            Nep171Withdraw {
+            NftWithdraw {
                 token,
                 receiver_id,
                 token_id,
@@ -55,15 +55,13 @@ impl DefuseImpl {
     fn internal_nft_withdraw(
         &mut self,
         sender_id: AccountId,
-        withdraw: Nep171Withdraw,
+        withdraw: NftWithdraw,
     ) -> Result<PromiseOrValue<bool>> {
         let sender = self
             .accounts
             .get_mut(&sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
-        self.state
-            .nft_withdraw(sender_id, sender, withdraw)
-            .map(Into::into)
+        self.state.nft_withdraw(sender_id, sender, withdraw)
     }
 }
 
@@ -72,15 +70,15 @@ impl State {
         &mut self,
         sender_id: AccountId,
         sender: &mut Account,
-        Nep171Withdraw {
+        NftWithdraw {
             token,
             receiver_id,
             token_id,
             memo,
             msg,
             gas,
-        }: Nep171Withdraw,
-    ) -> Result<Promise> {
+        }: NftWithdraw,
+    ) -> Result<PromiseOrValue<bool>> {
         self.internal_withdraw(
             sender,
             [(TokenId::Nep171(token.clone(), token_id.clone()), 1)],
@@ -101,7 +99,8 @@ impl State {
             DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
                 .with_static_gas(DefuseImpl::NFT_RESOLVE_WITHDRAW_GAS)
                 .nft_resolve_withdraw(token, sender_id, token_id, is_call),
-        ))
+        )
+        .into())
     }
 }
 

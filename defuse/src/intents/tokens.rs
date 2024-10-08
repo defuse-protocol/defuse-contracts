@@ -1,8 +1,8 @@
 use defuse_contracts::defuse::{
-    intents::tokens::{TokenTransfer, TokenTransferCall, TokenWithdraw},
+    intents::tokens::{FtWithdraw, MtWithdraw, NftWithdraw, TokenTransfer, TokenTransferCall},
     DefuseError, Result,
 };
-use near_sdk::{AccountId, Promise};
+use near_sdk::AccountId;
 
 use crate::accounts::Account;
 
@@ -35,6 +35,7 @@ impl IntentExecutor<TokenTransfer> for State {
 }
 
 impl IntentExecutor<TokenTransferCall> for State {
+    #[inline]
     fn execute_intent(
         &mut self,
         sender_id: &AccountId,
@@ -42,35 +43,49 @@ impl IntentExecutor<TokenTransferCall> for State {
         intent: TokenTransferCall,
     ) -> Result<()> {
         self.internal_transfer_call(sender_id, sender, intent)
+            // detach
             .map(|_promise| ())
     }
 }
 
-impl IntentExecutor<TokenWithdraw> for State {
+impl IntentExecutor<FtWithdraw> for State {
+    #[inline]
     fn execute_intent(
         &mut self,
-        account_id: &AccountId,
-        account: &mut Account,
-        intent: TokenWithdraw,
+        sender_id: &AccountId,
+        sender: &mut Account,
+        intent: FtWithdraw,
     ) -> Result<()> {
-        self.token_withdraw(account_id.clone(), account, intent)
-            // detach promise
+        self.ft_withdraw(sender_id.clone(), sender, intent)
+            // detach
             .map(|_promise| ())
     }
 }
 
-impl State {
+impl IntentExecutor<NftWithdraw> for State {
     #[inline]
-    pub fn token_withdraw(
+    fn execute_intent(
         &mut self,
-        sender_id: AccountId,
+        sender_id: &AccountId,
         sender: &mut Account,
-        withdraw: TokenWithdraw,
-    ) -> Result<Promise> {
-        match withdraw {
-            TokenWithdraw::Nep141(withdraw) => self.ft_withdraw(sender_id, sender, withdraw),
-            TokenWithdraw::Nep171(withdraw) => self.nft_withdraw(sender_id, sender, withdraw),
-            TokenWithdraw::Nep245(withdraw) => self.mt_withdraw(sender_id, sender, withdraw),
-        }
+        intent: NftWithdraw,
+    ) -> Result<()> {
+        self.nft_withdraw(sender_id.clone(), sender, intent)
+            // detach
+            .map(|_promise| ())
+    }
+}
+
+impl IntentExecutor<MtWithdraw> for State {
+    #[inline]
+    fn execute_intent(
+        &mut self,
+        sender_id: &AccountId,
+        sender: &mut Account,
+        intent: MtWithdraw,
+    ) -> Result<()> {
+        self.mt_withdraw(sender_id.clone(), sender, intent)
+            // detach
+            .map(|_promise| ())
     }
 }
