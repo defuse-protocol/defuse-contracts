@@ -12,16 +12,16 @@ use std::collections::HashMap;
 use accounts::Accounts;
 use defuse_contracts::{
     defuse::{Defuse, Result},
-    utils::{cache::PREDECESSOR_ACCOUNT_ID, fees::Pips, UnwrapOrPanic},
+    utils::{fees::Pips, UnwrapOrPanic},
 };
 use impl_tools::autoimpl;
-use near_plugins::{access_control, AccessControlRole, AccessControllable};
+use near_plugins::{access_control, AccessControlRole};
 use near_sdk::{near, require, AccountId, BorshStorageKey, PanicOnDefault};
 
 use self::state::State;
 
 #[near(serializers = [json])]
-#[derive(AccessControlRole, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(AccessControlRole, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Role {
     FeesManager,
     #[cfg(feature = "beta")]
@@ -44,31 +44,30 @@ impl DefuseImpl {
     pub fn new(
         fee: Pips,
         fee_collector: AccountId,
+        super_admins: Vec<AccountId>,
         admins: HashMap<Role, Vec<AccountId>>,
         grantees: HashMap<Role, Vec<AccountId>>,
     ) -> Self {
-        let owner = PREDECESSOR_ACCOUNT_ID.clone();
-
         let mut contract = Self {
             accounts: Accounts::new(Prefix::Accounts),
             state: State::new(Prefix::Runtime, fee, fee_collector),
         };
 
-        if !admins.is_empty() || !grantees.is_empty() {
-            // TODO
-            require!(contract.acl_init_super_admin(owner));
-
-            let mut acl = contract.acl_get_or_init();
-
-            require!(admins
+        let mut acl = contract.acl_get_or_init();
+        require!(
+            super_admins
                 .into_iter()
-                .flat_map(|(role, admins)| iter::repeat(role).zip(admins))
-                .all(|(role, admin)| acl.add_admin_unchecked(role, &admin)));
-            require!(grantees
-                .into_iter()
-                .flat_map(|(role, grantees)| iter::repeat(role).zip(grantees))
-                .all(|(role, grantee)| acl.grant_role_unchecked(role, &grantee)));
-        }
+                .all(|super_admin| acl.add_super_admin_unchecked(&super_admin))
+                && admins
+                    .into_iter()
+                    .flat_map(|(role, admins)| iter::repeat(role).zip(admins))
+                    .all(|(role, admin)| acl.add_admin_unchecked(role, &admin))
+                && grantees
+                    .into_iter()
+                    .flat_map(|(role, grantees)| iter::repeat(role).zip(grantees))
+                    .all(|(role, grantee)| acl.grant_role_unchecked(role, &grantee)),
+            "failed to set roles"
+        );
 
         contract
     }

@@ -3,9 +3,10 @@ mod env;
 mod intents;
 mod tokens;
 
-use std::sync::LazyLock;
+use std::{collections::HashMap, sync::LazyLock};
 
 use accounts::AccountManagerExt;
+use defuse_contract::Role;
 use defuse_contracts::{
     defuse::{
         message::{DefuseMessage, SignedDefuseMessage},
@@ -27,7 +28,10 @@ pub trait DefuseExt: AccountManagerExt {
         &self,
         id: &str,
         fee: Pips,
-        fee_collector: impl Into<Option<&AccountId>>,
+        fee_collector: &AccountId,
+        super_admins: impl IntoIterator<Item = AccountId>,
+        admins: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
+        grantees: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
     ) -> anyhow::Result<Contract>;
 }
 
@@ -36,16 +40,26 @@ impl DefuseExt for near_workspaces::Account {
         &self,
         id: &str,
         fee: Pips,
-        fee_collector: impl Into<Option<&AccountId>>,
+        fee_collector: &AccountId,
+        super_admins: impl IntoIterator<Item = AccountId>,
+        admins: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
+        grantees: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
     ) -> anyhow::Result<Contract> {
         let contract = self.deploy_contract(id, &DEFUSE_WASM).await?;
         contract
             .call("new")
             .args_json(json!({
                 "fee": fee,
-                "fee_collector": fee_collector.into(),
-                "admins": {},
-                "grantees": {},
+                "fee_collector": fee_collector,
+                "super_admins": super_admins.into_iter().collect::<Vec<_>>(),
+                "admins": admins
+                    .into_iter()
+                    .map(|(role, admins)| (role, admins.into_iter().collect::<Vec<_>>()))
+                    .collect::<HashMap<_, _>>(),
+                "grantees": grantees
+                    .into_iter()
+                    .map(|(role, grantees)| (role, grantees.into_iter().collect::<Vec<_>>()))
+                    .collect::<HashMap<_, _>>(),
             }))
             .max_gas()
             .transact()
@@ -60,10 +74,13 @@ impl DefuseExt for Contract {
         &self,
         id: &str,
         fee: Pips,
-        fee_collector: impl Into<Option<&AccountId>>,
+        fee_collector: &AccountId,
+        super_admins: impl IntoIterator<Item = AccountId>,
+        admins: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
+        grantees: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
     ) -> anyhow::Result<Contract> {
         self.as_account()
-            .deploy_defuse(id, fee, fee_collector)
+            .deploy_defuse(id, fee, fee_collector, super_admins, admins, grantees)
             .await
     }
 }

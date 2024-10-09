@@ -1,12 +1,12 @@
 use core::{
     fmt::{self, Display},
-    ops::Mul,
+    ops::{Add, Mul, Sub},
 };
 
 use near_sdk::near;
 use thiserror::Error as ThisError;
 
-use super::integer::CheckedMulDiv;
+use super::integer::{CheckedAdd, CheckedMulDiv, CheckedSub};
 
 /// Pip == 1/100th of bip == 0.0001%
 #[near(serializers = [borsh, json])]
@@ -58,6 +58,11 @@ impl Pips {
     }
 
     #[inline]
+    pub const fn inverse(self) -> Self {
+        Self(Self::MAX.as_pips() - self.as_pips())
+    }
+
+    #[inline]
     pub const fn checked_mul(self, rhs: u32) -> Option<Self> {
         let Some(pips) = self.as_pips().checked_mul(rhs) else {
             return None;
@@ -70,6 +75,42 @@ impl Pips {
         amount
             .checked_mul_div(self.as_pips() as u128, Self::MAX.as_pips() as u128)
             .unwrap_or_else(|| unreachable!())
+    }
+}
+
+impl CheckedAdd for Pips {
+    #[inline]
+    fn checked_add(self, rhs: Self) -> Option<Self> {
+        self.as_pips()
+            .checked_add(rhs.as_pips())
+            .and_then(Self::from_pips)
+    }
+}
+
+impl Add for Pips {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: Self) -> Self::Output {
+        self.checked_add(rhs).unwrap()
+    }
+}
+
+impl CheckedSub for Pips {
+    #[inline]
+    fn checked_sub(self, rhs: Self) -> Option<Self> {
+        self.as_pips()
+            .checked_sub(rhs.as_pips())
+            .and_then(Self::from_pips)
+    }
+}
+
+impl Sub for Pips {
+    type Output = Self;
+
+    #[inline]
+    fn sub(self, rhs: Self) -> Self::Output {
+        self.checked_sub(rhs).unwrap()
     }
 }
 
@@ -92,6 +133,7 @@ impl Display for Pips {
 impl TryFrom<u32> for Pips {
     type Error = PipsOutOfRange;
 
+    #[inline]
     fn try_from(pips: u32) -> Result<Self, Self::Error> {
         Self::from_pips(pips).ok_or(PipsOutOfRange)
     }

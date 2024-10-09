@@ -681,6 +681,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bnum",
+ "defuse-contract",
  "defuse-contracts",
  "impl-tools",
  "near-contract-standards",

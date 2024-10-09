@@ -6,7 +6,7 @@ use defuse_contracts::{
         message::SignedDefuseMessage,
         tokens::{TokenAmounts, TokenId},
     },
-    utils::Deadline,
+    utils::{fees::Pips, Deadline},
 };
 use near_sdk::AccountId;
 use near_workspaces::Account;
@@ -74,7 +74,6 @@ async fn test_swap_many() {
             },
             AccountFtDiff {
                 account: &env.user2,
-
                 init_balances: [(env.ft2.id(), 500)].into_iter().collect(),
                 diff: [
                     TokenAmounts::<i128>::default()
@@ -92,6 +91,65 @@ async fn test_swap_many() {
                 ]
                 .into(),
                 result_balances: [(env.ft1.id(), 100), (env.ft2.id(), 0), (env.ft3.id(), 500)]
+                    .into_iter()
+                    .collect(),
+            },
+            AccountFtDiff {
+                account: &env.user3,
+                init_balances: [(env.ft3.id(), 500)].into_iter().collect(),
+                diff: [TokenAmounts::<i128>::default()
+                    .with_try_extend::<i128>([
+                        (TokenId::Nep141(env.ft2.id().clone()), 300),
+                        (TokenId::Nep141(env.ft3.id().clone()), -500),
+                    ])
+                    .unwrap()]
+                .into(),
+                result_balances: [(env.ft2.id(), 300)].into_iter().collect(),
+            },
+        ]
+        .into(),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_swap_many_with_fees() {
+    let fee = Pips::ONE_PERCENT * 2;
+    let env = Env::builder().with_fee(fee).build().await.unwrap();
+    test_ft_diffs(
+        &env,
+        [
+            AccountFtDiff {
+                account: &env.user1,
+                init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
+                diff: [TokenAmounts::<i128>::default()
+                    .with_try_extend::<i128>([
+                        (TokenId::Nep141(env.ft1.id().clone()), -100),
+                        (TokenId::Nep141(env.ft2.id().clone()), 200),
+                    ])
+                    .unwrap()]
+                .into(),
+                result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
+            },
+            AccountFtDiff {
+                account: &env.user2,
+                init_balances: [(env.ft2.id(), 520)].into_iter().collect(),
+                diff: [
+                    TokenAmounts::<i128>::default()
+                        .with_try_extend::<i128>([
+                            (TokenId::Nep141(env.ft1.id().clone()), 97),
+                            (TokenId::Nep141(env.ft2.id().clone()), -208),
+                        ])
+                        .unwrap(),
+                    TokenAmounts::<i128>::default()
+                        .with_try_extend::<i128>([
+                            (TokenId::Nep141(env.ft3.id().clone()), 481),
+                            (TokenId::Nep141(env.ft2.id().clone()), -312),
+                        ])
+                        .unwrap(),
+                ]
+                .into(),
+                result_balances: [(env.ft1.id(), 97), (env.ft2.id(), 0), (env.ft3.id(), 481)]
                     .into_iter()
                     .collect(),
             },
