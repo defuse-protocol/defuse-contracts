@@ -6,19 +6,23 @@ mod intents;
 mod state;
 mod tokens;
 
+use core::iter;
+use std::collections::HashMap;
+
 use accounts::Accounts;
 use defuse_contracts::{
     defuse::{Defuse, Result},
-    utils::{fees::Pips, UnwrapOrPanic},
+    utils::{cache::PREDECESSOR_ACCOUNT_ID, fees::Pips, UnwrapOrPanic},
 };
 use impl_tools::autoimpl;
-use near_plugins::{access_control, AccessControlRole};
-use near_sdk::{near, AccountId, BorshStorageKey, PanicOnDefault};
+use near_plugins::{access_control, AccessControlRole, AccessControllable};
+use near_sdk::{near, require, AccountId, BorshStorageKey, PanicOnDefault};
 
 use self::state::State;
 
-#[derive(AccessControlRole, Clone, Copy)]
-enum Role {
+#[near(serializers = [json])]
+#[derive(AccessControlRole, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Role {
     FeesManager,
     #[cfg(feature = "beta")]
     BetaAccess,
@@ -37,12 +41,36 @@ pub struct DefuseImpl {
 #[near]
 impl DefuseImpl {
     #[init]
-    pub fn new(fee: Pips, fee_collector: AccountId) -> Self {
-        // TODO: fee_collector optional, owner by default
-        Self {
+    pub fn new(
+        fee: Pips,
+        fee_collector: AccountId,
+        admins: HashMap<Role, Vec<AccountId>>,
+        grantees: HashMap<Role, Vec<AccountId>>,
+    ) -> Self {
+        let owner = PREDECESSOR_ACCOUNT_ID.clone();
+
+        let mut contract = Self {
             accounts: Accounts::new(Prefix::Accounts),
             state: State::new(Prefix::Runtime, fee, fee_collector),
+        };
+
+        if !admins.is_empty() || !grantees.is_empty() {
+            // TODO
+            require!(contract.acl_init_super_admin(owner));
+
+            let mut acl = contract.acl_get_or_init();
+
+            require!(admins
+                .into_iter()
+                .flat_map(|(role, admins)| iter::repeat(role).zip(admins))
+                .all(|(role, admin)| acl.add_admin_unchecked(role, &admin)));
+            require!(grantees
+                .into_iter()
+                .flat_map(|(role, grantees)| iter::repeat(role).zip(grantees))
+                .all(|(role, grantee)| acl.grant_role_unchecked(role, &grantee)));
         }
+
+        contract
     }
 }
 

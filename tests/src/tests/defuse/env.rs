@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use defuse_contracts::utils::fees::Pips;
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
@@ -62,6 +64,14 @@ impl Env {
             .root_account()
             .defuse_ft_deposit(self.defuse.id(), token_id, amount, to)
             .await
+    }
+}
+
+impl Deref for Env {
+    type Target = Account;
+
+    fn deref(&self) -> &Self::Target {
+        self.sandbox.root_account()
     }
 }
 

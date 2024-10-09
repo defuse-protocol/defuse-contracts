@@ -24,6 +24,9 @@ impl IntentExecutor<MtBatchTransfer> for State {
             .entry(transfer.receiver_id)
             .or_default();
         for (token_id, amount) in transfer.token_id_amounts {
+            if amount == 0 {
+                return Err(DefuseError::ZeroAmount);
+            }
             sender.token_balances.withdraw(token_id.clone(), amount)?;
             receiver_deposit.add(token_id, amount)?;
         }

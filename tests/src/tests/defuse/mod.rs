@@ -39,18 +39,18 @@ impl DefuseExt for near_workspaces::Account {
         fee_collector: impl Into<Option<&AccountId>>,
     ) -> anyhow::Result<Contract> {
         let contract = self.deploy_contract(id, &DEFUSE_WASM).await?;
-
         contract
             .call("new")
             .args_json(json!({
                 "fee": fee,
-                "fee_collector": fee_collector.into().unwrap_or(self.id()),
+                "fee_collector": fee_collector.into(),
+                "admins": {},
+                "grantees": {},
             }))
             .max_gas()
             .transact()
             .await?
             .into_result()?;
-
         Ok(contract)
     }
 }

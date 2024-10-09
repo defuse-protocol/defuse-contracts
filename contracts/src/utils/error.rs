@@ -4,6 +4,7 @@ use near_sdk::{env, FunctionError};
 
 pub trait PanicError {
     #[inline]
+    #[track_caller]
     fn panic_str(&self) -> !
     where
         Self: AsRef<str>,
@@ -12,6 +13,7 @@ pub trait PanicError {
     }
 
     #[inline]
+    #[track_caller]
     fn panic_static_str(self) -> !
     where
         Self: Into<&'static str>,
@@ -20,6 +22,7 @@ pub trait PanicError {
     }
 
     #[inline]
+    #[track_caller]
     fn panic_display(&self) -> !
     where
         Self: Display,
@@ -49,6 +52,7 @@ pub trait UnwrapOrPanic<T, E> {
 
 impl<T, E> UnwrapOrPanic<T, E> for Result<T, E> {
     #[inline]
+    #[track_caller]
     fn unwrap_or_panic(self) -> T
     where
         E: FunctionError,
@@ -57,6 +61,7 @@ impl<T, E> UnwrapOrPanic<T, E> for Result<T, E> {
     }
 
     #[inline]
+    #[track_caller]
     fn unwrap_or_panic_str(self) -> T
     where
         E: AsRef<str>,
@@ -65,6 +70,7 @@ impl<T, E> UnwrapOrPanic<T, E> for Result<T, E> {
     }
 
     #[inline]
+    #[track_caller]
     fn unwrap_or_panic_static_str(self) -> T
     where
         E: Into<&'static str>,
@@ -73,6 +79,7 @@ impl<T, E> UnwrapOrPanic<T, E> for Result<T, E> {
     }
 
     #[inline]
+    #[track_caller]
     fn unwrap_or_panic_display(self) -> T
     where
         E: Display,

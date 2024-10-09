@@ -19,8 +19,7 @@ async fn test_deposit_withdraw() {
     let ft1 = TokenId::Nep141(env.ft1.id().clone());
 
     assert_eq!(
-        env.defuse
-            .mt_balance_of(env.user1.id(), &ft1.to_string())
+        env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
             .await
             .unwrap(),
         1000
@@ -35,8 +34,7 @@ async fn test_deposit_withdraw() {
     );
 
     assert_eq!(
-        env.defuse
-            .mt_balance_of(env.user1.id(), &ft1.to_string())
+        env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
             .await
             .unwrap(),
         0

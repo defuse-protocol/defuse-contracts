@@ -158,8 +158,7 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
             .map(|(t, b)| (TokenId::Nep141(t.clone()).to_string(), b))
             .unzip();
         assert_eq!(
-            env.defuse
-                .mt_batch_balance_of(account.account.id(), &tokens)
+            env.mt_contract_batch_balance_of(env.defuse.id(), account.account.id(), &tokens)
                 .await
                 .unwrap(),
             balances
@@ -218,17 +217,23 @@ async fn test_invariant_violated() {
 
     // balances should stay the same
     assert_eq!(
-        env.defuse
-            .mt_batch_balance_of(env.user1.id(), [&ft1.to_string(), &ft2.to_string()])
-            .await
-            .unwrap(),
+        env.mt_contract_batch_balance_of(
+            env.defuse.id(),
+            env.user1.id(),
+            [&ft1.to_string(), &ft2.to_string()]
+        )
+        .await
+        .unwrap(),
         [1000, 0]
     );
     assert_eq!(
-        env.defuse
-            .mt_batch_balance_of(env.user2.id(), [&ft1.to_string(), &ft2.to_string()])
-            .await
-            .unwrap(),
+        env.mt_contract_batch_balance_of(
+            env.defuse.id(),
+            env.user2.id(),
+            [&ft1.to_string(), &ft2.to_string()]
+        )
+        .await
+        .unwrap(),
         [0, 2000]
     );
 }

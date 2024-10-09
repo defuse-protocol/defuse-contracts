@@ -4,18 +4,20 @@ use core::{
 };
 
 use near_sdk::near;
+use thiserror::Error as ThisError;
 
 use super::integer::CheckedMulDiv;
 
 /// Pip == 1/100th of bip == 0.0001%
 #[near(serializers = [borsh, json])]
+#[serde(try_from = "u32")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Pips(u32);
 
 impl Pips {
     pub const ONE_BIP: Self = Self(100);
-    pub const ONE_PERCENT: Pips = Self(Self::ONE_BIP.as_pips() * 100);
-    pub const MAX: Pips = Self(Self::ONE_PERCENT.as_pips() * 100);
+    pub const ONE_PERCENT: Self = Self(Self::ONE_BIP.as_pips() * 100);
+    pub const MAX: Self = Self(Self::ONE_PERCENT.as_pips() * 100);
 
     #[inline]
     pub const fn from_pips(pips: u32) -> Option<Self> {
@@ -86,3 +88,15 @@ impl Display for Pips {
         write!(f, "{:.4}%", self.as_f64() * 100f64)
     }
 }
+
+impl TryFrom<u32> for Pips {
+    type Error = PipsOutOfRange;
+
+    fn try_from(pips: u32) -> Result<Self, Self::Error> {
+        Self::from_pips(pips).ok_or(PipsOutOfRange)
+    }
+}
+
+#[derive(Debug, ThisError)]
+#[error("out of range: 0..={}", Pips::MAX.as_pips())]
+pub struct PipsOutOfRange;
