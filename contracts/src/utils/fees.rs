@@ -88,29 +88,9 @@ impl Pips {
     }
 
     #[inline]
-    pub fn inverse_fee(self, amount: u128) -> u128 {
-        amount
-            .checked_mul_div_ceil(
-                Self::MAX.as_pips() as u128,
-                Self::MAX.as_pips() as u128 + self.as_pips() as u128,
-            )
-            .unwrap_or_else(|| unreachable!())
-    }
-
-    #[inline]
     pub fn fee_ceil(self, amount: u128) -> u128 {
         amount
             .checked_mul_div_ceil(self.as_pips() as u128, Self::MAX.as_pips() as u128)
-            .unwrap_or_else(|| unreachable!())
-    }
-
-    #[inline]
-    pub fn inverse_fee_ceil(self, amount: u128) -> u128 {
-        amount
-            .checked_mul_div(
-                Self::MAX.as_pips() as u128,
-                Self::MAX.as_pips() as u128 + self.as_pips() as u128,
-            )
             .unwrap_or_else(|| unreachable!())
     }
 }

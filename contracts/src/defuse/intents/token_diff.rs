@@ -18,9 +18,9 @@ pub struct TokenDiff {
 impl TokenDiff {
     #[inline]
     pub fn estimate_amount_out(amount_in: u128, fee: Pips) -> u128 {
+        // amount_out = ⌊⌊amount_in * (1-fee)⌋ / (1+fee)⌋
         fee.invert()
             .fee(amount_in)
-            // TODO: maybe optimize?
             .checked_mul_div(
                 Pips::MAX.as_pips() as u128,
                 Pips::MAX.as_pips() as u128 + fee.as_pips() as u128,
@@ -30,8 +30,9 @@ impl TokenDiff {
 
     #[inline]
     pub fn estimate_amount_in(amount_out: u128, fee: Pips) -> Option<u128> {
-        let amount_out_with_fees = amount_out.checked_add(fee.fee_ceil(amount_out))?;
-        amount_out_with_fees
+        // amount_in = ⌈⌈amount_out * (1+fee)⌉ / (1-fee)⌉
+        amount_out
+            .checked_add(fee.fee_ceil(amount_out))?
             .checked_mul_div_ceil(Pips::MAX.as_pips() as u128, fee.invert().as_pips() as u128)
     }
 }
