@@ -11,6 +11,7 @@ use defuse_contracts::{
 use near_sdk::AccountId;
 use near_workspaces::Account;
 use rand::{thread_rng, Rng};
+use rstest::rstest;
 use serde_json::json;
 
 use crate::{
@@ -18,9 +19,10 @@ use crate::{
     utils::mt::MtExt,
 };
 
+#[rstest]
 #[tokio::test]
-async fn test_swap_p2p() {
-    let env = Env::new().await.unwrap();
+async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips) {
+    let env = Env::builder().with_fee(fee).build().await.unwrap();
     test_ft_diffs(
         &env,
         [
@@ -30,91 +32,43 @@ async fn test_swap_p2p() {
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
                         (TokenId::Nep141(env.ft1.id().clone()), -100),
-                        (TokenId::Nep141(env.ft2.id().clone()), 200),
+                        (
+                            TokenId::Nep141(env.ft2.id().clone()),
+                            TokenDiff::estimate_amount_out(200, fee) as i128,
+                        ),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
+                result_balances: [(env.ft2.id(), TokenDiff::estimate_amount_out(200, fee))]
+                    .into_iter()
+                    .collect(),
             },
             AccountFtDiff {
                 account: &env.user2,
                 init_balances: [(env.ft2.id(), 200)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
-                        (TokenId::Nep141(env.ft1.id().clone()), 100),
+                        (
+                            TokenId::Nep141(env.ft1.id().clone()),
+                            TokenDiff::estimate_amount_out(100, fee) as i128,
+                        ),
                         (TokenId::Nep141(env.ft2.id().clone()), -200),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(env.ft1.id(), 100)].into_iter().collect(),
-            },
-        ]
-        .into(),
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn test_swap_many() {
-    let env = Env::new().await.unwrap();
-    test_ft_diffs(
-        &env,
-        [
-            AccountFtDiff {
-                account: &env.user1,
-                init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
-                diff: [TokenAmounts::<i128>::default()
-                    .with_try_extend::<i128>([
-                        (TokenId::Nep141(env.ft1.id().clone()), -100),
-                        (TokenId::Nep141(env.ft2.id().clone()), 200),
-                    ])
-                    .unwrap()]
-                .into(),
-                result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
-            },
-            AccountFtDiff {
-                account: &env.user2,
-                init_balances: [(env.ft2.id(), 500)].into_iter().collect(),
-                diff: [
-                    TokenAmounts::<i128>::default()
-                        .with_try_extend::<i128>([
-                            (TokenId::Nep141(env.ft1.id().clone()), 100),
-                            (TokenId::Nep141(env.ft2.id().clone()), -200),
-                        ])
-                        .unwrap(),
-                    TokenAmounts::<i128>::default()
-                        .with_try_extend::<i128>([
-                            (TokenId::Nep141(env.ft3.id().clone()), 500),
-                            (TokenId::Nep141(env.ft2.id().clone()), -300),
-                        ])
-                        .unwrap(),
-                ]
-                .into(),
-                result_balances: [(env.ft1.id(), 100), (env.ft2.id(), 0), (env.ft3.id(), 500)]
+                result_balances: [(env.ft1.id(), TokenDiff::estimate_amount_out(100, fee))]
                     .into_iter()
                     .collect(),
             },
-            AccountFtDiff {
-                account: &env.user3,
-                init_balances: [(env.ft3.id(), 500)].into_iter().collect(),
-                diff: [TokenAmounts::<i128>::default()
-                    .with_try_extend::<i128>([
-                        (TokenId::Nep141(env.ft2.id().clone()), 300),
-                        (TokenId::Nep141(env.ft3.id().clone()), -500),
-                    ])
-                    .unwrap()]
-                .into(),
-                result_balances: [(env.ft2.id(), 300)].into_iter().collect(),
-            },
         ]
         .into(),
     )
     .await;
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_swap_many_with_fees() {
-    let fee = Pips::ONE_PERCENT * 2;
+async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips) {
     let env = Env::builder().with_fee(fee).build().await.unwrap();
     test_ft_diffs(
         &env,
@@ -133,25 +87,46 @@ async fn test_swap_many_with_fees() {
             },
             AccountFtDiff {
                 account: &env.user2,
-                init_balances: [(env.ft2.id(), 520)].into_iter().collect(),
+                init_balances: [(env.ft2.id(), 1000)].into_iter().collect(),
                 diff: [
                     TokenAmounts::<i128>::default()
                         .with_try_extend::<i128>([
-                            (TokenId::Nep141(env.ft1.id().clone()), 97),
-                            (TokenId::Nep141(env.ft2.id().clone()), -208),
+                            (
+                                TokenId::Nep141(env.ft1.id().clone()),
+                                TokenDiff::estimate_amount_out(100, fee) as i128,
+                            ),
+                            (
+                                TokenId::Nep141(env.ft2.id().clone()),
+                                -(TokenDiff::estimate_amount_in(200, fee).unwrap() as i128),
+                            ),
                         ])
                         .unwrap(),
                     TokenAmounts::<i128>::default()
                         .with_try_extend::<i128>([
-                            (TokenId::Nep141(env.ft3.id().clone()), 481),
-                            (TokenId::Nep141(env.ft2.id().clone()), -312),
+                            (
+                                TokenId::Nep141(env.ft2.id().clone()),
+                                -(TokenDiff::estimate_amount_in(300, fee).unwrap() as i128),
+                            ),
+                            (
+                                TokenId::Nep141(env.ft3.id().clone()),
+                                TokenDiff::estimate_amount_out(500, fee) as i128,
+                            ),
                         ])
                         .unwrap(),
                 ]
                 .into(),
-                result_balances: [(env.ft1.id(), 97), (env.ft2.id(), 0), (env.ft3.id(), 481)]
-                    .into_iter()
-                    .collect(),
+                result_balances: [
+                    (env.ft1.id(), TokenDiff::estimate_amount_out(100, fee)),
+                    (
+                        env.ft2.id(),
+                        1000u128
+                            - TokenDiff::estimate_amount_in(200, fee).unwrap()
+                            - TokenDiff::estimate_amount_in(300, fee).unwrap(),
+                    ),
+                    (env.ft3.id(), TokenDiff::estimate_amount_out(500, fee)),
+                ]
+                .into_iter()
+                .collect(),
             },
             AccountFtDiff {
                 account: &env.user3,

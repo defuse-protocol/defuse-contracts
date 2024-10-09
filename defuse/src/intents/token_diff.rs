@@ -21,7 +21,7 @@ impl IntentExecutor<TokenDiff> for State {
         for (token_id, delta) in intent.diff {
             account.token_balances.add_delta(token_id.clone(), delta)?;
 
-            let fee = self.fee.fee(delta.unsigned_abs());
+            let fee = self.fee.fee_ceil(delta.unsigned_abs());
             fees_collected.add(token_id.clone(), fee)?;
 
             self.runtime.total_supply_deltas.add(

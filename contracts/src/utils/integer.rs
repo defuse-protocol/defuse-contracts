@@ -1,3 +1,5 @@
+use core::ops::Mul;
+
 use bnum::{cast::As, BUint, BUintD8};
 
 pub type U256 = BUintD8<32>;
@@ -80,6 +82,7 @@ impl_checked_add_sub!(u128, i128);
 
 pub trait CheckedMulDiv<RHS = Self>: Sized {
     fn checked_mul_div(self, mul: RHS, div: RHS) -> Option<Self>;
+    fn checked_mul_div_ceil(self, mul: RHS, div: RHS) -> Option<Self>;
 }
 
 macro_rules! impl_checked_mul_div {
@@ -87,7 +90,21 @@ macro_rules! impl_checked_mul_div {
         impl CheckedMulDiv for $t {
             #[inline]
             fn checked_mul_div(self, mul: Self, div: Self) -> Option<Self> {
-                ((self.as_::<$h>() * mul.as_::<$h>()) / div.as_::<$h>())
+                self.as_::<$h>()
+                    .mul(mul.as_::<$h>())
+                    .checked_div(div.as_::<$h>())?
+                    .try_into()
+                    .ok()
+            }
+
+            #[inline]
+            fn checked_mul_div_ceil(self, mul: Self, div: Self) -> Option<Self> {
+                if div == 0 {
+                    return None;
+                }
+                self.as_::<$h>()
+                    .mul(mul.as_::<$h>())
+                    .div_ceil(div.as_::<$h>())
                     .try_into()
                     .ok()
             }

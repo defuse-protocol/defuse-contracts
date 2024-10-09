@@ -38,3 +38,6 @@ nep413 = ["crypto"]
 # `not(target_arch = "wasm32"))`. This is needed to make
 # `cargo near abi` work as it doesn't allow to pass `--features abi`.
 abi = ["serde_with/schemars_0_8"]
+
+[dev-dependencies]
+rstest.workspace = true

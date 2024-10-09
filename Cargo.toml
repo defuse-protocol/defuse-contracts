@@ -32,6 +32,7 @@ near-contract-standards = "5.5"
 near-plugins = { git = "https://github.com/Near-One/near-plugins", rev = "e6e4b070" }
 near-sdk = { version = "5.5", features = ["unstable"] }
 near-workspaces = "0.14"
+rstest = "0.21.0"
 serde_json = "1"
 serde_with = "3.9"
 strum = { version = "0.26", features = ["derive"] }
