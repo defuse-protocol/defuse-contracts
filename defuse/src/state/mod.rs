@@ -1,8 +1,8 @@
 pub mod runtime;
 
-use defuse_contracts::{defuse::fees::Fees, utils::prefix::NestPrefix};
+use defuse_contracts::utils::{fees::Pips, prefix::NestPrefix};
 use impl_tools::autoimpl;
-use near_sdk::{borsh::BorshSerialize, near, BorshStorageKey, IntoStorageKey};
+use near_sdk::{borsh::BorshSerialize, near, AccountId, BorshStorageKey, IntoStorageKey};
 
 use crate::tokens::TokensBalances;
 
@@ -13,7 +13,8 @@ use self::runtime::RuntimeState;
 #[autoimpl(DerefMut using self.runtime)]
 #[derive(Debug)]
 pub struct State {
-    pub fees: Fees,
+    pub fee: Pips,
+    pub fee_collector: AccountId,
     pub total_supplies: TokensBalances,
 
     #[borsh(skip)]
@@ -22,12 +23,13 @@ pub struct State {
 
 impl State {
     #[inline]
-    pub fn new<S>(prefix: S, fees: Fees) -> Self
+    pub fn new<S>(prefix: S, fee: Pips, fee_collector: AccountId) -> Self
     where
         S: IntoStorageKey,
     {
         Self {
-            fees,
+            fee,
+            fee_collector,
             total_supplies: TokensBalances::new(
                 prefix.into_storage_key().nest(Prefix::TotalSupplies),
             ),

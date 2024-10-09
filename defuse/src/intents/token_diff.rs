@@ -12,17 +12,19 @@ impl IntentExecutor<TokenDiff> for State {
         account: &mut Account,
         intent: TokenDiff,
     ) -> Result<()> {
+        let fees_collected = self
+            .runtime
+            .postponed_deposits
+            .entry(self.fee_collector.clone())
+            .or_default();
+
         for (token_id, delta) in intent.diff {
             account.token_balances.add_delta(token_id.clone(), delta)?;
 
-            let fee = self.fees.apply(delta.unsigned_abs());
-            self.runtime
-                .postponed_deposits
-                .entry(self.fees.collector.clone())
-                .or_default()
-                .add(token_id.clone(), fee)?;
+            let fee = self.fee.fee(delta.unsigned_abs());
+            fees_collected.add(token_id.clone(), fee)?;
 
-            self.total_supply_deltas.add(
+            self.runtime.total_supply_deltas.add(
                 token_id.clone(),
                 delta
                     .checked_add_unsigned(fee)

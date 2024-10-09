@@ -13,9 +13,10 @@ use near_workspaces::Account;
 use rand::{thread_rng, Rng};
 use serde_json::json;
 
-use crate::utils::mt::MtExt;
-
-use super::{accounts::AccountManagerExt, env::Env, DefuseSigner};
+use crate::{
+    tests::defuse::{accounts::AccountManagerExt, env::Env, DefuseSigner},
+    utils::mt::MtExt,
+};
 
 #[tokio::test]
 async fn test_swap_p2p() {

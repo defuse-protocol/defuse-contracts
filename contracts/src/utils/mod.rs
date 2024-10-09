@@ -6,6 +6,7 @@ pub mod cache;
 pub mod cleanup;
 mod deadline;
 mod error;
+pub mod fees;
 pub mod integer;
 mod lock;
 pub mod prefix;

@@ -8,12 +8,12 @@ mod tokens;
 
 use accounts::Accounts;
 use defuse_contracts::{
-    defuse::{fees::Fees, Defuse, Result},
-    utils::UnwrapOrPanic,
+    defuse::{Defuse, Result},
+    utils::{fees::Pips, UnwrapOrPanic},
 };
 use impl_tools::autoimpl;
 use near_plugins::{access_control, AccessControlRole};
-use near_sdk::{near, BorshStorageKey, PanicOnDefault};
+use near_sdk::{near, AccountId, BorshStorageKey, PanicOnDefault};
 
 use self::state::State;
 
@@ -37,10 +37,11 @@ pub struct DefuseImpl {
 #[near]
 impl DefuseImpl {
     #[init]
-    pub fn new(fees: Fees) -> Self {
+    pub fn new(fee: Pips, fee_collector: AccountId) -> Self {
+        // TODO: fee_collector optional, owner by default
         Self {
             accounts: Accounts::new(Prefix::Accounts),
-            state: State::new(Prefix::Runtime, fees),
+            state: State::new(Prefix::Runtime, fee, fee_collector),
         }
     }
 }
