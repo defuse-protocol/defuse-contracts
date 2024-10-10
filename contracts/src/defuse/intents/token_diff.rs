@@ -42,7 +42,7 @@ impl TokenDiff {
     ) -> Result<TokenAmounts<i128>> {
         deltas
             .into_iter()
-            // accumulate
+            // accumulate deltas with fees
             .try_fold(
                 TokenAmounts::<i128>::default(),
                 |mut deltas, (token_id, delta)| {
@@ -56,7 +56,7 @@ impl TokenDiff {
                 },
             )?
             .into_iter()
-            // calculate closre
+            // calculate closure
             .try_fold(TokenAmounts::default(), |mut deltas, (token_id, delta)| {
                 deltas
                     .add(
