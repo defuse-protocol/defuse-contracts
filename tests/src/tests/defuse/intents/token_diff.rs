@@ -34,12 +34,12 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
                         (TokenId::Nep141(env.ft1.id().clone()), -100),
                         (
                             TokenId::Nep141(env.ft2.id().clone()),
-                            TokenDiff::estimate_amount_out(200, fee) as i128,
+                            TokenDiff::closure_delta(-200, fee).unwrap(),
                         ),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(env.ft2.id(), TokenDiff::estimate_amount_out(200, fee))]
+                result_balances: [(env.ft2.id(), TokenDiff::closure_delta(-200, fee).unwrap())]
                     .into_iter()
                     .collect(),
             },
@@ -50,13 +50,13 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
                     .with_try_extend::<i128>([
                         (
                             TokenId::Nep141(env.ft1.id().clone()),
-                            TokenDiff::estimate_amount_out(100, fee) as i128,
+                            TokenDiff::closure_delta(-100, fee).unwrap(),
                         ),
                         (TokenId::Nep141(env.ft2.id().clone()), -200),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(env.ft1.id(), TokenDiff::estimate_amount_out(100, fee))]
+                result_balances: [(env.ft1.id(), TokenDiff::closure_delta(-100, fee).unwrap())]
                     .into_iter()
                     .collect(),
             },
@@ -93,11 +93,11 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
                         .with_try_extend::<i128>([
                             (
                                 TokenId::Nep141(env.ft1.id().clone()),
-                                TokenDiff::estimate_amount_out(100, fee) as i128,
+                                TokenDiff::closure_delta(-100, fee).unwrap(),
                             ),
                             (
                                 TokenId::Nep141(env.ft2.id().clone()),
-                                -(TokenDiff::estimate_amount_in(200, fee).unwrap() as i128),
+                                TokenDiff::closure_delta(200, fee).unwrap(),
                             ),
                         ])
                         .unwrap(),
@@ -105,25 +105,24 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
                         .with_try_extend::<i128>([
                             (
                                 TokenId::Nep141(env.ft2.id().clone()),
-                                -(TokenDiff::estimate_amount_in(300, fee).unwrap() as i128),
+                                TokenDiff::closure_delta(300, fee).unwrap(),
                             ),
                             (
                                 TokenId::Nep141(env.ft3.id().clone()),
-                                TokenDiff::estimate_amount_out(500, fee) as i128,
+                                TokenDiff::closure_delta(-500, fee).unwrap(),
                             ),
                         ])
                         .unwrap(),
                 ]
                 .into(),
                 result_balances: [
-                    (env.ft1.id(), TokenDiff::estimate_amount_out(100, fee)),
+                    (env.ft1.id(), TokenDiff::closure_delta(-100, fee).unwrap()),
                     (
                         env.ft2.id(),
-                        1000u128
-                            - TokenDiff::estimate_amount_in(200, fee).unwrap()
-                            - TokenDiff::estimate_amount_in(300, fee).unwrap(),
+                        1000 + TokenDiff::closure_delta(200, fee).unwrap()
+                            + TokenDiff::closure_delta(300, fee).unwrap(),
                     ),
-                    (env.ft3.id(), TokenDiff::estimate_amount_out(500, fee)),
+                    (env.ft3.id(), TokenDiff::closure_delta(-500, fee).unwrap()),
                 ]
                 .into_iter()
                 .collect(),
@@ -146,7 +145,7 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
     .await;
 }
 
-type FtBalances<'a> = BTreeMap<&'a AccountId, u128>;
+type FtBalances<'a> = BTreeMap<&'a AccountId, i128>;
 
 #[derive(Debug)]
 struct AccountFtDiff<'a> {
@@ -160,9 +159,13 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
     // deposit
     for account in &accounts {
         for (token_id, balance) in &account.init_balances {
-            env.defuse_ft_mint(token_id, *balance, account.account.id())
-                .await
-                .unwrap();
+            env.defuse_ft_mint(
+                token_id,
+                (*balance).try_into().unwrap(),
+                account.account.id(),
+            )
+            .await
+            .unwrap();
         }
     }
 
@@ -188,7 +191,12 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
         let (tokens, balances): (Vec<_>, Vec<_>) = account
             .result_balances
             .into_iter()
-            .map(|(t, b)| (TokenId::Nep141(t.clone()).to_string(), b))
+            .map(|(t, b)| {
+                (
+                    TokenId::Nep141(t.clone()).to_string(),
+                    u128::try_from(b).unwrap(),
+                )
+            })
             .unzip();
         assert_eq!(
             env.mt_contract_batch_balance_of(env.defuse.id(), account.account.id(), &tokens)

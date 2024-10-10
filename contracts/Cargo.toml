@@ -40,4 +40,6 @@ nep413 = ["crypto"]
 abi = ["serde_with/schemars_0_8"]
 
 [dev-dependencies]
+itertools.workspace = true
+near-sdk = { workspace = true, features = ["unit-testing"] }
 rstest.workspace = true

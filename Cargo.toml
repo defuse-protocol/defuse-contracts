@@ -27,6 +27,7 @@ bnum = { version = "0.12", features = ["borsh"] }
 derive_more = "1.0"
 hex = "0.4"
 impl-tools = "0.10"
+itertools = "0.13"
 near-account-id = "1.0"
 near-contract-standards = "5.5"
 near-plugins = { git = "https://github.com/Near-One/near-plugins", rev = "e6e4b070" }

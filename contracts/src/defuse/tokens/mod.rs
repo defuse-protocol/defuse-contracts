@@ -137,7 +137,7 @@ mod abi {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[autoimpl(Default)]
 #[autoimpl(Deref using self.0)]
 #[cfg_attr(
@@ -220,9 +220,18 @@ impl<A> TokenAmounts<A> {
     {
         iter.into_iter()
             .try_fold(Self::default(), |mut amounts, (token_id, amount)| {
-                amounts.add(token_id, amount)?;
-                Ok(amounts)
+                amounts.add(token_id, amount).map(|_| amounts)
             })
+    }
+
+    #[inline]
+    pub fn into_tokens(self) -> impl Iterator<Item = TokenId> {
+        self.0.into_keys()
+    }
+
+    #[inline]
+    pub fn into_amounts(self) -> impl Iterator<Item = A> {
+        self.0.into_values()
     }
 
     #[inline]
