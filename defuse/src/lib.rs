@@ -63,6 +63,7 @@ impl DefuseImpl {
         super_admins: Vec<AccountId>,
         admins: HashMap<Role, Vec<AccountId>>,
         grantees: HashMap<Role, Vec<AccountId>>,
+        staging_duration: Option<near_sdk::Duration>,
     ) -> Self {
         let mut contract = Self {
             accounts: Accounts::new(Prefix::Accounts),
@@ -85,6 +86,10 @@ impl DefuseImpl {
                     .all(|(role, grantee)| acl.grant_role_unchecked(role, &grantee)),
             "failed to set roles"
         );
+
+        if let Some(staging_duration) = staging_duration {
+            contract.up_set_staging_duration_unchecked(staging_duration);
+        }
 
         contract
     }
