@@ -13,6 +13,7 @@ use defuse_contracts::{
         UnwrapOrPanic,
     },
 };
+use near_plugins::{pause, Pausable};
 use near_sdk::{
     assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, Gas, NearToken,
     PromiseOrValue, PromiseResult,
@@ -22,6 +23,7 @@ use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 
 #[near]
 impl MultiTokenWithdrawer for DefuseImpl {
+    #[pause]
     #[payable]
     fn mt_withdraw(
         &mut self,

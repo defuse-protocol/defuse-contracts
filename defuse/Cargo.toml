@@ -20,8 +20,4 @@ near-plugins.workspace = true
 near-sdk.workspace = true
 
 [features]
-# default = ["beta"]
-
 abi = ["defuse-contracts/abi"]
-
-beta = [] # TODO: remove

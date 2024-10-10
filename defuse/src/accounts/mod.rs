@@ -20,6 +20,7 @@ use defuse_contracts::{
     },
 };
 
+use near_plugins::{pause, Pausable};
 use near_sdk::{
     borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey, IntoStorageKey,
 };
@@ -44,15 +45,14 @@ impl AccountManager for DefuseImpl {
             .collect()
     }
 
+    #[pause(name = "accounts")]
     fn add_public_key(&mut self, public_key: PublicKey) {
-        #[cfg(feature = "beta")]
-        crate::beta::beta_access!(self);
-
         self.accounts
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
             .add_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
     }
 
+    #[pause(name = "accounts")]
     fn remove_public_key(&mut self, public_key: &PublicKey) {
         self.accounts
             // create account if doesn't exist, so the user can opt out of implicit public key
@@ -81,11 +81,9 @@ impl AccountManager for DefuseImpl {
         .map(Into::into)
     }
 
+    #[pause(name = "accounts")]
     #[handle_result]
     fn invalidate_nonces(&mut self, nonces: Vec<DisplayFromStr<Nonce>>) {
-        #[cfg(feature = "beta")]
-        crate::beta::beta_access!(self);
-
         let account = self.accounts.get_or_create(PREDECESSOR_ACCOUNT_ID.clone());
         for n in nonces.into_iter().map(DisplayFromStr::into_inner) {
             let _ = account.commit_nonce(n);
@@ -137,7 +135,6 @@ impl Accounts {
             })
     }
 
-    #[inline]
     pub fn verify_signed_message<T>(
         &mut self,
         signed: SignedDefuseMessage<T>,

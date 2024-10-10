@@ -3,6 +3,7 @@ use defuse_contracts::{
     nep245::receiver::MultiTokenReceiver,
     utils::{cache::PREDECESSOR_ACCOUNT_ID, UnwrapOrPanic},
 };
+use near_plugins::{pause, Pausable};
 use near_sdk::{json_types::U128, near, require, AccountId, PromiseOrValue};
 
 use crate::{DefuseImpl, DefuseImplExt};
@@ -13,7 +14,7 @@ impl MultiTokenReceiver for DefuseImpl {
     ///
     /// `msg` contains [`AccountId`] of the internal recipient.
     /// Empty `msg` means deposit to `sender_id`
-    #[allow(unused_variables)]
+    #[pause]
     fn mt_on_transfer(
         &mut self,
         sender_id: AccountId,
@@ -22,14 +23,11 @@ impl MultiTokenReceiver for DefuseImpl {
         amounts: Vec<U128>,
         msg: String,
     ) -> PromiseOrValue<Vec<U128>> {
-        #[cfg(feature = "beta")]
-        crate::beta::beta_access!(self, sender_id.clone());
-
         require!(
             token_ids.len() == amounts.len(),
             "token_ids should be the same length as amounts"
         );
-
+        let _previous_owner_ids = previous_owner_ids;
         let receiver_id = if !msg.is_empty() {
             msg.parse().unwrap_or_panic_display()
         } else {

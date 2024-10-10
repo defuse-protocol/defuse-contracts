@@ -1,3 +1,4 @@
+mod relayer;
 mod token_diff;
 mod tokens;
 
@@ -6,20 +7,19 @@ use defuse_contracts::defuse::{
     message::SignedDefuseMessage,
     Result,
 };
+use near_plugins::{pause, Pausable};
 use near_sdk::{near, AccountId};
 
 use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 
 #[near]
 impl SignedIntentExecutor for DefuseImpl {
+    #[pause(name = "intents")]
     #[handle_result]
     fn execute_signed_intents(
         &mut self,
         signed: Vec<SignedDefuseMessage<DefuseIntents>>,
     ) -> Result<()> {
-        #[cfg(feature = "beta")]
-        crate::beta::beta_access!(self);
-
         for signed in signed {
             let (signer_id, signer, intents) = self.accounts.verify_signed_message(signed)?;
 

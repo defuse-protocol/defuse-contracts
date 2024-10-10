@@ -1,6 +1,5 @@
 mod accounts;
-#[cfg(feature = "beta")]
-mod beta;
+mod admin;
 mod fees;
 mod intents;
 mod state;
@@ -9,33 +8,50 @@ mod tokens;
 use core::iter;
 use std::collections::HashMap;
 
-use accounts::Accounts;
 use defuse_contracts::{
     defuse::{Defuse, Result},
     utils::{fees::Pips, UnwrapOrPanic},
 };
 use impl_tools::autoimpl;
-use near_plugins::{access_control, AccessControlRole};
-use near_sdk::{near, require, AccountId, BorshStorageKey, PanicOnDefault};
+use near_plugins::{access_control, AccessControlRole, AccessControllable, Pausable, Upgradable};
+use near_sdk::{
+    borsh::BorshDeserialize, near, require, store::LookupSet, AccountId, BorshStorageKey,
+    PanicOnDefault,
+};
 
-use self::state::State;
+use self::{accounts::Accounts, state::State};
 
 #[near(serializers = [json])]
 #[derive(AccessControlRole, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Role {
+    PauseManager,
+
+    UpgradeCodeStager,
+    UpgradeCodeDeployer,
+    UpgradeDurationManager,
+
     FeesManager,
-    #[cfg(feature = "beta")]
-    BetaAccess,
+    RelayerKeysManager,
 }
 
 #[access_control(role_type(Role))]
 #[near(contract_state)]
+#[derive(Pausable, Upgradable, PanicOnDefault)]
+#[pausable(manager_roles(Role::PauseManager))]
+#[upgradable(access_control_roles(
+    code_stagers(Role::UpgradeCodeStager),
+    code_deployers(Role::UpgradeCodeDeployer),
+    duration_initializers(Role::UpgradeDurationManager),
+    duration_update_stagers(Role::UpgradeDurationManager),
+    duration_update_appliers(Role::UpgradeDurationManager),
+))]
 #[autoimpl(Deref using self.state)]
 #[autoimpl(DerefMut using self.state)]
-#[derive(PanicOnDefault)]
 pub struct DefuseImpl {
     accounts: Accounts,
     state: State,
+
+    relayer_keys: LookupSet<near_sdk::PublicKey>,
 }
 
 #[near]
@@ -51,6 +67,7 @@ impl DefuseImpl {
         let mut contract = Self {
             accounts: Accounts::new(Prefix::Accounts),
             state: State::new(Prefix::State, fee, fee_collector),
+            relayer_keys: LookupSet::new(Prefix::RelayerKeys),
         };
 
         let mut acl = contract.acl_get_or_init();
@@ -95,4 +112,5 @@ impl Defuse for DefuseImpl {}
 enum Prefix {
     Accounts,
     State,
+    RelayerKeys,
 }

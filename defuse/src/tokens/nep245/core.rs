@@ -10,6 +10,7 @@ use defuse_contracts::{
         UnwrapOrPanic,
     },
 };
+use near_plugins::{pause, Pausable};
 use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, PromiseOrValue};
 
 use crate::{accounts::Account, intents::IntentExecutor, state::State, DefuseImpl, DefuseImplExt};
@@ -34,6 +35,7 @@ impl MultiTokenCore for DefuseImpl {
         );
     }
 
+    #[pause(name = "mt_transfer")]
     #[payable]
     fn mt_batch_transfer(
         &mut self,
@@ -67,6 +69,7 @@ impl MultiTokenCore for DefuseImpl {
         .unwrap_or_panic()
     }
 
+    #[pause(name = "mt_transfer")]
     #[payable]
     fn mt_transfer_call(
         &mut self,
@@ -87,6 +90,7 @@ impl MultiTokenCore for DefuseImpl {
         )
     }
 
+    #[pause(name = "mt_transfer")]
     #[payable]
     fn mt_batch_transfer_call(
         &mut self,

@@ -82,6 +82,7 @@ pub struct EnvBuilder {
     fee_collector: Option<AccountId>,
     super_admins: Vec<AccountId>,
     self_as_super_admin: bool,
+    deployer_as_super_admin: bool,
     admins: HashMap<Role, Vec<AccountId>>,
     grantees: HashMap<Role, Vec<AccountId>>,
 }
@@ -104,6 +105,11 @@ impl EnvBuilder {
 
     pub fn self_as_super_admin(mut self) -> Self {
         self.self_as_super_admin = true;
+        self
+    }
+
+    pub fn deployer_as_super_admin(mut self) -> Self {
+        self.deployer_as_super_admin = true;
         self
     }
 
@@ -130,7 +136,13 @@ impl EnvBuilder {
                     "defuse",
                     self.fee,
                     self.fee_collector.as_ref().unwrap_or(root.id()),
-                    self.super_admins,
+                    self.super_admins
+                        .into_iter()
+                        .chain(
+                            Some(format!("defuse.{}", root.id()).parse().unwrap())
+                                .filter(|_| self.self_as_super_admin),
+                        )
+                        .chain(Some(root.id().clone()).filter(|_| self.deployer_as_super_admin)),
                     self.admins,
                     self.grantees,
                 )

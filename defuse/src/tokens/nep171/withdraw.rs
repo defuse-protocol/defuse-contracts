@@ -13,6 +13,7 @@ use defuse_contracts::{
     },
 };
 use near_contract_standards::non_fungible_token::{self, core::ext_nft_core};
+use near_plugins::{pause, Pausable};
 use near_sdk::{
     assert_one_yocto, env, near, serde_json, AccountId, Gas, NearToken, PromiseOrValue,
     PromiseResult,
@@ -22,6 +23,7 @@ use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 
 #[near]
 impl NonFungibleTokenWithdrawer for DefuseImpl {
+    #[pause]
     #[payable]
     fn nft_withdraw(
         &mut self,
