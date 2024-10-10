@@ -1,13 +1,19 @@
 use defuse_contracts::{
+    defuse::{
+        intents::tokens::{MtBatchTransfer, MtBatchTransferCall},
+        tokens::TokenAmounts,
+        DefuseError, Result,
+    },
     nep245::{self, receiver::ext_mt_receiver, MultiTokenCore},
     utils::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
         UnwrapOrPanic,
     },
 };
+use near_plugins::{pause, Pausable};
 use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, PromiseOrValue};
 
-use crate::{DefuseImpl, DefuseImplExt};
+use crate::{accounts::Account, intents::IntentExecutor, state::State, DefuseImpl, DefuseImplExt};
 
 #[near]
 impl MultiTokenCore for DefuseImpl {
@@ -29,6 +35,7 @@ impl MultiTokenCore for DefuseImpl {
         );
     }
 
+    #[pause(name = "mt_transfer")]
     #[payable]
     fn mt_batch_transfer(
         &mut self,
@@ -45,19 +52,24 @@ impl MultiTokenCore for DefuseImpl {
         );
         require!(approvals.is_none(), "approvals are not supported");
 
-        self.internal_transfer(
+        self.internal_mt_batch_transfer(
             &PREDECESSOR_ACCOUNT_ID,
-            receiver_id,
-            token_ids
-                .into_iter()
-                .map(|token_id| token_id.parse().unwrap_or_panic_display())
-                .zip(amounts.into_iter().map(|a| a.0))
-                .collect(),
-            memo,
+            MtBatchTransfer {
+                receiver_id,
+                token_id_amounts: TokenAmounts::try_from_iter(
+                    token_ids
+                        .into_iter()
+                        .map(|token_id| token_id.parse().unwrap_or_panic_display())
+                        .zip(amounts.into_iter().map(|a| a.0)),
+                )
+                .unwrap_or_panic(),
+                memo,
+            },
         )
         .unwrap_or_panic()
     }
 
+    #[pause(name = "mt_transfer")]
     #[payable]
     fn mt_transfer_call(
         &mut self,
@@ -78,6 +90,7 @@ impl MultiTokenCore for DefuseImpl {
         )
     }
 
+    #[pause(name = "mt_transfer")]
     #[payable]
     fn mt_batch_transfer_call(
         &mut self,
@@ -95,34 +108,25 @@ impl MultiTokenCore for DefuseImpl {
         );
         require!(approvals.is_none(), "approvals are not supported");
 
-        self.internal_transfer(
+        self.internal_mt_batch_transfer_call(
             &PREDECESSOR_ACCOUNT_ID,
-            receiver_id.clone(),
-            token_ids
-                .iter()
-                .map(|token_id| token_id.parse().unwrap_or_panic_display())
-                .zip(amounts.iter().map(|a| a.0))
-                .collect(),
-            memo,
-        )
-        .unwrap_or_panic();
-
-        let previous_owner_ids = vec![PREDECESSOR_ACCOUNT_ID.clone(); token_ids.len()];
-
-        ext_mt_receiver::ext(receiver_id.clone())
-            .mt_on_transfer(
-                PREDECESSOR_ACCOUNT_ID.clone(),
-                previous_owner_ids.clone(),
-                token_ids.clone(),
-                amounts.clone(),
+            MtBatchTransferCall {
+                transfer: MtBatchTransfer {
+                    receiver_id,
+                    token_id_amounts: TokenAmounts::try_from_iter(
+                        token_ids
+                            .into_iter()
+                            .map(|token_id| token_id.parse().unwrap_or_panic_display())
+                            .zip(amounts.into_iter().map(|a| a.0)),
+                    )
+                    .unwrap_or_panic(),
+                    memo,
+                },
                 msg,
-            )
-            .then(
-                Self::ext(CURRENT_ACCOUNT_ID.clone())
-                    .with_static_gas(Self::mt_resolve_transfer_gas(&token_ids))
-                    .mt_resolve_transfer(previous_owner_ids, receiver_id, token_ids, amounts, None),
-            )
-            .into()
+                gas_for_mt_on_transfer: None,
+            },
+        )
+        .unwrap_or_panic()
     }
 
     fn mt_token(&self, token_ids: Vec<nep245::TokenId>) -> Vec<Option<nep245::Token>> {
@@ -170,10 +174,83 @@ impl MultiTokenCore for DefuseImpl {
 }
 
 impl DefuseImpl {
+    fn internal_mt_batch_transfer(
+        &mut self,
+        sender_id: &AccountId,
+        transfer: MtBatchTransfer,
+    ) -> Result<()> {
+        let sender = self
+            .accounts
+            .get_mut(sender_id)
+            .ok_or(DefuseError::AccountNotFound)?;
+        self.state.execute_intent(sender_id, sender, transfer)
+    }
+
+    fn internal_mt_batch_transfer_call(
+        &mut self,
+        sender_id: &AccountId,
+        transfer: MtBatchTransferCall,
+    ) -> Result<PromiseOrValue<Vec<U128>>> {
+        let sender = self
+            .accounts
+            .get_mut(sender_id)
+            .ok_or(DefuseError::AccountNotFound)?;
+        self.state
+            .internal_mt_batch_transfer_call(sender_id, sender, transfer)
+    }
+
     fn internal_mt_balance_of(&self, account_id: &AccountId, token_id: &nep245::TokenId) -> u128 {
         let Ok(token_id) = token_id.parse() else {
             return 0;
         };
         self.internal_balance_of(account_id, &token_id)
+    }
+}
+
+impl State {
+    pub fn internal_mt_batch_transfer_call(
+        &mut self,
+        sender_id: &AccountId,
+        sender: &mut Account,
+        MtBatchTransferCall {
+            transfer,
+            msg,
+            gas_for_mt_on_transfer,
+        }: MtBatchTransferCall,
+    ) -> Result<PromiseOrValue<Vec<U128>>> {
+        self.execute_intent(sender_id, sender, transfer.clone())?;
+
+        let (token_ids, amounts): (Vec<_>, Vec<_>) = transfer
+            .token_id_amounts
+            .iter()
+            .map(|(token_id, amount)| (token_id.to_string(), U128(*amount)))
+            .unzip();
+
+        let previous_owner_ids = vec![PREDECESSOR_ACCOUNT_ID.clone(); token_ids.len()];
+
+        let mut ext = ext_mt_receiver::ext(transfer.receiver_id.clone());
+        if let Some(gas) = gas_for_mt_on_transfer {
+            ext = ext.with_static_gas(gas);
+        }
+        Ok(ext
+            .mt_on_transfer(
+                PREDECESSOR_ACCOUNT_ID.clone(),
+                previous_owner_ids.clone(),
+                token_ids.clone(),
+                amounts.clone(),
+                msg,
+            )
+            .then(
+                DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
+                    .with_static_gas(DefuseImpl::mt_resolve_transfer_gas(&token_ids))
+                    .mt_resolve_transfer(
+                        previous_owner_ids,
+                        transfer.receiver_id,
+                        token_ids,
+                        amounts,
+                        None,
+                    ),
+            )
+            .into())
     }
 }

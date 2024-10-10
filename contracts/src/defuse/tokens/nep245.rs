@@ -11,8 +11,7 @@ pub trait MultiTokenWithdrawer: MultiTokenReceiver + MultiTokenWithdrawResolver 
         &mut self,
         token: AccountId,
         receiver_id: AccountId,
-        token_ids: Vec<TokenId>,
-        amounts: Vec<U128>,
+        token_id_amounts: Vec<(TokenId, U128)>,
         memo: Option<String>,
         msg: Option<String>,
     ) -> PromiseOrValue<Vec<U128>>;
@@ -23,8 +22,7 @@ pub trait MultiTokenWithdrawResolver {
         &mut self,
         token: AccountId,
         sender_id: AccountId,
-        token_ids: Vec<TokenId>,
-        amounts: Vec<U128>,
+        token_id_amounts: Vec<(TokenId, U128)>,
         is_call: bool,
     ) -> Vec<U128>;
 }

@@ -1,19 +1,8 @@
 use core::convert::Infallible;
-use std::collections::HashMap;
 
-use near_sdk::{borsh::BorshSerialize, near, AccountId};
+use near_sdk::{borsh::BorshSerialize, near};
 
-use crate::{
-    crypto::{Payload, SignedPayload},
-    nep413::Nep413Payload,
-};
-
-pub type SignedPayloads<T> = HashMap<
-    // Signer account
-    AccountId,
-    // Payloads signed by the account
-    Vec<SignedPayload<MultiStandardPayload<T>>>,
->;
+use crate::{crypto::Payload, nep413::Nep413Payload};
 
 #[derive(Debug, Clone)]
 #[near(serializers = [borsh, json])]

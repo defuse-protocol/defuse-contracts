@@ -157,8 +157,10 @@ async fn test_rollback_intent() {
     assert!(matches!(intent.status(), Status::Available));
 
     // The user decides to roll back the intent.
-    let status = env.user.rollback_intent(env.intent.id(), "1").await;
-    assert!(status.is_success());
+    env.user
+        .rollback_intent(env.intent.id(), "1")
+        .await
+        .unwrap();
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
     assert!(matches!(intent.status(), Status::RolledBack));
@@ -203,8 +205,10 @@ async fn test_rollback_intent_too_early() {
     assert!(intent.is_some());
 
     // The user decides to roll back intent too early.
-    let result = env.user.rollback_intent(env.intent.id(), "1").await;
-    assert!(result.is_failure());
+    env.user
+        .rollback_intent(env.intent.id(), "1")
+        .await
+        .unwrap_err();
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
     assert!(matches!(intent.status(), Status::Available));

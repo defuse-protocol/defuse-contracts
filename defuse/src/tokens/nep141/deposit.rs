@@ -3,6 +3,7 @@ use defuse_contracts::{
     utils::{cache::PREDECESSOR_ACCOUNT_ID, UnwrapOrPanic},
 };
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
+use near_plugins::{pause, Pausable};
 use near_sdk::{json_types::U128, near, AccountId, PromiseOrValue};
 
 use crate::{DefuseImpl, DefuseImplExt};
@@ -12,6 +13,7 @@ impl FungibleTokenReceiver for DefuseImpl {
     ///
     /// `msg` contains [`AccountId`] of the internal recipient.
     /// Empty `msg` means deposit to `sender_id`
+    #[pause]
     fn ft_on_transfer(
         &mut self,
         sender_id: AccountId,
@@ -29,6 +31,10 @@ impl FungibleTokenReceiver for DefuseImpl {
             [(TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone()), amount.0)],
         )
         .unwrap_or_panic();
+
+        // TODO: signed actions
+
+        // TODO: log deposited
 
         PromiseOrValue::Value(U128(0))
     }

@@ -1,0 +1,78 @@
+mod relayer;
+mod token_diff;
+mod tokens;
+
+use defuse_contracts::defuse::{
+    intents::{DefuseIntents, Intent, SignedIntentExecutor},
+    message::SignedDefuseMessage,
+    Result,
+};
+use near_plugins::{pause, Pausable};
+use near_sdk::{near, AccountId};
+
+use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
+
+#[near]
+impl SignedIntentExecutor for DefuseImpl {
+    #[pause(name = "intents")]
+    #[handle_result]
+    fn execute_signed_intents(
+        &mut self,
+        signed: Vec<SignedDefuseMessage<DefuseIntents>>,
+    ) -> Result<()> {
+        for signed in signed {
+            let (signer_id, signer, intents) = self.accounts.verify_signed_message(signed)?;
+
+            for intent in intents.intents {
+                self.state.execute_intent(&signer_id, signer, intent)?;
+            }
+            // TODO: log intent hash?
+        }
+
+        Ok(())
+    }
+}
+
+pub trait IntentExecutor<T> {
+    fn execute_intent(
+        &mut self,
+        account_id: &AccountId,
+        account: &mut Account,
+        intent: T,
+    ) -> Result<()>;
+}
+
+impl IntentExecutor<Intent> for State {
+    fn execute_intent(
+        &mut self,
+        account_id: &AccountId,
+        account: &mut Account,
+        intent: Intent,
+    ) -> Result<()> {
+        match intent {
+            Intent::AddPublicKey { public_key } => {
+                account.add_public_key(account_id, public_key);
+                Ok(())
+            }
+            Intent::RemovePublicKey { public_key } => {
+                account.remove_public_key(account_id, &public_key);
+                Ok(())
+            }
+            Intent::InvalidateNonces { nonces } => {
+                for n in nonces {
+                    let _ = account.commit_nonce(n);
+                }
+                Ok(())
+            }
+
+            Intent::MtBatchTransfer(intent) => self.execute_intent(account_id, account, intent),
+            Intent::MtBatchTransferCall(intent) => self.execute_intent(account_id, account, intent),
+
+            Intent::TokenDiff(intent) => self.execute_intent(account_id, account, intent),
+
+            Intent::FtWithdraw(intent) => self.execute_intent(account_id, account, intent),
+            Intent::NftWithdraw(intent) => self.execute_intent(account_id, account, intent),
+            Intent::MtWithdraw(intent) => self.execute_intent(account_id, account, intent),
+        }
+    }
+}
