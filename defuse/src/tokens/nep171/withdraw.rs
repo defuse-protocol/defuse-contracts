@@ -30,7 +30,6 @@ impl NonFungibleTokenWithdrawer for DefuseImpl {
         token_id: non_fungible_token::TokenId,
         memo: Option<String>,
         msg: Option<String>,
-        gas: Option<Gas>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
         self.internal_nft_withdraw(
@@ -41,7 +40,7 @@ impl NonFungibleTokenWithdrawer for DefuseImpl {
                 token_id,
                 memo,
                 msg,
-                gas,
+                gas: None,
             },
         )
         .unwrap_or_panic()
@@ -52,6 +51,7 @@ impl DefuseImpl {
     /// Value is taken from [`near_contract_standards`](https://github.com/near/near-sdk-rs/blob/f179a289528fbec5cd85077314e29deec198d0f3/near-contract-standards/src/non_fungible_token/core/core_impl.rs#L19)
     const NFT_RESOLVE_WITHDRAW_GAS: Gas = Gas::from_tgas(5);
 
+    // TODO: export as #[private] for a backup?
     fn internal_nft_withdraw(
         &mut self,
         sender_id: AccountId,

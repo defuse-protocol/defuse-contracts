@@ -22,7 +22,7 @@ use crate::{
 #[rstest]
 #[tokio::test]
 async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips) {
-    let env = Env::builder().with_fee(fee).build().await.unwrap();
+    let env = Env::builder().fee(fee).build().await.unwrap();
     test_ft_diffs(
         &env,
         [
@@ -69,7 +69,7 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
 #[rstest]
 #[tokio::test]
 async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips) {
-    let env = Env::builder().with_fee(fee).build().await.unwrap();
+    let env = Env::builder().fee(fee).build().await.unwrap();
     test_ft_diffs(
         &env,
         [

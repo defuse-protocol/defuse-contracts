@@ -30,7 +30,6 @@ impl FungibleTokenWithdrawer for DefuseImpl {
         amount: U128,
         memo: Option<String>,
         msg: Option<String>,
-        gas: Option<Gas>,
     ) -> PromiseOrValue<U128> {
         assert_one_yocto();
         self.internal_ft_withdraw(
@@ -41,7 +40,7 @@ impl FungibleTokenWithdrawer for DefuseImpl {
                 amount,
                 memo,
                 msg,
-                gas,
+                gas: None,
             },
         )
         .unwrap_or_panic()
@@ -53,6 +52,7 @@ impl DefuseImpl {
     const FT_RESOLVE_WITHDRAW_GAS: Gas = Gas::from_tgas(5);
 
     #[inline]
+    // TODO: export as #[private] for a backup?
     fn internal_ft_withdraw(
         &mut self,
         sender_id: AccountId,

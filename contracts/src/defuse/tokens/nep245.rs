@@ -1,4 +1,4 @@
-use near_sdk::{ext_contract, json_types::U128, AccountId, Gas, PromiseOrValue};
+use near_sdk::{ext_contract, json_types::U128, AccountId, PromiseOrValue};
 
 use crate::nep245::{receiver::MultiTokenReceiver, TokenId};
 
@@ -14,7 +14,6 @@ pub trait MultiTokenWithdrawer: MultiTokenReceiver + MultiTokenWithdrawResolver 
         token_id_amounts: Vec<(TokenId, U128)>,
         memo: Option<String>,
         msg: Option<String>,
-        gas: Option<Gas>,
     ) -> PromiseOrValue<Vec<U128>>;
 }
 

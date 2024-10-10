@@ -50,7 +50,7 @@ impl DefuseImpl {
     ) -> Self {
         let mut contract = Self {
             accounts: Accounts::new(Prefix::Accounts),
-            state: State::new(Prefix::Runtime, fee, fee_collector),
+            state: State::new(Prefix::State, fee, fee_collector),
         };
 
         let mut acl = contract.acl_get_or_init();
@@ -94,5 +94,5 @@ impl Defuse for DefuseImpl {}
 #[near(serializers = [borsh])]
 enum Prefix {
     Accounts,
-    Runtime,
+    State,
 }

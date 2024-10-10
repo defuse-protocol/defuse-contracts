@@ -30,7 +30,6 @@ impl MultiTokenWithdrawer for DefuseImpl {
         token_id_amounts: Vec<(nep245::TokenId, U128)>,
         memo: Option<String>,
         msg: Option<String>,
-        gas: Option<Gas>,
     ) -> PromiseOrValue<Vec<U128>> {
         assert_one_yocto();
         self.internal_mt_withdraw(
@@ -41,7 +40,7 @@ impl MultiTokenWithdrawer for DefuseImpl {
                 token_id_amounts,
                 memo,
                 msg,
-                gas,
+                gas: None,
             },
         )
         .unwrap_or_panic()
@@ -53,6 +52,7 @@ impl DefuseImpl {
     const MT_RESOLVE_WITHDRAW_GAS_BASE: Gas = Gas::from_tgas(5);
     const MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID: Gas = Gas::from_tgas(1);
 
+    // TODO: export as #[private] for a backup?
     fn internal_mt_withdraw(
         &mut self,
         sender_id: AccountId,

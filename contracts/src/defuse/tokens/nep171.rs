@@ -1,5 +1,5 @@
 use near_contract_standards::non_fungible_token::{core::NonFungibleTokenReceiver, TokenId};
-use near_sdk::{ext_contract, AccountId, Gas, PromiseOrValue};
+use near_sdk::{ext_contract, AccountId, PromiseOrValue};
 
 #[ext_contract(ext_nft_withdraw)]
 pub trait NonFungibleTokenWithdrawer:
@@ -15,7 +15,6 @@ pub trait NonFungibleTokenWithdrawer:
         token_id: TokenId,
         memo: Option<String>,
         msg: Option<String>,
-        gas: Option<Gas>,
     ) -> PromiseOrValue<bool>;
 }
 

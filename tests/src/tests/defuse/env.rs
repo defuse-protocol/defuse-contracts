@@ -81,32 +81,38 @@ pub struct EnvBuilder {
     fee: Pips,
     fee_collector: Option<AccountId>,
     super_admins: Vec<AccountId>,
+    self_as_super_admin: bool,
     admins: HashMap<Role, Vec<AccountId>>,
     grantees: HashMap<Role, Vec<AccountId>>,
 }
 
 impl EnvBuilder {
-    pub fn with_fee(mut self, fee: Pips) -> Self {
+    pub fn fee(mut self, fee: Pips) -> Self {
         self.fee = fee;
         self
     }
 
-    pub fn with_fee_collector(mut self, fee_collector: AccountId) -> Self {
+    pub fn fee_collector(mut self, fee_collector: AccountId) -> Self {
         self.fee_collector = Some(fee_collector);
         self
     }
 
-    pub fn with_super_admin(mut self, super_admin: AccountId) -> Self {
+    pub fn super_admin(mut self, super_admin: AccountId) -> Self {
         self.super_admins.push(super_admin);
         self
     }
 
-    pub fn with_admin(mut self, role: Role, admin: AccountId) -> Self {
+    pub fn self_as_super_admin(mut self) -> Self {
+        self.self_as_super_admin = true;
+        self
+    }
+
+    pub fn admin(mut self, role: Role, admin: AccountId) -> Self {
         self.admins.entry(role).or_default().push(admin);
         self
     }
 
-    pub fn with_grantee(mut self, role: Role, grantee: AccountId) -> Self {
+    pub fn grantee(mut self, role: Role, grantee: AccountId) -> Self {
         self.grantees.entry(role).or_default().push(grantee);
         self
     }
