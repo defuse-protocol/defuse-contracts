@@ -9,7 +9,6 @@ type U248 = BUintD8<31>;
 /// See [permit2 nonce schema](https://docs.uniswap.org/contracts/permit2/reference/signature-transfer#nonce-schema)
 #[derive(Debug)]
 #[near(serializers = [borsh])]
-// TODO: hasher Identity?
 pub struct BitMap256(LookupMap<U248, U256>);
 
 impl BitMap256 {

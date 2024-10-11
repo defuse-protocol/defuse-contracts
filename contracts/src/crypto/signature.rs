@@ -46,11 +46,7 @@ impl Signature {
                 .then_some(PublicKey::Ed25519(*public_key)),
             Signature::Secp256k1 {
                 signature: [signature @ .., v],
-            } => {
-                // TODO: are we sure about malleability_flag?
-                // https://github.com/near/nearcore/blob/541c84a56bf9a2920271881f1a7804e2dd2d4ee7/core/crypto/src/signature.rs#L448
-                env::ecrecover(hash, signature, *v, true).map(PublicKey::Secp256k1)
-            }
+            } => env::ecrecover(hash, signature, *v, true).map(PublicKey::Secp256k1),
         }
     }
 }

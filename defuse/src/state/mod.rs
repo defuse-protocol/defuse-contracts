@@ -13,9 +13,10 @@ use self::runtime::RuntimeState;
 #[autoimpl(DerefMut using self.runtime)]
 #[derive(Debug)]
 pub struct State {
+    pub total_supplies: TokensBalances,
+
     pub fee: Pips,
     pub fee_collector: AccountId,
-    pub total_supplies: TokensBalances,
 
     #[borsh(skip)]
     pub runtime: RuntimeState,
@@ -28,11 +29,11 @@ impl State {
         S: IntoStorageKey,
     {
         Self {
-            fee,
-            fee_collector,
             total_supplies: TokensBalances::new(
                 prefix.into_storage_key().nest(Prefix::TotalSupplies),
             ),
+            fee,
+            fee_collector,
             runtime: Default::default(),
         }
     }
