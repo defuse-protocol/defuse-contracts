@@ -34,9 +34,7 @@ pub enum Role {
     RelayerKeysManager,
 }
 
-// TODO: contract metadata
 #[access_control(role_type(Role))]
-#[near(contract_state)]
 #[derive(Pausable, Upgradable, PanicOnDefault)]
 #[pausable(manager_roles(Role::PauseManager))]
 #[upgradable(access_control_roles(
@@ -45,6 +43,14 @@ pub enum Role {
     duration_initializers(Role::UpgradeDurationManager),
     duration_update_stagers(Role::UpgradeDurationManager),
     duration_update_appliers(Role::UpgradeDurationManager),
+))]
+#[near(contract_state, contract_metadata(
+    // TODO: remove when this PR is merged:
+    // https://github.com/near/near-sdk-rs/pull/1249
+    version = "unknown",
+    link = "https://github.com/defuse-protocol/defuse-contracts",
+    standard(standard = "dip4", version = "0.1.0"),
+    standard(standard = "nep245", version = "1.0.0"),
 ))]
 #[autoimpl(Deref using self.state)]
 #[autoimpl(DerefMut using self.state)]
