@@ -1,12 +1,30 @@
 use core::convert::Infallible;
 
-use near_sdk::{borsh::BorshSerialize, near};
+use derive_more::derive::From;
+use impl_tools::autoimpl;
+use near_sdk::{borsh::BorshSerialize, near, AccountId};
 
-use crate::{crypto::Payload, nep413::Nep413Payload};
+use crate::{
+    crypto::{Payload, SignedPayload},
+    nep413::Nep413Payload,
+};
 
-#[derive(Debug, Clone)]
+pub type SignedDefusePayload<T> = SignedPayload<MultiStandardPayload<SignerPayload<T>>>;
+pub type DefusePayload<T> = Nep413Payload<SignerPayload<T>>;
+
+#[near(serializers = [borsh, json])]
+#[autoimpl(Deref using self.payload)]
+#[autoimpl(DerefMut using self.payload)]
+pub struct SignerPayload<T> {
+    pub signer_id: AccountId,
+
+    #[serde(flatten)]
+    pub payload: T,
+}
+
 #[near(serializers = [borsh, json])]
 #[serde(tag = "standard", rename_all = "snake_case")]
+#[derive(Debug, Clone, From)]
 pub enum MultiStandardPayload<T> {
     Nep413(Nep413Payload<T>),
 }
@@ -20,13 +38,6 @@ where
         match self {
             Self::Nep413(payload) => payload.hash(),
         }
-    }
-}
-
-impl<T> From<Nep413Payload<T>> for MultiStandardPayload<T> {
-    #[inline]
-    fn from(value: Nep413Payload<T>) -> Self {
-        Self::Nep413(value)
     }
 }
 

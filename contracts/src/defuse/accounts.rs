@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use near_sdk::{ext_contract, AccountId};
+use near_sdk::{ext_contract, serde::Serialize, AccountId};
 
 use crate::{crypto::PublicKey, nep413::Nonce, utils::serde::wrappers::DisplayFromStr};
 
@@ -35,4 +35,20 @@ pub trait AccountManager {
     ) -> Option<DisplayFromStr<Nonce>>;
 
     fn invalidate_nonces(&mut self, nonces: Vec<DisplayFromStr<Nonce>>);
+}
+
+#[must_use = "make sure to `.emit()` this event"]
+#[derive(Debug, Serialize)]
+#[serde(crate = "::near_sdk::serde")]
+pub struct PublicKeyAddedEvent<'a> {
+    pub account_id: &'a AccountId,
+    pub public_key: &'a PublicKey,
+}
+
+#[must_use = "make sure to `.emit()` this event"]
+#[derive(Debug, Serialize)]
+#[serde(crate = "::near_sdk::serde")]
+pub struct PublicKeyRemovedEvent<'a> {
+    pub account_id: &'a AccountId,
+    pub public_key: &'a PublicKey,
 }

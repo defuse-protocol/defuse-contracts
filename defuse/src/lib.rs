@@ -34,6 +34,7 @@ pub enum Role {
     RelayerKeysManager,
 }
 
+// TODO: contract metadata
 #[access_control(role_type(Role))]
 #[near(contract_state)]
 #[derive(Pausable, Upgradable, PanicOnDefault)]

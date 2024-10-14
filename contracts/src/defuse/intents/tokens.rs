@@ -3,15 +3,14 @@ use near_contract_standards::non_fungible_token;
 use near_sdk::json_types::U128;
 use near_sdk::{near, AccountId, Gas};
 
-use crate::nep245;
-
-use crate::defuse::tokens::TokenAmounts;
+use crate::{defuse::tokens::TokenId, nep245};
 
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
 pub struct MtBatchTransfer {
     pub receiver_id: AccountId,
-    pub token_id_amounts: TokenAmounts<u128>,
+    pub token_ids: Vec<TokenId>,
+    pub amounts: Vec<U128>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 }
@@ -72,7 +71,8 @@ pub struct NftWithdraw {
 pub struct MtWithdraw {
     pub token: AccountId,
     pub receiver_id: AccountId,
-    pub token_id_amounts: Vec<(nep245::TokenId, U128)>,
+    pub token_ids: Vec<nep245::TokenId>,
+    pub amounts: Vec<U128>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 

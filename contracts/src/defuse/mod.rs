@@ -1,9 +1,9 @@
 pub mod accounts;
 // pub mod actions;
 mod error;
+pub mod events;
 pub mod fees;
 pub mod intents;
-pub mod message;
 pub mod payload;
 pub mod tokens;
 
@@ -15,7 +15,7 @@ use crate::{
 pub use self::error::*;
 use self::{accounts::AccountManager, tokens::nep141::FungibleTokenWithdrawer};
 
-use intents::{relayer::RelayerKeys, SignedIntentExecutor};
+use intents::{relayer::RelayerKeys, IntentsExecutor};
 use near_contract_standards::{
     fungible_token::receiver::FungibleTokenReceiver,
     non_fungible_token::core::NonFungibleTokenReceiver,
@@ -26,7 +26,7 @@ use tokens::{nep171::NonFungibleTokenWithdrawer, nep245::MultiTokenWithdrawer};
 
 #[ext_contract(ext_defuse)]
 pub trait Defuse:
-    SignedIntentExecutor
+    IntentsExecutor
     + RelayerKeys
     + AccountManager
     + MultiTokenCore

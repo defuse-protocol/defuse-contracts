@@ -40,9 +40,8 @@ impl Nonces {
 
     #[inline]
     pub fn commit(&mut self, n: Nonce) -> Result<()> {
-        if self.0.set(n, true) {
-            return Err(DefuseError::NonceUsed);
-        }
-        Ok(())
+        (!self.0.set(n, true))
+            .then_some(())
+            .ok_or(DefuseError::NonceUsed)
     }
 }

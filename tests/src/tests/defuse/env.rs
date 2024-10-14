@@ -2,7 +2,7 @@ use std::{collections::HashMap, ops::Deref};
 
 use defuse_contract::Role;
 use defuse_contracts::utils::fees::Pips;
-use near_sdk::AccountId;
+use near_sdk::{AccountId, Duration};
 use near_workspaces::{Account, Contract};
 
 use crate::utils::{ft::FtExt, Sandbox};
@@ -85,6 +85,7 @@ pub struct EnvBuilder {
     deployer_as_super_admin: bool,
     admins: HashMap<Role, Vec<AccountId>>,
     grantees: HashMap<Role, Vec<AccountId>>,
+    staging_duration: Option<Duration>,
 }
 
 impl EnvBuilder {
@@ -123,6 +124,11 @@ impl EnvBuilder {
         self
     }
 
+    pub fn staging_duration(mut self, staging_duration: Duration) -> Self {
+        self.staging_duration = Some(staging_duration);
+        self
+    }
+
     pub async fn build(self) -> anyhow::Result<Env> {
         let sandbox = Sandbox::new().await?;
         let root = sandbox.root_account();
@@ -145,6 +151,7 @@ impl EnvBuilder {
                         .chain(Some(root.id().clone()).filter(|_| self.deployer_as_super_admin)),
                     self.admins,
                     self.grantees,
+                    self.staging_duration,
                 )
                 .await?,
             ft1: root.deploy_ft_token("ft1").await?,

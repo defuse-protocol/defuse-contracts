@@ -1,5 +1,12 @@
 use defuse_contracts::{
-    crypto::PublicKey, defuse::Result, nep413::Nonce, utils::prefix::NestPrefix,
+    crypto::PublicKey,
+    defuse::{
+        accounts::{PublicKeyAddedEvent, PublicKeyRemovedEvent},
+        events::DefuseIntentEmit,
+        DefuseError, Result,
+    },
+    nep413::{Nep413Payload, Nonce},
+    utils::{cache::CURRENT_ACCOUNT_ID, prefix::NestPrefix},
 };
 use impl_tools::autoimpl;
 use near_account_id::AccountType;
@@ -42,20 +49,50 @@ impl Account {
     }
 
     #[inline]
-    pub fn add_public_key(&mut self, me: &AccountId, public_key: PublicKey) {
+    pub fn add_public_key(&mut self, me: &AccountId, public_key: PublicKey) -> Result<()> {
+        PublicKeyAddedEvent {
+            account_id: me,
+            public_key: &public_key,
+        }
+        .emit();
+
+        self.maybe_add_public_key(me, public_key)
+            .then_some(())
+            .ok_or(DefuseError::PublicKeyExists)
+    }
+
+    #[inline]
+    fn maybe_add_public_key(&mut self, me: &AccountId, public_key: PublicKey) -> bool {
         if me == &public_key.to_implicit_account_id() {
+            let was_removed = self.implicit_public_key_removed;
             self.implicit_public_key_removed = false;
+            was_removed
         } else {
-            self.public_keys.insert(public_key);
+            self.public_keys.insert(public_key)
         }
     }
 
     #[inline]
-    pub fn remove_public_key(&mut self, me: &AccountId, public_key: &PublicKey) {
+    pub fn remove_public_key(&mut self, me: &AccountId, public_key: &PublicKey) -> Result<()> {
+        PublicKeyRemovedEvent {
+            account_id: me,
+            public_key,
+        }
+        .emit();
+
+        self.maybe_remove_public_key(me, public_key)
+            .then_some(())
+            .ok_or(DefuseError::PublicKeyNotExist)
+    }
+
+    #[inline]
+    fn maybe_remove_public_key(&mut self, me: &AccountId, public_key: &PublicKey) -> bool {
         if me == &public_key.to_implicit_account_id() {
+            let was_removed = self.implicit_public_key_removed;
             self.implicit_public_key_removed = true;
+            !was_removed
         } else {
-            self.public_keys.remove(public_key);
+            self.public_keys.remove(public_key)
         }
     }
 
@@ -83,6 +120,19 @@ impl Account {
     #[inline]
     pub fn commit_nonce(&mut self, n: Nonce) -> Result<()> {
         self.nonces.commit(n)
+    }
+
+    #[inline]
+    pub fn verify_nep413_payload<T>(&mut self, payload: Nep413Payload<T>) -> Result<T> {
+        // check recipient
+        if payload.recipient != *CURRENT_ACCOUNT_ID {
+            return Err(DefuseError::WrongRecipient);
+        }
+
+        // commit nonce
+        self.commit_nonce(payload.nonce)?;
+
+        Ok(payload.message)
     }
 }
 

@@ -39,11 +39,11 @@ impl MultiTokenResolver for DefuseImpl {
     ) -> Vec<U128> {
         require!(
             previous_owner_ids.len() == token_ids.len(),
-            "previous_owner_ids should be the same length as tokens_ids"
+            "previous_owner_ids.len() != token_ids.len()"
         );
         require!(
             token_ids.len() == amounts.len(),
-            "token_ids should be the same length as amounts"
+            "token_ids.len() != amounts.len()"
         );
         require!(approvals.is_none(), "approvals are not supported");
 

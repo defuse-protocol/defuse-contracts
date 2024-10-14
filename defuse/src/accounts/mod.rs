@@ -8,19 +8,14 @@ use std::collections::HashSet;
 
 use defuse_contracts::{
     crypto::PublicKey,
-    defuse::{
-        accounts::AccountManager, message::SignedDefuseMessage, payload::ValidatePayloadAs,
-        DefuseError, Result,
-    },
-    nep413::{Nep413Payload, Nonce},
+    defuse::accounts::AccountManager,
+    nep413::Nonce,
     utils::{
-        cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
-        prefix::NestPrefix,
-        serde::wrappers::DisplayFromStr,
+        cache::PREDECESSOR_ACCOUNT_ID, prefix::NestPrefix, serde::wrappers::DisplayFromStr,
+        UnwrapOrPanic,
     },
 };
 
-use near_plugins::{pause, Pausable};
 use near_sdk::{
     borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey, IntoStorageKey,
 };
@@ -45,19 +40,19 @@ impl AccountManager for DefuseImpl {
             .collect()
     }
 
-    #[pause(name = "accounts")]
     fn add_public_key(&mut self, public_key: PublicKey) {
         self.accounts
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
-            .add_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
+            .add_public_key(&PREDECESSOR_ACCOUNT_ID, public_key)
+            .unwrap_or_panic()
     }
 
-    #[pause(name = "accounts")]
     fn remove_public_key(&mut self, public_key: &PublicKey) {
         self.accounts
             // create account if doesn't exist, so the user can opt out of implicit public key
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
-            .remove_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
+            .remove_public_key(&PREDECESSOR_ACCOUNT_ID, public_key)
+            .unwrap_or_panic()
     }
 
     fn is_nonce_used(&self, account_id: &AccountId, nonce: DisplayFromStr<Nonce>) -> bool {
@@ -81,7 +76,6 @@ impl AccountManager for DefuseImpl {
         .map(Into::into)
     }
 
-    #[pause(name = "accounts")]
     #[handle_result]
     fn invalidate_nonces(&mut self, nonces: Vec<DisplayFromStr<Nonce>>) {
         let account = self.accounts.get_or_create(PREDECESSOR_ACCOUNT_ID.clone());
@@ -133,40 +127,6 @@ impl Accounts {
                     account_id,
                 )
             })
-    }
-
-    pub fn verify_signed_message<T>(
-        &mut self,
-        signed: SignedDefuseMessage<T>,
-    ) -> Result<(AccountId, &mut Account, T)>
-    where
-        T: BorshSerialize,
-    {
-        // verify signature and derive its public key
-        let public_key = signed.verify().ok_or(DefuseError::InvalidSignature)?;
-
-        // extract NEP-413 payload
-        let payload: Nep413Payload<_> = signed.payload.validate_as()?;
-
-        // check recipient
-        if payload.recipient != *CURRENT_ACCOUNT_ID {
-            return Err(DefuseError::WrongRecipient);
-        }
-        // check deadline
-        if payload.deadline.has_expired() {
-            return Err(DefuseError::DeadlineExpired);
-        }
-
-        let signer_id = payload.message.signer_id;
-        let account = self.get_or_create(signer_id.clone());
-        // make sure the account has this public key
-        if !account.has_public_key(&signer_id, &public_key) {
-            return Err(DefuseError::InvalidSignature);
-        }
-        // commit nonce
-        account.commit_nonce(payload.nonce)?;
-
-        Ok((signer_id, account, payload.message.message))
     }
 }
 

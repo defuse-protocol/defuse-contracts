@@ -10,14 +10,17 @@ pub enum DefuseError {
     #[error("account not found")]
     AccountNotFound,
 
+    #[error("public key already exists")]
+    PublicKeyExists,
+
+    #[error("public key doesn't exist")]
+    PublicKeyNotExist,
+
     #[error("integer overflow")]
     IntegerOverflow,
 
     #[error("deadline has expired")]
     DeadlineExpired,
-
-    #[error("invalid sender/receiver")]
-    InvalidSenderReceiver,
 
     #[error("invalid signature")]
     InvalidSignature,

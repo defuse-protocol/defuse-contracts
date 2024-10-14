@@ -1,7 +1,6 @@
 use defuse_contracts::{
     defuse::{
         intents::tokens::{MtBatchTransfer, MtBatchTransferCall},
-        tokens::TokenAmounts,
         DefuseError, Result,
     },
     nep245::{self, receiver::ext_mt_receiver, MultiTokenCore},
@@ -46,23 +45,17 @@ impl MultiTokenCore for DefuseImpl {
         memo: Option<String>,
     ) {
         assert_one_yocto();
-        require!(
-            token_ids.len() == amounts.len(),
-            "token_ids should be the same length as amounts"
-        );
         require!(approvals.is_none(), "approvals are not supported");
 
         self.internal_mt_batch_transfer(
             &PREDECESSOR_ACCOUNT_ID,
             MtBatchTransfer {
                 receiver_id,
-                token_id_amounts: TokenAmounts::try_from_iter(
-                    token_ids
-                        .into_iter()
-                        .map(|token_id| token_id.parse().unwrap_or_panic_display())
-                        .zip(amounts.into_iter().map(|a| a.0)),
-                )
-                .unwrap_or_panic(),
+                token_ids: token_ids
+                    .into_iter()
+                    .map(|token_id| token_id.parse().unwrap_or_panic_display())
+                    .collect(),
+                amounts,
                 memo,
             },
         )
@@ -102,10 +95,6 @@ impl MultiTokenCore for DefuseImpl {
         msg: String,
     ) -> PromiseOrValue<Vec<U128>> {
         assert_one_yocto();
-        require!(
-            token_ids.len() == amounts.len(),
-            "token_ids should be the same length as amounts"
-        );
         require!(approvals.is_none(), "approvals are not supported");
 
         self.internal_mt_batch_transfer_call(
@@ -113,13 +102,11 @@ impl MultiTokenCore for DefuseImpl {
             MtBatchTransferCall {
                 transfer: MtBatchTransfer {
                     receiver_id,
-                    token_id_amounts: TokenAmounts::try_from_iter(
-                        token_ids
-                            .into_iter()
-                            .map(|token_id| token_id.parse().unwrap_or_panic_display())
-                            .zip(amounts.into_iter().map(|a| a.0)),
-                    )
-                    .unwrap_or_panic(),
+                    token_ids: token_ids
+                        .into_iter()
+                        .map(|token_id| token_id.parse().unwrap_or_panic_display())
+                        .collect(),
+                    amounts,
                     memo,
                 },
                 msg,
@@ -220,13 +207,9 @@ impl State {
     ) -> Result<PromiseOrValue<Vec<U128>>> {
         self.execute_intent(sender_id, sender, transfer.clone())?;
 
-        let (token_ids, amounts): (Vec<_>, Vec<_>) = transfer
-            .token_id_amounts
-            .iter()
-            .map(|(token_id, amount)| (token_id.to_string(), U128(*amount)))
-            .unzip();
+        let token_ids: Vec<_> = transfer.token_ids.iter().map(ToString::to_string).collect();
 
-        let previous_owner_ids = vec![PREDECESSOR_ACCOUNT_ID.clone(); token_ids.len()];
+        let previous_owner_ids = vec![sender_id.clone(); token_ids.len()];
 
         let mut ext = ext_mt_receiver::ext(transfer.receiver_id.clone());
         if let Some(gas) = gas_for_mt_on_transfer {
@@ -234,10 +217,10 @@ impl State {
         }
         Ok(ext
             .mt_on_transfer(
-                PREDECESSOR_ACCOUNT_ID.clone(),
+                sender_id.clone(),
                 previous_owner_ids.clone(),
                 token_ids.clone(),
-                amounts.clone(),
+                transfer.amounts.clone(),
                 msg,
             )
             .then(
@@ -247,7 +230,7 @@ impl State {
                         previous_owner_ids,
                         transfer.receiver_id,
                         token_ids,
-                        amounts,
+                        transfer.amounts,
                         None,
                     ),
             )

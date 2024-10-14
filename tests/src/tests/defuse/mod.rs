@@ -8,14 +8,11 @@ use std::{collections::HashMap, sync::LazyLock};
 use accounts::AccountManagerExt;
 use defuse_contract::Role;
 use defuse_contracts::{
-    defuse::{
-        message::{DefuseMessage, SignedDefuseMessage},
-        payload::MultiStandardPayload,
-    },
+    defuse::payload::{MultiStandardPayload, SignedDefusePayload, SignerPayload},
     nep413::{Nep413Payload, Nonce},
-    utils::{fees::Pips, Deadline},
+    utils::fees::Pips,
 };
-use near_sdk::{borsh::BorshSerialize, AccountId};
+use near_sdk::{borsh::BorshSerialize, AccountId, Duration};
 use near_workspaces::Contract;
 use serde_json::json;
 
@@ -24,6 +21,7 @@ use crate::utils::{account::AccountExt, crypto::Signer, read_wasm};
 static DEFUSE_WASM: LazyLock<Vec<u8>> = LazyLock::new(|| read_wasm("defuse_contract"));
 
 pub trait DefuseExt: AccountManagerExt {
+    #[allow(clippy::too_many_arguments)]
     async fn deploy_defuse(
         &self,
         id: &str,
@@ -32,6 +30,7 @@ pub trait DefuseExt: AccountManagerExt {
         super_admins: impl IntoIterator<Item = AccountId>,
         admins: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
         grantees: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
+        staging_duration: Option<Duration>,
     ) -> anyhow::Result<Contract>;
 }
 
@@ -44,6 +43,7 @@ impl DefuseExt for near_workspaces::Account {
         super_admins: impl IntoIterator<Item = AccountId>,
         admins: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
         grantees: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
+        staging_duration: Option<Duration>,
     ) -> anyhow::Result<Contract> {
         let contract = self.deploy_contract(id, &DEFUSE_WASM).await?;
         contract
@@ -60,6 +60,7 @@ impl DefuseExt for near_workspaces::Account {
                     .into_iter()
                     .map(|(role, grantees)| (role, grantees.into_iter().collect::<Vec<_>>()))
                     .collect::<HashMap<_, _>>(),
+                "staging_duration": staging_duration,
             }))
             .max_gas()
             .transact()
@@ -78,41 +79,47 @@ impl DefuseExt for Contract {
         super_admins: impl IntoIterator<Item = AccountId>,
         admins: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
         grantees: impl IntoIterator<Item = (Role, impl IntoIterator<Item = AccountId>)>,
+        staging_duration: Option<Duration>,
     ) -> anyhow::Result<Contract> {
         self.as_account()
-            .deploy_defuse(id, fee, fee_collector, super_admins, admins, grantees)
+            .deploy_defuse(
+                id,
+                fee,
+                fee_collector,
+                super_admins,
+                admins,
+                grantees,
+                staging_duration,
+            )
             .await
     }
 }
 
 pub trait DefuseSigner: Signer {
-    fn sign_defuse_message<T>(
+    fn sign_defuse_payload<T>(
         &self,
         defuse_contract: &AccountId,
-        message: T,
         nonce: Nonce,
-        deadline: Deadline,
-    ) -> SignedDefuseMessage<T>
+        payload: T,
+    ) -> SignedDefusePayload<T>
     where
         T: BorshSerialize;
 }
 
 impl DefuseSigner for near_workspaces::Account {
-    fn sign_defuse_message<T>(
+    fn sign_defuse_payload<T>(
         &self,
         defuse_contract: &AccountId,
-        message: T,
         nonce: Nonce,
-        deadline: Deadline,
-    ) -> SignedDefuseMessage<T>
+        payload: T,
+    ) -> SignedDefusePayload<T>
     where
         T: BorshSerialize,
     {
         self.sign_payload(MultiStandardPayload::Nep413(
-            Nep413Payload::new(DefuseMessage {
+            Nep413Payload::new(SignerPayload {
                 signer_id: self.id().clone(),
-                deadline,
-                message,
+                payload,
             })
             .with_recipient(defuse_contract.to_string())
             .with_nonce(nonce),

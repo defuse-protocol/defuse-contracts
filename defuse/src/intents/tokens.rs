@@ -2,7 +2,7 @@ use defuse_contracts::defuse::{
     intents::tokens::{FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NftWithdraw},
     DefuseError, Result,
 };
-use near_sdk::AccountId;
+use near_sdk::{require, AccountId};
 
 use crate::accounts::Account;
 
@@ -13,17 +13,22 @@ impl IntentExecutor<MtBatchTransfer> for State {
         &mut self,
         sender_id: &AccountId,
         sender: &mut Account,
-        transfer: MtBatchTransfer,
+        MtBatchTransfer {
+            receiver_id,
+            token_ids,
+            amounts,
+            memo: _memo,
+        }: MtBatchTransfer,
     ) -> Result<()> {
-        if sender_id == &transfer.receiver_id {
-            return Err(DefuseError::InvalidSenderReceiver);
-        }
+        require!(sender_id != &receiver_id, "sender_id == receiver_id");
+        require!(
+            token_ids.len() == amounts.len(),
+            "token_ids.len() != amounts.len()"
+        );
 
-        let receiver_deposit = self
-            .postponed_deposits
-            .entry(transfer.receiver_id)
-            .or_default();
-        for (token_id, amount) in transfer.token_id_amounts {
+        let receiver_deposit = self.postponed_deposits.entry(receiver_id).or_default();
+
+        for (token_id, amount) in token_ids.into_iter().zip(amounts.into_iter().map(|a| a.0)) {
             if amount == 0 {
                 return Err(DefuseError::ZeroAmount);
             }

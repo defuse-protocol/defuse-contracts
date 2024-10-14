@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use defuse_contracts::{
     defuse::{
         intents::{token_diff::TokenDiff, DefuseIntents},
-        message::SignedDefuseMessage,
+        payload::SignedDefusePayload,
         tokens::{TokenAmounts, TokenId},
     },
     utils::{fees::Pips, Deadline},
@@ -171,15 +171,15 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
 
     // verify
     env.defuse
-        .execute_signed_intents(accounts.iter().flat_map(move |account| {
+        .execute_intents(accounts.iter().flat_map(move |account| {
             account.diff.iter().cloned().map(|diff| {
-                account.account.sign_defuse_message(
+                account.account.sign_defuse_payload(
                     env.defuse.id(),
+                    thread_rng().gen(),
                     DefuseIntents {
+                        deadline: Deadline::infinity(),
                         intents: [TokenDiff { diff }.into()].into(),
                     },
-                    thread_rng().gen(),
-                    Deadline::infinity(),
                 )
             })
         }))
@@ -223,10 +223,12 @@ async fn test_invariant_violated() {
         .unwrap();
 
     env.defuse
-        .execute_signed_intents([
-            env.user1.sign_defuse_message(
+        .execute_intents([
+            env.user1.sign_defuse_payload(
                 env.defuse.id(),
+                thread_rng().gen(),
                 DefuseIntents {
+                    deadline: Deadline::infinity(),
                     intents: [TokenDiff {
                         diff: TokenAmounts::default()
                             .with_try_extend::<i128>([(ft1.clone(), -1000), (ft2.clone(), 2000)])
@@ -235,12 +237,12 @@ async fn test_invariant_violated() {
                     .into()]
                     .into(),
                 },
-                thread_rng().gen(),
-                Deadline::infinity(),
             ),
-            env.user1.sign_defuse_message(
+            env.user1.sign_defuse_payload(
                 env.defuse.id(),
+                thread_rng().gen(),
                 DefuseIntents {
+                    deadline: Deadline::infinity(),
                     intents: [TokenDiff {
                         diff: TokenAmounts::default()
                             .with_try_extend::<i128>([(ft1.clone(), 1000), (ft2.clone(), -1999)])
@@ -249,8 +251,6 @@ async fn test_invariant_violated() {
                     .into()]
                     .into(),
                 },
-                thread_rng().gen(),
-                Deadline::infinity(),
             ),
         ])
         .await
@@ -280,20 +280,20 @@ async fn test_invariant_violated() {
 }
 
 pub trait SignedIntentsExt: AccountManagerExt {
-    async fn execute_signed_intents(
+    async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
+        intents: impl IntoIterator<Item = SignedDefusePayload<DefuseIntents>>,
     ) -> anyhow::Result<()>;
 }
 
 impl SignedIntentsExt for near_workspaces::Account {
-    async fn execute_signed_intents(
+    async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
+        intents: impl IntoIterator<Item = SignedDefusePayload<DefuseIntents>>,
     ) -> anyhow::Result<()> {
-        self.call(self.id(), "execute_signed_intents")
+        self.call(self.id(), "execute_intents_json")
             .args_json(json!({
-                "signed": intents.into_iter().collect::<Vec<_>>(),
+                "intents": intents.into_iter().collect::<Vec<_>>(),
             }))
             .max_gas()
             .transact()
@@ -305,10 +305,10 @@ impl SignedIntentsExt for near_workspaces::Account {
 }
 
 impl SignedIntentsExt for near_workspaces::Contract {
-    async fn execute_signed_intents(
+    async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
+        intents: impl IntoIterator<Item = SignedDefusePayload<DefuseIntents>>,
     ) -> anyhow::Result<()> {
-        self.as_account().execute_signed_intents(intents).await
+        self.as_account().execute_intents(intents).await
     }
 }

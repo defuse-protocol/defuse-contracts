@@ -1,10 +1,10 @@
 use near_plugins::AccessControllable;
 use near_sdk::{ext_contract, Promise, PublicKey};
 
-use super::SignedIntentExecutor;
+use super::IntentsExecutor;
 
 #[ext_contract(ext_relayer_keys)]
-pub trait RelayerKeys: SignedIntentExecutor + AccessControllable {
+pub trait RelayerKeys: IntentsExecutor + AccessControllable {
     /// Adds access key for calling `execute_signed_intents`
     /// with allowance passed as attached deposit via `#[payable]`
     fn add_relayer_key(&mut self, public_key: PublicKey) -> Promise;
