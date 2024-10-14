@@ -20,11 +20,13 @@ use self::{
     tokens::{FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NftWithdraw},
 };
 
-#[ext_contract(ext_signed_executor)]
+#[ext_contract(ext_intent_executor)]
 pub trait IntentsExecutor: FeesManager {
-    // TODO: borsh
     #[handle_result]
-    fn execute_intents(&mut self, intents: Vec<SignedDefusePayload<DefuseIntents>>) -> Result<()>;
+    fn execute_intents(
+        &mut self,
+        #[serializer(borsh)] intents: Vec<SignedDefusePayload<DefuseIntents>>,
+    ) -> Result<()>;
     #[handle_result]
     fn execute_intents_json(
         &mut self,
@@ -32,7 +34,10 @@ pub trait IntentsExecutor: FeesManager {
     ) -> Result<()>;
 
     #[handle_result]
-    fn simulate_intents(self, intents: Vec<DefusePayload<DefuseIntents>>) -> Result<()>;
+    fn simulate_intents(
+        self,
+        #[serializer(borsh)] intents: Vec<DefusePayload<DefuseIntents>>,
+    ) -> Result<()>;
     #[handle_result]
     fn simulate_intents_json(self, intents: Vec<DefusePayload<DefuseIntents>>) -> Result<()>;
 }
