@@ -20,7 +20,7 @@ use self::{
     tokens::{FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NftWithdraw},
 };
 
-#[ext_contract(ext_intent_executor)]
+#[ext_contract(ext_intents_executor)]
 pub trait IntentsExecutor: FeesManager {
     #[handle_result]
     fn execute_intents(

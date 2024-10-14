@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use defuse_contracts::defuse::tokens::TokenId;
+use defuse_contracts::defuse::tokens::{DepositMessage, TokenId};
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use serde_json::json;
 
@@ -49,7 +49,7 @@ pub trait DefuseFtReceiver {
         defuse_id: &AccountId,
         token_id: &AccountId,
         amount: u128,
-        to: impl Into<Option<&AccountId>>,
+        msg: DepositMessage,
     ) -> anyhow::Result<()>;
 }
 
@@ -59,16 +59,10 @@ impl DefuseFtReceiver for near_workspaces::Account {
         defuse_id: &AccountId,
         token_id: &AccountId,
         amount: u128,
-        to: impl Into<Option<&AccountId>>,
+        msg: DepositMessage,
     ) -> anyhow::Result<()> {
         if self
-            .ft_transfer_call(
-                token_id,
-                defuse_id,
-                amount,
-                None,
-                to.into().map(AsRef::<str>::as_ref).unwrap_or_default(),
-            )
+            .ft_transfer_call(token_id, defuse_id, amount, None, &msg.to_string())
             .await?
             != amount
         {
@@ -84,10 +78,10 @@ impl DefuseFtReceiver for near_workspaces::Contract {
         defuse_id: &AccountId,
         token_id: &AccountId,
         amount: u128,
-        to: impl Into<Option<&AccountId>>,
+        msg: DepositMessage,
     ) -> anyhow::Result<()> {
         self.as_account()
-            .defuse_ft_deposit(defuse_id, token_id, amount, to)
+            .defuse_ft_deposit(defuse_id, token_id, amount, msg)
             .await
     }
 }

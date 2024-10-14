@@ -1,6 +1,12 @@
 use defuse_contracts::{
-    defuse::tokens::TokenId,
-    utils::{cache::PREDECESSOR_ACCOUNT_ID, UnwrapOrPanic},
+    defuse::{
+        intents::{ext_intents_executor, IntentsExecutor},
+        tokens::{DepositMessage, TokenId},
+    },
+    utils::{
+        cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+        UnwrapOrPanic,
+    },
 };
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_plugins::{pause, Pausable};
@@ -20,21 +26,29 @@ impl FungibleTokenReceiver for DefuseImpl {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
-        let receiver_id = if !msg.is_empty() {
+        let msg = if !msg.is_empty() {
             msg.parse().unwrap_or_panic_display()
         } else {
-            sender_id
+            DepositMessage::new(sender_id)
         };
 
         self.internal_deposit(
-            receiver_id,
+            msg.receiver_id,
             [(TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone()), amount.0)],
         )
         .unwrap_or_panic();
 
-        // TODO: signed actions
-
         // TODO: log deposited
+
+        if !msg.execute_intents.is_empty() {
+            if msg.refund_if_fails {
+                self.execute_intents(msg.execute_intents).unwrap_or_panic();
+            } else {
+                // detach promise
+                ext_intents_executor::ext(CURRENT_ACCOUNT_ID.clone())
+                    .execute_intents(msg.execute_intents);
+            }
+        }
 
         PromiseOrValue::Value(U128(0))
     }

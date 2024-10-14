@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::Deref};
 
 use defuse_contract::Role;
-use defuse_contracts::utils::fees::Pips;
+use defuse_contracts::{defuse::tokens::DepositMessage, utils::fees::Pips};
 use near_sdk::{AccountId, Duration};
 use near_workspaces::{Account, Contract};
 
@@ -63,7 +63,12 @@ impl Env {
     ) -> anyhow::Result<()> {
         self.sandbox
             .root_account()
-            .defuse_ft_deposit(self.defuse.id(), token_id, amount, to)
+            .defuse_ft_deposit(
+                self.defuse.id(),
+                token_id,
+                amount,
+                DepositMessage::new(to.clone()),
+            )
             .await
     }
 }

@@ -15,6 +15,7 @@ pub type DefusePayload<T> = Nep413Payload<SignerPayload<T>>;
 #[near(serializers = [borsh, json])]
 #[autoimpl(Deref using self.payload)]
 #[autoimpl(DerefMut using self.payload)]
+#[derive(Debug, Clone)]
 pub struct SignerPayload<T> {
     pub signer_id: AccountId,
 

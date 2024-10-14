@@ -10,7 +10,7 @@ use std::collections::{btree_map, BTreeMap};
 
 use impl_tools::autoimpl;
 use near_account_id::ParseAccountError;
-use near_sdk::{near, AccountId};
+use near_sdk::{near, serde_json, AccountId};
 use serde_with::{serde_as, DeserializeFromStr, DisplayFromStr, SerializeDisplay};
 use strum::{EnumDiscriminants, EnumString};
 use thiserror::Error as ThisError;
@@ -18,9 +18,10 @@ use thiserror::Error as ThisError;
 use crate::utils::{
     cleanup::DefaultMap,
     integer::{CheckedAdd, CheckedSub},
+    UnwrapOrPanic,
 };
 
-use super::{DefuseError, Result};
+use super::{intents::DefuseIntents, payload::SignedDefusePayload, DefuseError, Result};
 
 #[derive(
     Clone,
@@ -259,6 +260,59 @@ impl<'a, T> IntoIterator for &'a TokenAmounts<T> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
+    }
+}
+
+#[near(serializers = [json])]
+#[derive(Debug, Clone)]
+pub struct DepositMessage {
+    pub receiver_id: AccountId,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub execute_intents: Vec<SignedDefusePayload<DefuseIntents>>,
+
+    #[serde(default, skip_serializing_if = "::core::ops::Not::not")]
+    pub refund_if_fails: bool,
+}
+
+impl DepositMessage {
+    #[inline]
+    pub const fn new(receiver_id: AccountId) -> Self {
+        Self {
+            receiver_id,
+            execute_intents: Vec::new(),
+            refund_if_fails: false,
+        }
+    }
+}
+
+impl Display for DepositMessage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.execute_intents.is_empty() {
+            f.write_str(self.receiver_id.as_str())
+        } else {
+            f.write_str(&serde_json::to_string(self).unwrap_or_panic_display())
+        }
+    }
+}
+
+#[derive(Debug, ThisError)]
+pub enum ParseDepositMessageError {
+    #[error(transparent)]
+    Account(#[from] ParseAccountError),
+    #[error("JSON: {0}")]
+    JSON(#[from] serde_json::Error),
+}
+
+impl FromStr for DepositMessage {
+    type Err = ParseDepositMessageError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.starts_with('{') {
+            serde_json::from_str(s).map_err(Into::into)
+        } else {
+            s.parse().map(Self::new).map_err(Into::into)
+        }
     }
 }
 
