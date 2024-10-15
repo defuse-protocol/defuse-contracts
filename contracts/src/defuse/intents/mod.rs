@@ -79,7 +79,8 @@ mod tests {
     #[test]
     fn test_hash() {
         let p: Nep413Payload = serde_json::from_value(json!({
-"message": "{
+        "message":
+"{
     \"signer_id\": \"signer.near\",
     \"deadline\": {
         \"timestamp\": 1234567890
@@ -92,9 +93,9 @@ mod tests {
         }
     }]
 }",
-        "nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8=",
-        "recipient": "defuse.near"
-        }))
+            "nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8=",
+            "recipient": "defuse.near"
+            }))
         .unwrap();
 
         assert_eq!(

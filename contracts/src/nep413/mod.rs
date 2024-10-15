@@ -1,6 +1,5 @@
 use core::fmt::Display;
 
-use impl_tools::autoimpl;
 use near_sdk::{borsh, env::sha256_array, near, CryptoHash};
 use serde_with::serde_as;
 
@@ -20,8 +19,6 @@ use crate::{
     serde_as(schemars = false)
 )]
 #[near(serializers = [borsh, json])]
-#[autoimpl(Deref using self.message)]
-#[autoimpl(DerefMut using self.message)]
 pub struct Nep413Payload {
     pub message: String,
 
