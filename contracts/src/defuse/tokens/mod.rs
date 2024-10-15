@@ -21,7 +21,7 @@ use crate::utils::{
     UnwrapOrPanic,
 };
 
-use super::{intents::DefuseIntents, payload::SignedDefusePayload, DefuseError, Result};
+use super::{intents::DefuseIntents, payload::SignedDefuseMessage, DefuseError, Result};
 
 #[derive(
     Clone,
@@ -269,7 +269,7 @@ pub struct DepositMessage {
     pub receiver_id: AccountId,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub execute_intents: Vec<SignedDefusePayload<DefuseIntents>>,
+    pub execute_intents: Vec<SignedDefuseMessage<DefuseIntents>>,
 
     #[serde(default, skip_serializing_if = "::core::ops::Not::not")]
     pub refund_if_fails: bool,

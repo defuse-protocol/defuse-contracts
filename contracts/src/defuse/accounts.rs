@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use near_sdk::{ext_contract, serde::Serialize, AccountId};
 
-use crate::{crypto::PublicKey, nep413::Nonce, utils::serde::wrappers::DisplayFromStr};
+use crate::{crypto::PublicKey, nep413::U256, utils::serde::wrappers::Base64};
+
+use super::Result;
 
 #[ext_contract(ext_public_key_manager)]
 pub trait AccountManager {
@@ -20,21 +22,12 @@ pub trait AccountManager {
     fn remove_public_key(&mut self, public_key: &PublicKey);
 
     /// Returns whether given nonce was already used by the account
-    fn is_nonce_used(&self, account_id: &AccountId, nonce: DisplayFromStr<Nonce>) -> bool;
-
-    /// Returns the first nonce available for given `public_key` of given `account_id`
-    /// starting from `start` or `0` otherwise.
-    ///
     /// NOTE: nonces are non-sequential and follow
     /// [permit2 nonce schema](https://docs.uniswap.org/contracts/permit2/reference/signature-transfer#nonce-schema).
-    /// But using them sequentially is more storage-efficient.
-    fn find_unused_nonce(
-        &self,
-        account_id: &AccountId,
-        start: Option<DisplayFromStr<Nonce>>,
-    ) -> Option<DisplayFromStr<Nonce>>;
+    fn is_nonce_used(&self, account_id: &AccountId, nonce: Base64<U256>) -> bool;
 
-    fn invalidate_nonces(&mut self, nonces: Vec<DisplayFromStr<Nonce>>);
+    #[handle_result]
+    fn invalidate_nonces(&mut self, nonces: Vec<Base64<U256>>) -> Result<()>;
 }
 
 #[must_use = "make sure to `.emit()` this event"]

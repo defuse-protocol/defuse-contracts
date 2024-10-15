@@ -8,11 +8,10 @@ use std::collections::HashSet;
 
 use defuse_contracts::{
     crypto::PublicKey,
-    defuse::accounts::AccountManager,
-    nep413::Nonce,
+    defuse::{accounts::AccountManager, Result},
+    nep413::U256,
     utils::{
-        cache::PREDECESSOR_ACCOUNT_ID, prefix::NestPrefix, serde::wrappers::DisplayFromStr,
-        UnwrapOrPanic,
+        cache::PREDECESSOR_ACCOUNT_ID, prefix::NestPrefix, serde::wrappers::Base64, UnwrapOrPanic,
     },
 };
 
@@ -55,33 +54,20 @@ impl AccountManager for DefuseImpl {
             .unwrap_or_panic()
     }
 
-    fn is_nonce_used(&self, account_id: &AccountId, nonce: DisplayFromStr<Nonce>) -> bool {
+    fn is_nonce_used(&self, account_id: &AccountId, nonce: Base64<U256>) -> bool {
         self.accounts
             .get(account_id)
             .map(move |account| account.is_nonce_used(nonce.into_inner()))
             .unwrap_or_default()
     }
 
-    fn find_unused_nonce(
-        &self,
-        account_id: &AccountId,
-        start: Option<DisplayFromStr<Nonce>>,
-    ) -> Option<DisplayFromStr<Nonce>> {
-        let start = start.map(DisplayFromStr::into_inner);
-        if let Some(account) = self.accounts.get(account_id) {
-            account.find_unused_nonce(start)
-        } else {
-            Some(start.unwrap_or_default())
-        }
-        .map(Into::into)
-    }
-
     #[handle_result]
-    fn invalidate_nonces(&mut self, nonces: Vec<DisplayFromStr<Nonce>>) {
+    fn invalidate_nonces(&mut self, nonces: Vec<Base64<U256>>) -> Result<()> {
         let account = self.accounts.get_or_create(PREDECESSOR_ACCOUNT_ID.clone());
-        for n in nonces.into_iter().map(DisplayFromStr::into_inner) {
-            let _ = account.commit_nonce(n);
+        for n in nonces.into_iter().map(Base64::into_inner) {
+            account.commit_nonce(n)?;
         }
+        Ok(())
     }
 }
 

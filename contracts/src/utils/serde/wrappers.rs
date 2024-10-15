@@ -3,11 +3,13 @@ use core::{
     str::FromStr,
 };
 
-use serde_with::{DeserializeFromStr, SerializeDisplay};
+use derive_more::derive::From;
+use near_sdk::serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DeserializeFromStr, SerializeDisplay};
 
 /// Helper type to implement `#[derive(Serialize, Deserialize)]`,
 /// as `#[near_bindgen]` doesn't support `#[serde(...)]` attributes on method arguments
-#[derive(Debug, Clone, Copy, Default, SerializeDisplay, DeserializeFromStr)]
+#[derive(Debug, Clone, Copy, Default, SerializeDisplay, DeserializeFromStr, From)]
 pub struct DisplayFromStr<T>(pub T);
 
 impl<T> DisplayFromStr<T> {
@@ -37,10 +39,20 @@ where
     }
 }
 
-impl<T> From<T> for DisplayFromStr<T> {
+/// Helper type to implement `#[derive(Serialize, Deserialize)]`,
+/// as `#[near_bindgen]` doesn't support `#[serde(...)]` attributes on method arguments
+#[serde_as]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, From)]
+#[serde(
+    crate = "::near_sdk::serde",
+    bound(serialize = "T: AsRef<[u8]>", deserialize = "T: TryFrom<Vec<u8>>")
+)]
+pub struct Base64<T>(#[serde_as(as = "super::base64::Base64")] pub T);
+
+impl<T> Base64<T> {
     #[inline]
-    fn from(value: T) -> Self {
-        Self(value)
+    pub fn into_inner(self) -> T {
+        self.0
     }
 }
 
@@ -53,6 +65,23 @@ mod abi {
     impl<T> JsonSchema for DisplayFromStr<T>
     where
         T: Display + FromStr<Err: Display>,
+    {
+        fn schema_name() -> String {
+            String::schema_name()
+        }
+
+        fn json_schema(gen: &mut SchemaGenerator) -> Schema {
+            String::json_schema(gen)
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+    }
+
+    impl<T> JsonSchema for Base64<T>
+    where
+        T: AsRef<[u8]> + TryFrom<Vec<u8>>,
     {
         fn schema_name() -> String {
             String::schema_name()

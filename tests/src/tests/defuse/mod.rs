@@ -5,18 +5,18 @@ mod tokens;
 
 use std::{collections::HashMap, sync::LazyLock};
 
-use accounts::AccountManagerExt;
 use defuse_contract::Role;
 use defuse_contracts::{
-    defuse::payload::{MultiStandardPayload, SignedDefusePayload, SignerPayload},
-    nep413::{Nep413Payload, Nonce},
-    utils::fees::Pips,
+    defuse::payload::{DefuseMessage, MultiStandardPayload, SignedDefuseMessage},
+    nep413::{Nep413Payload, U256},
+    utils::{fees::Pips, Deadline},
 };
-use near_sdk::{borsh::BorshSerialize, AccountId, Duration};
+use near_sdk::{serde::Serialize, serde_json::json, AccountId, Duration};
 use near_workspaces::Contract;
-use serde_json::json;
 
 use crate::utils::{account::AccountExt, crypto::Signer, read_wasm};
+
+use self::accounts::AccountManagerExt;
 
 static DEFUSE_WASM: LazyLock<Vec<u8>> = LazyLock::new(|| read_wasm("defuse_contract"));
 
@@ -96,30 +96,33 @@ impl DefuseExt for Contract {
 }
 
 pub trait DefuseSigner: Signer {
-    fn sign_defuse_payload<T>(
+    fn sign_defuse_message<T>(
         &self,
         defuse_contract: &AccountId,
-        nonce: Nonce,
-        payload: T,
-    ) -> SignedDefusePayload<T>
+        nonce: U256,
+        deadline: Deadline,
+        message: T,
+    ) -> SignedDefuseMessage<T>
     where
-        T: BorshSerialize;
+        T: Serialize;
 }
 
 impl DefuseSigner for near_workspaces::Account {
-    fn sign_defuse_payload<T>(
+    fn sign_defuse_message<T>(
         &self,
         defuse_contract: &AccountId,
-        nonce: Nonce,
-        payload: T,
-    ) -> SignedDefusePayload<T>
+        nonce: U256,
+        deadline: Deadline,
+        message: T,
+    ) -> SignedDefuseMessage<T>
     where
-        T: BorshSerialize,
+        T: Serialize,
     {
         self.sign_payload(MultiStandardPayload::Nep413(
-            Nep413Payload::new(SignerPayload {
+            Nep413Payload::new(DefuseMessage {
                 signer_id: self.id().clone(),
-                payload,
+                deadline,
+                message,
             })
             .with_recipient(defuse_contract.to_string())
             .with_nonce(nonce),

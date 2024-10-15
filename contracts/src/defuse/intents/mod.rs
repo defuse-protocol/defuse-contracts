@@ -7,11 +7,11 @@ use derive_more::derive::From;
 use near_sdk::{ext_contract, near, serde::Serialize, CryptoHash};
 use serde_with::serde_as;
 
-use crate::utils::{serde::base58::Base58, Deadline};
+use crate::utils::serde::base58::Base58;
 
 use super::{
     fees::FeesManager,
-    payload::{DefusePayload, SignedDefusePayload},
+    payload::{DefuseMessage, SignedDefuseMessage},
     Result,
 };
 
@@ -24,30 +24,15 @@ use self::{
 #[ext_contract(ext_intents_executor)]
 pub trait IntentsExecutor: FeesManager {
     #[handle_result]
-    fn execute_intents(
-        &mut self,
-        #[serializer(borsh)] intents: Vec<SignedDefusePayload<DefuseIntents>>,
-    ) -> Result<()>;
-    #[handle_result]
-    fn execute_intents_json(
-        &mut self,
-        intents: Vec<SignedDefusePayload<DefuseIntents>>,
-    ) -> Result<()>;
+    fn execute_intents(&mut self, intents: Vec<SignedDefuseMessage<DefuseIntents>>) -> Result<()>;
 
     #[handle_result]
-    fn simulate_intents(
-        self,
-        #[serializer(borsh)] intents: Vec<DefusePayload<DefuseIntents>>,
-    ) -> Result<()>;
-    #[handle_result]
-    fn simulate_intents_json(self, intents: Vec<DefusePayload<DefuseIntents>>) -> Result<()>;
+    fn simulate_intents(self, intents: Vec<DefuseMessage<DefuseIntents>>) -> Result<()>;
 }
 
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
 pub struct DefuseIntents {
-    pub deadline: Deadline,
-
     /// Sequence of intents to execute in given order. Empty list is also
     /// a valid sequence, i.e. it doesn't do anything, but still invalidates
     /// the [`nonce`](crate::nep413::Nep413Payload::nonce) for the signer
@@ -86,36 +71,36 @@ pub struct IntentExecutedEvent<'a> {
 mod tests {
     use super::*;
 
-    use crate::crypto::Payload;
+    use crate::{crypto::Payload, nep413::Nep413Payload};
     use hex_literal::hex;
     use near_sdk::serde_json::{self, json};
 
     #[test]
     fn test_hash() {
-        let p: DefusePayload<DefuseIntents> = serde_json::from_value(json!({
-          "message": {
-            "signer_id": "signer.near",
-            "deadline": {
-              "timestamp": 1234567890,
+        let p: Nep413Payload<DefuseMessage<DefuseIntents>> = serde_json::from_value(json!({
+          "message": "{
+            \"signer_id\": \"signer.near\",
+            \"deadline\": {
+              \"timestamp\": 1234567890
             },
-            "intents": [
+            \"intents\": [
               {
-                "intent": "token_diff",
-                "diff": {
-                    "nep141:ft1.near": "-10",
-                    "nep141:ft2.near": "20"
+                \"intent\": \"token_diff\",
+                \"diff\": {
+                    \"nep141:ft1.near\": \"-10\",
+                    \"nep141:ft2.near\": \"20\"
                 }
               }
             ]
-          },
-          "nonce": "1",
+          }",
+          "nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8=", // i.e. 1
           "recipient": "defuse.near"
         }))
         .unwrap();
 
         assert_eq!(
             p.hash(),
-            hex!("54257372a8f6e8fef307828c68a91e358771fbe40cc9dd7cbdfbc06d5eea8a5e")
+            hex!("23406bfa68a201214878441986388cb4c2a7a26c5f29c2df2574635d0ed35134")
         );
     }
 }

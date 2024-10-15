@@ -1,8 +1,6 @@
 use core::ops::Mul;
 
-use bnum::{cast::As, BInt, BUint, BUintD8};
-
-pub type U256 = BUintD8<32>;
+use bnum::{cast::As, BInt, BUint};
 
 pub trait CheckedAdd<RHS = Self>: Sized {
     fn checked_add(self, rhs: RHS) -> Option<Self>;

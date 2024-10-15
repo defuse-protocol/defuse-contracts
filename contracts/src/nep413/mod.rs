@@ -1,19 +1,14 @@
-use core::fmt::Display;
+use core::{fmt::Display, str::FromStr};
 
 use impl_tools::autoimpl;
-use near_sdk::{
-    borsh::{self, BorshSerialize},
-    env::sha256_array,
-    near, CryptoHash,
-};
+use near_sdk::{borsh, env::sha256_array, near, CryptoHash};
 use serde_with::{serde_as, DisplayFromStr};
 
+pub use crate::utils::bitmap::U256;
 use crate::{
     crypto::Payload,
-    utils::{integer::U256, UnwrapOrPanic},
+    utils::{serde::base64::Base64, UnwrapOrPanic},
 };
-
-pub type Nonce = U256;
 
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(
@@ -29,13 +24,16 @@ pub type Nonce = U256;
 #[autoimpl(DerefMut using self.message)]
 pub struct Nep413Payload<T = String> {
     #[borsh(
-        serialize_with = "crate::utils::borsh::as_base64",
-        deserialize_with = "crate::utils::borsh::from_base64"
+        bound(serialize = "T: Display", deserialize = "T: FromStr<Err: Display>"),
+        serialize_with = "crate::utils::borsh::DisplayFromStr::serialize",
+        deserialize_with = "crate::utils::borsh::DisplayFromStr::deserialize"
     )]
+    #[serde_as(as = "DisplayFromStr")]
+    #[serde(bound(serialize = "T: Display", deserialize = "T: FromStr<Err: Display>"))]
     pub message: T,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub nonce: Nonce,
+    #[serde_as(as = "Base64")]
+    pub nonce: U256,
 
     pub recipient: String,
 
@@ -43,10 +41,7 @@ pub struct Nep413Payload<T = String> {
     pub callback_url: Option<String>,
 }
 
-impl<T> Nep413Payload<T>
-where
-    T: BorshSerialize,
-{
+impl<T> Nep413Payload<T> {
     #[inline]
     pub fn new(message: T) -> Self {
         Self {
@@ -57,7 +52,7 @@ where
         }
     }
 
-    pub fn with_nonce(mut self, nonce: Nonce) -> Self {
+    pub fn with_nonce(mut self, nonce: U256) -> Self {
         self.nonce = nonce;
         self
     }
@@ -78,7 +73,7 @@ where
 
 impl<T> Payload for Nep413Payload<T>
 where
-    T: BorshSerialize,
+    T: Display,
 {
     /// Returns SHA-256 hash of serialized payload according to
     /// [NEP-413](https://github.com/near/NEPs/blob/master/neps/nep-0413.md#signature)

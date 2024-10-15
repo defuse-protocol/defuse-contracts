@@ -5,7 +5,7 @@ use defuse_contracts::{
         events::DefuseIntentEmit,
         DefuseError, Result,
     },
-    nep413::{Nep413Payload, Nonce},
+    nep413::{Nep413Payload, U256},
     utils::{cache::CURRENT_ACCOUNT_ID, prefix::NestPrefix},
 };
 use impl_tools::autoimpl;
@@ -108,17 +108,12 @@ impl Account {
     }
 
     #[inline]
-    pub fn is_nonce_used(&self, nonce: Nonce) -> bool {
+    pub fn is_nonce_used(&self, nonce: U256) -> bool {
         self.nonces.is_used(nonce)
     }
 
     #[inline]
-    pub fn find_unused_nonce(&self, start: impl Into<Option<Nonce>>) -> Option<Nonce> {
-        self.nonces.next_unused(start)
-    }
-
-    #[inline]
-    pub fn commit_nonce(&mut self, n: Nonce) -> Result<()> {
+    pub fn commit_nonce(&mut self, n: U256) -> Result<()> {
         self.nonces.commit(n)
     }
 

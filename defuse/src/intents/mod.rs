@@ -4,16 +4,17 @@ mod token_diff;
 mod tokens;
 
 use defuse_contracts::{
-    crypto::{Payload, PublicKey},
+    crypto::Payload,
     defuse::{
         events::DefuseIntentEmit,
         intents::{DefuseIntents, Intent, IntentExecutedEvent, IntentsExecutor},
-        payload::{DefusePayload, SignedDefusePayload, SignerPayload, ValidatePayloadAs},
+        payload::{DefuseMessage, SignedDefuseMessage, ValidatePayloadAs},
         DefuseError, Result,
     },
+    nep413::Nep413Payload,
 };
 use near_plugins::{pause, Pausable};
-use near_sdk::{borsh::BorshSerialize, near, AccountId};
+use near_sdk::{near, AccountId};
 
 use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 
@@ -21,93 +22,66 @@ use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 impl IntentsExecutor for DefuseImpl {
     #[pause(name = "intents")]
     #[handle_result]
-    fn execute_intents(
-        &mut self,
-        #[serializer(borsh)] intents: Vec<SignedDefusePayload<DefuseIntents>>,
-    ) -> Result<()> {
+    fn execute_intents(&mut self, intents: Vec<SignedDefuseMessage<DefuseIntents>>) -> Result<()> {
         for signed in intents {
-            self.execute_signed_intent(signed)?;
-        }
-        Ok(())
-    }
-    #[handle_result]
-    fn execute_intents_json(
-        &mut self,
-        intents: Vec<SignedDefusePayload<DefuseIntents>>,
-    ) -> Result<()> {
-        self.execute_intents(intents)
-    }
+            // calculate intent hash
+            let hash = signed.payload.hash();
 
-    #[handle_result]
-    fn simulate_intents(
-        mut self,
-        #[serializer(borsh)] intents: Vec<DefusePayload<DefuseIntents>>,
-    ) -> Result<()> {
-        for payload in intents {
-            self.execute_payload_intent(payload, None)?;
-        }
-        Ok(())
-    }
+            // verify signature of the hash
+            let public_key = signed
+                .signature
+                .verify(&hash)
+                .ok_or(DefuseError::InvalidSignature)?;
 
-    #[handle_result]
-    fn simulate_intents_json(self, intents: Vec<DefusePayload<DefuseIntents>>) -> Result<()> {
-        self.simulate_intents(intents)
-    }
-}
+            // extract NEP-413 payload
+            let payload: Nep413Payload<_> = signed.payload.validate_as()?;
 
-impl DefuseImpl {
-    pub fn execute_signed_intent<T>(&mut self, signed: SignedDefusePayload<T>) -> Result<()>
-    where
-        T: BorshSerialize,
-        State: IntentExecutor<T>,
-    {
-        // calculate intent hash
-        let hash = signed.payload.hash();
+            // signer_id is encoded in the signed message
+            let signer_id = &payload.message.signer_id;
 
-        // verify signature of the hash
-        let public_key = signed
-            .signature
-            .verify(&hash)
-            .ok_or(DefuseError::InvalidSignature)?;
+            // get the account of the signer, create if doesn't exist
+            let signer = self.accounts.get_or_create(signer_id.clone());
 
-        // extract NEP-413 payload
-        let payload: DefusePayload<_> = signed.payload.validate_as()?;
-
-        self.execute_payload_intent(payload, public_key)?;
-        IntentExecutedEvent { hash: &hash }.emit();
-
-        Ok(())
-    }
-
-    fn execute_payload_intent<T>(
-        &mut self,
-        payload: DefusePayload<T>,
-        verify_public_key: impl Into<Option<PublicKey>>,
-    ) -> Result<()>
-    where
-        State: IntentExecutor<T>,
-    {
-        // signer_id is encoded in the signed message
-        let signer_id = &payload.message.signer_id;
-
-        // get the account of the signer, create if doesn't exist
-        let signer = self.accounts.get_or_create(signer_id.clone());
-
-        if let Some(public_key) = verify_public_key.into() {
             // make sure the account has this public key
             if !signer.has_public_key(signer_id, &public_key) {
                 return Err(DefuseError::InvalidSignature);
             }
+
+            // verify NEP-413 payload
+            let DefuseMessage {
+                signer_id,
+                deadline,
+                message: intent,
+            } = signer.verify_nep413_payload(payload)?;
+
+            // make message is still valid
+            if deadline.has_expired() {
+                return Err(DefuseError::DeadlineExpired);
+            }
+
+            // execute intent
+            self.state.execute_intent(&signer_id, signer, intent)?;
+            IntentExecutedEvent { hash: &hash }.emit();
         }
+        Ok(())
+    }
 
-        // verify NEP-413 payload
-        let SignerPayload {
-            signer_id,
-            payload: intent,
-        } = signer.verify_nep413_payload(payload)?;
+    #[handle_result]
+    fn simulate_intents(mut self, intents: Vec<DefuseMessage<DefuseIntents>>) -> Result<()> {
+        for message in intents {
+            // make message is still valid
+            if message.deadline.has_expired() {
+                return Err(DefuseError::DeadlineExpired);
+            }
 
-        // execute intent
-        self.state.execute_intent(&signer_id, signer, intent)
+            // get the account of the signer, create if doesn't exist
+            let signer = self.accounts.get_or_create(message.signer_id.clone());
+
+            // execute intent
+            self.state
+                .execute_intent(&message.signer_id, signer, message.message)?;
+        }
+        Ok(())
     }
 }
 
@@ -131,10 +105,6 @@ where
         account: &mut Account,
         intent: DefuseIntents,
     ) -> Result<()> {
-        if intent.deadline.has_expired() {
-            return Err(DefuseError::DeadlineExpired);
-        }
-
         for intent in intent.intents {
             self.execute_intent(account_id, account, intent)?;
         }

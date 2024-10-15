@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use defuse_contracts::{
     defuse::{
         intents::{token_diff::TokenDiff, DefuseIntents},
-        payload::SignedDefusePayload,
+        payload::SignedDefuseMessage,
         tokens::{TokenAmounts, TokenId},
     },
     utils::{fees::Pips, Deadline},
@@ -173,11 +173,11 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
     env.defuse
         .execute_intents(accounts.iter().flat_map(move |account| {
             account.diff.iter().cloned().map(|diff| {
-                account.account.sign_defuse_payload(
+                account.account.sign_defuse_message(
                     env.defuse.id(),
                     thread_rng().gen(),
+                    Deadline::infinity(),
                     DefuseIntents {
-                        deadline: Deadline::infinity(),
                         intents: [TokenDiff { diff }.into()].into(),
                     },
                 )
@@ -224,11 +224,11 @@ async fn test_invariant_violated() {
 
     env.defuse
         .execute_intents([
-            env.user1.sign_defuse_payload(
+            env.user1.sign_defuse_message(
                 env.defuse.id(),
                 thread_rng().gen(),
+                Deadline::infinity(),
                 DefuseIntents {
-                    deadline: Deadline::infinity(),
                     intents: [TokenDiff {
                         diff: TokenAmounts::default()
                             .with_try_extend::<i128>([(ft1.clone(), -1000), (ft2.clone(), 2000)])
@@ -238,11 +238,11 @@ async fn test_invariant_violated() {
                     .into(),
                 },
             ),
-            env.user1.sign_defuse_payload(
+            env.user1.sign_defuse_message(
                 env.defuse.id(),
                 thread_rng().gen(),
+                Deadline::infinity(),
                 DefuseIntents {
-                    deadline: Deadline::infinity(),
                     intents: [TokenDiff {
                         diff: TokenAmounts::default()
                             .with_try_extend::<i128>([(ft1.clone(), 1000), (ft2.clone(), -1999)])
@@ -282,16 +282,16 @@ async fn test_invariant_violated() {
 pub trait SignedIntentsExt: AccountManagerExt {
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedDefusePayload<DefuseIntents>>,
+        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
     ) -> anyhow::Result<()>;
 }
 
 impl SignedIntentsExt for near_workspaces::Account {
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedDefusePayload<DefuseIntents>>,
+        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
     ) -> anyhow::Result<()> {
-        self.call(self.id(), "execute_intents_json")
+        self.call(self.id(), "execute_intents")
             .args_json(json!({
                 "intents": intents.into_iter().collect::<Vec<_>>(),
             }))
@@ -307,7 +307,7 @@ impl SignedIntentsExt for near_workspaces::Account {
 impl SignedIntentsExt for near_workspaces::Contract {
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedDefusePayload<DefuseIntents>>,
+        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
     ) -> anyhow::Result<()> {
         self.as_account().execute_intents(intents).await
     }
