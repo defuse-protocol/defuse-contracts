@@ -8,6 +8,7 @@ members = [
     "intents/swap",
     "intents/swap-ft",
     "tests",
+    "wasm-toolkit"
 ]
 default-members = ["contracts"]
 
