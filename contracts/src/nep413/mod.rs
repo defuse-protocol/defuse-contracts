@@ -1,13 +1,13 @@
-use core::{fmt::Display, str::FromStr};
+use core::fmt::Display;
 
 use impl_tools::autoimpl;
 use near_sdk::{borsh, env::sha256_array, near, CryptoHash};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::serde_as;
 
 pub use crate::utils::bitmap::U256;
 use crate::{
     crypto::Payload,
-    utils::{serde::base64::Base64, UnwrapOrPanic},
+    utils::{serde::base64::Base64, UnwrapOrPanicError},
 };
 
 #[derive(Debug, Clone, Default)]
@@ -22,15 +22,8 @@ use crate::{
 #[near(serializers = [borsh, json])]
 #[autoimpl(Deref using self.message)]
 #[autoimpl(DerefMut using self.message)]
-pub struct Nep413Payload<T = String> {
-    #[borsh(
-        bound(serialize = "T: Display", deserialize = "T: FromStr<Err: Display>"),
-        serialize_with = "crate::utils::borsh::DisplayFromStr::serialize",
-        deserialize_with = "crate::utils::borsh::DisplayFromStr::deserialize"
-    )]
-    #[serde_as(as = "DisplayFromStr")]
-    #[serde(bound(serialize = "T: Display", deserialize = "T: FromStr<Err: Display>"))]
-    pub message: T,
+pub struct Nep413Payload {
+    pub message: String,
 
     #[serde_as(as = "Base64")]
     pub nonce: U256,
@@ -41,9 +34,9 @@ pub struct Nep413Payload<T = String> {
     pub callback_url: Option<String>,
 }
 
-impl<T> Nep413Payload<T> {
+impl Nep413Payload {
     #[inline]
-    pub fn new(message: T) -> Self {
+    pub fn new(message: String) -> Self {
         Self {
             message,
             nonce: Default::default(),
@@ -71,10 +64,7 @@ impl<T> Nep413Payload<T> {
     }
 }
 
-impl<T> Payload for Nep413Payload<T>
-where
-    T: Display,
-{
+impl Payload for Nep413Payload {
     /// Returns SHA-256 hash of serialized payload according to
     /// [NEP-413](https://github.com/near/NEPs/blob/master/neps/nep-0413.md#signature)
     #[inline]
@@ -84,5 +74,28 @@ where
         const PREFIX_TAG: u32 = (1u32 << 31) + NEP_NUMBER;
 
         sha256_array(&borsh::to_vec(&(PREFIX_TAG, self)).unwrap_or_panic_display())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use hex_literal::hex;
+    use near_sdk::serde_json::{self, json};
+
+    #[test]
+    fn test_hash() {
+        let p: Nep413Payload = serde_json::from_value(json!({
+          "message": "example",
+          "nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8=", // i.e. 1
+          "recipient": "example.near"
+        }))
+        .unwrap();
+
+        assert_eq!(
+            p.hash(),
+            hex!("458584c1ca632fbc6a65d2ffaaa65ead60928e7bad742ea3d02aa232f8bcf08b")
+        );
     }
 }

@@ -102,14 +102,17 @@ impl State {
             token_ids.len() == amounts.len(),
             "token_ids.len() != amounts.len()"
         );
+        require!(!amounts.is_empty(), "zero amounts");
 
         self.internal_withdraw(
+            &sender_id,
             sender,
             token_ids
                 .iter()
                 .cloned()
                 .map(|token_id| TokenId::Nep245(token.clone(), token_id))
                 .zip(amounts.iter().map(|a| a.0)),
+            Some("withdraw"),
         )?;
 
         let mut ext =
@@ -166,7 +169,7 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
             PromiseResult::Failed => vec![U128(0); amounts.len()],
         };
 
-        let account = self.accounts.get_or_create(sender_id);
+        let sender = self.accounts.get_or_create(sender_id.clone());
 
         for ((token_id, amount), used) in token_ids.into_iter().zip(amounts).zip(&mut used) {
             // update min during iteration
@@ -174,17 +177,14 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
 
             let refund = amount.0 - used.0;
             if refund > 0 {
-                let token_id = TokenId::Nep245(token.clone(), token_id);
                 self.state
-                    .total_supplies
-                    .deposit(token_id.clone(), refund)
+                    .internal_deposit(
+                        &sender_id,
+                        sender,
+                        [(TokenId::Nep245(token.clone(), token_id), refund)],
+                        Some("refund mt_withdraw"),
+                    )
                     .unwrap_or_panic();
-                account
-                    .token_balances
-                    .deposit(token_id, refund)
-                    .unwrap_or_panic();
-
-                // TODO: log refund
             }
         }
 

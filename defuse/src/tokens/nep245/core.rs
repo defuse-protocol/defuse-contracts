@@ -6,7 +6,7 @@ use defuse_contracts::{
     nep245::{self, receiver::ext_mt_receiver, MultiTokenCore},
     utils::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
-        UnwrapOrPanic,
+        UnwrapOrPanic, UnwrapOrPanicError,
     },
 };
 use near_plugins::{pause, Pausable};

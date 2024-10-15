@@ -5,8 +5,8 @@ use defuse_contracts::{
         events::DefuseIntentEmit,
         DefuseError, Result,
     },
-    nep413::{Nep413Payload, U256},
-    utils::{cache::CURRENT_ACCOUNT_ID, prefix::NestPrefix},
+    nep413::U256,
+    utils::prefix::NestPrefix,
 };
 use impl_tools::autoimpl;
 use near_account_id::AccountType;
@@ -115,19 +115,6 @@ impl Account {
     #[inline]
     pub fn commit_nonce(&mut self, n: U256) -> Result<()> {
         self.nonces.commit(n)
-    }
-
-    #[inline]
-    pub fn verify_nep413_payload<T>(&mut self, payload: Nep413Payload<T>) -> Result<T> {
-        // check recipient
-        if payload.recipient != *CURRENT_ACCOUNT_ID {
-            return Err(DefuseError::WrongRecipient);
-        }
-
-        // commit nonce
-        self.commit_nonce(payload.nonce)?;
-
-        Ok(payload.message)
     }
 }
 

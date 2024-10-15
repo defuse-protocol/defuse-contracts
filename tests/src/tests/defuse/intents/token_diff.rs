@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 
 use defuse_contracts::{
+    crypto::SignedPayload,
     defuse::{
         intents::{token_diff::TokenDiff, DefuseIntents},
-        payload::SignedDefuseMessage,
+        payload::MultiStandardPayload,
         tokens::{TokenAmounts, TokenId},
     },
     utils::{fees::Pips, Deadline},
@@ -282,14 +283,14 @@ async fn test_invariant_violated() {
 pub trait SignedIntentsExt: AccountManagerExt {
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
+        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
     ) -> anyhow::Result<()>;
 }
 
 impl SignedIntentsExt for near_workspaces::Account {
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
+        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
     ) -> anyhow::Result<()> {
         self.call(self.id(), "execute_intents")
             .args_json(json!({
@@ -307,7 +308,7 @@ impl SignedIntentsExt for near_workspaces::Account {
 impl SignedIntentsExt for near_workspaces::Contract {
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedDefuseMessage<DefuseIntents>>,
+        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
     ) -> anyhow::Result<()> {
         self.as_account().execute_intents(intents).await
     }

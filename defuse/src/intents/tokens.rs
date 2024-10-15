@@ -1,6 +1,11 @@
-use defuse_contracts::defuse::{
-    intents::tokens::{FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NftWithdraw},
-    DefuseError, Result,
+use defuse_contracts::{
+    defuse::{
+        intents::tokens::{
+            FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NftWithdraw,
+        },
+        Result,
+    },
+    nep245::{MtEventEmit, MtTransferEvent},
 };
 use near_sdk::{require, AccountId};
 
@@ -17,26 +22,36 @@ impl IntentExecutor<MtBatchTransfer> for State {
             receiver_id,
             token_ids,
             amounts,
-            memo: _memo,
+            memo,
         }: MtBatchTransfer,
     ) -> Result<()> {
         require!(sender_id != &receiver_id, "sender_id == receiver_id");
+        require!(!amounts.is_empty(), "zero amounts");
         require!(
             token_ids.len() == amounts.len(),
             "token_ids.len() != amounts.len()"
         );
 
+        [MtTransferEvent {
+            authorized_id: None,
+            old_owner_id: sender_id,
+            new_owner_id: &receiver_id,
+            token_ids: &token_ids
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+            amounts: &amounts,
+            memo: memo.as_deref(),
+        }]
+        .emit();
+
         let receiver_deposit = self.postponed_deposits.entry(receiver_id).or_default();
 
         for (token_id, amount) in token_ids.into_iter().zip(amounts.into_iter().map(|a| a.0)) {
-            if amount == 0 {
-                return Err(DefuseError::ZeroAmount);
-            }
+            require!(amount > 0, "zero amount");
             sender.token_balances.withdraw(token_id.clone(), amount)?;
             receiver_deposit.add(token_id, amount)?;
         }
-
-        // TODO: log with memo
 
         Ok(())
     }

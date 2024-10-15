@@ -1,5 +1,5 @@
 use near_contract_standards::non_fungible_token::{core::NonFungibleTokenReceiver, TokenId};
-use near_sdk::{ext_contract, serde::Serialize, AccountId, PromiseOrValue};
+use near_sdk::{ext_contract, AccountId, PromiseOrValue};
 
 #[ext_contract(ext_nft_withdraw)]
 pub trait NonFungibleTokenWithdrawer:
@@ -26,24 +26,4 @@ pub trait NonFungibleTokenWithdrawResolver {
         token_id: TokenId,
         is_call: bool,
     ) -> bool;
-}
-
-#[must_use = "make sure to `.emit()` this event"]
-#[derive(Debug, Serialize)]
-#[serde(crate = "::near_sdk::serde")]
-pub struct NftDepositEvent<'a> {
-    pub sender_id: &'a AccountId,
-    pub receiver_id: &'a AccountId,
-    pub token: &'a AccountId,
-    pub token_id: &'a TokenId,
-}
-
-#[must_use = "make sure to `.emit()` this event"]
-#[derive(Debug, Serialize)]
-#[serde(crate = "::near_sdk::serde")]
-pub struct NftWithdrawEvent<'a> {
-    pub sender_id: &'a AccountId,
-    pub receiver_id: &'a AccountId,
-    pub token: &'a AccountId,
-    pub token_id: &'a TokenId,
 }

@@ -4,17 +4,18 @@ mod token_diff;
 mod tokens;
 
 use defuse_contracts::{
-    crypto::Payload,
+    crypto::{Payload, SignedPayload},
     defuse::{
         events::DefuseIntentEmit,
         intents::{DefuseIntents, Intent, IntentExecutedEvent, IntentsExecutor},
-        payload::{DefuseMessage, SignedDefuseMessage, ValidatePayloadAs},
+        payload::{DefuseMessage, MultiStandardPayload, ValidatePayloadAs},
         DefuseError, Result,
     },
     nep413::Nep413Payload,
+    utils::cache::CURRENT_ACCOUNT_ID,
 };
 use near_plugins::{pause, Pausable};
-use near_sdk::{near, AccountId};
+use near_sdk::{near, serde_json, AccountId};
 
 use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 
@@ -22,7 +23,7 @@ use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 impl IntentsExecutor for DefuseImpl {
     #[pause(name = "intents")]
     #[handle_result]
-    fn execute_intents(&mut self, intents: Vec<SignedDefuseMessage<DefuseIntents>>) -> Result<()> {
+    fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>) -> Result<()> {
         for signed in intents {
             // calculate intent hash
             let hash = signed.payload.hash();
@@ -34,10 +35,24 @@ impl IntentsExecutor for DefuseImpl {
                 .ok_or(DefuseError::InvalidSignature)?;
 
             // extract NEP-413 payload
-            let payload: Nep413Payload<_> = signed.payload.validate_as()?;
+            let payload: Nep413Payload = signed.payload.validate_as()?;
 
-            // signer_id is encoded in the signed message
-            let signer_id = &payload.message.signer_id;
+            // check recipient
+            if payload.recipient != *CURRENT_ACCOUNT_ID {
+                return Err(DefuseError::WrongRecipient);
+            }
+
+            // deserialize message
+            let message: DefuseMessage<DefuseIntents> =
+                serde_json::from_str(&payload.message).map_err(DefuseError::JSON)?;
+
+            // make message is still valid
+            if message.deadline.has_expired() {
+                return Err(DefuseError::DeadlineExpired);
+            }
+
+            // signer_id is encoded inside the message
+            let signer_id = &message.signer_id;
 
             // get the account of the signer, create if doesn't exist
             let signer = self.accounts.get_or_create(signer_id.clone());
@@ -47,21 +62,17 @@ impl IntentsExecutor for DefuseImpl {
                 return Err(DefuseError::InvalidSignature);
             }
 
-            // verify NEP-413 payload
-            let DefuseMessage {
-                signer_id,
-                deadline,
-                message: intent,
-            } = signer.verify_nep413_payload(payload)?;
-
-            // make message is still valid
-            if deadline.has_expired() {
-                return Err(DefuseError::DeadlineExpired);
-            }
+            // commit nonce
+            signer.commit_nonce(payload.nonce)?;
 
             // execute intent
-            self.state.execute_intent(&signer_id, signer, intent)?;
-            IntentExecutedEvent { hash: &hash }.emit();
+            self.state
+                .execute_intent(signer_id, signer, message.message)?;
+            IntentExecutedEvent {
+                signer_id,
+                hash: &hash,
+            }
+            .emit();
         }
         Ok(())
     }
@@ -94,10 +105,7 @@ pub trait IntentExecutor<T> {
     ) -> Result<()>;
 }
 
-impl<T> IntentExecutor<DefuseIntents> for T
-where
-    T: IntentExecutor<Intent>,
-{
+impl IntentExecutor<DefuseIntents> for State {
     #[inline]
     fn execute_intent(
         &mut self,
@@ -108,7 +116,6 @@ where
         for intent in intent.intents {
             self.execute_intent(account_id, account, intent)?;
         }
-
         Ok(())
     }
 }

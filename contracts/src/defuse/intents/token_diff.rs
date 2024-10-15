@@ -1,5 +1,5 @@
 use impl_tools::autoimpl;
-use near_sdk::near;
+use near_sdk::{near, serde::Serialize, AccountId};
 
 use crate::{
     defuse::{
@@ -14,7 +14,6 @@ use crate::{
 #[autoimpl(Deref using self.diff)]
 #[autoimpl(DerefMut using self.diff)]
 pub struct TokenDiff {
-    #[serde(default, skip_serializing_if = "TokenAmounts::is_empty")]
     pub diff: TokenAmounts<i128>,
 }
 
@@ -91,6 +90,16 @@ impl TokenDiff {
             Pips::MAX.as_pips() as i128 - delta.signum() * fee.as_pips() as i128,
         )
     }
+}
+
+#[must_use = "make sure to `.emit()` this event"]
+#[derive(Debug, Serialize)]
+#[serde(crate = "::near_sdk::serde")]
+pub struct TokenDiffEvent<'a> {
+    pub signer_id: &'a AccountId,
+
+    #[serde(flatten)]
+    pub token_diff: &'a TokenDiff,
 }
 
 #[cfg(test)]

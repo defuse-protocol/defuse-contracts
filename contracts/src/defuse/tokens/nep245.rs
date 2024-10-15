@@ -1,5 +1,4 @@
-use near_sdk::{ext_contract, json_types::U128, serde::Serialize, AccountId, PromiseOrValue};
-use serde_with::{serde_as, DisplayFromStr};
+use near_sdk::{ext_contract, json_types::U128, AccountId, PromiseOrValue};
 
 use crate::nep245::{receiver::MultiTokenReceiver, TokenId};
 
@@ -28,28 +27,4 @@ pub trait MultiTokenWithdrawResolver {
         amounts: Vec<U128>,
         is_call: bool,
     ) -> Vec<U128>;
-}
-
-#[must_use = "make sure to `.emit()` this event"]
-#[serde_as]
-#[derive(Debug, Serialize)]
-#[serde(crate = "::near_sdk::serde")]
-pub struct FtDepositEvent<'a> {
-    pub sender_id: &'a AccountId,
-    pub receiver_id: &'a AccountId,
-    pub token: &'a AccountId,
-    #[serde_as(as = "DisplayFromStr")]
-    pub amount: u128,
-}
-
-#[must_use = "make sure to `.emit()` this event"]
-#[serde_as]
-#[derive(Debug, Serialize)]
-#[serde(crate = "::near_sdk::serde")]
-pub struct FtWithdrawEvent<'a> {
-    pub sender_id: &'a AccountId,
-    pub receiver_id: &'a AccountId,
-    pub token: &'a AccountId,
-    #[serde_as(as = "DisplayFromStr")]
-    pub amount: u128,
 }

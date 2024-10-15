@@ -1,6 +1,6 @@
 use defuse_contracts::{
     defuse::intents::relayer::RelayerKeys,
-    utils::{cache::CURRENT_ACCOUNT_ID, UnwrapOrPanic},
+    utils::{cache::CURRENT_ACCOUNT_ID, UnwrapOrPanicError},
 };
 use near_plugins::{access_control_any, pause, AccessControllable, Pausable};
 use near_sdk::{env, near, require, Allowance, Promise, PublicKey};

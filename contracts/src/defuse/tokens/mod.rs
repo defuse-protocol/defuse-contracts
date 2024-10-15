@@ -15,13 +15,16 @@ use serde_with::{serde_as, DeserializeFromStr, DisplayFromStr, SerializeDisplay}
 use strum::{EnumDiscriminants, EnumString};
 use thiserror::Error as ThisError;
 
-use crate::utils::{
-    cleanup::DefaultMap,
-    integer::{CheckedAdd, CheckedSub},
-    UnwrapOrPanic,
+use crate::{
+    crypto::SignedPayload,
+    utils::{
+        cleanup::DefaultMap,
+        integer::{CheckedAdd, CheckedSub},
+        UnwrapOrPanicError,
+    },
 };
 
-use super::{intents::DefuseIntents, payload::SignedDefuseMessage, DefuseError, Result};
+use super::{payload::MultiStandardPayload, DefuseError, Result};
 
 #[derive(
     Clone,
@@ -159,16 +162,6 @@ pub struct TokenAmounts<T>(
 
 impl<A> TokenAmounts<A> {
     #[inline]
-    fn try_apply<E>(&mut self, token_id: TokenId, f: impl FnOnce(A) -> Result<A, E>) -> Result<A, E>
-    where
-        A: Default + Eq + Copy,
-    {
-        let mut d = self.0.entry_or_default(token_id);
-        *d = f(*d)?;
-        Ok(*d)
-    }
-
-    #[inline]
     pub fn add<T>(&mut self, token_id: TokenId, amount: T) -> Result<A>
     where
         A: CheckedAdd<T> + Default + Eq + Copy,
@@ -186,6 +179,16 @@ impl<A> TokenAmounts<A> {
         self.try_apply(token_id, |a| {
             a.checked_sub(amount).ok_or(DefuseError::IntegerOverflow)
         })
+    }
+
+    #[inline]
+    fn try_apply<E>(&mut self, token_id: TokenId, f: impl FnOnce(A) -> Result<A, E>) -> Result<A, E>
+    where
+        A: Default + Eq + Copy,
+    {
+        let mut d = self.0.entry_or_default(token_id);
+        *d = f(*d)?;
+        Ok(*d)
     }
 
     #[inline]
@@ -269,7 +272,7 @@ pub struct DepositMessage {
     pub receiver_id: AccountId,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub execute_intents: Vec<SignedDefuseMessage<DefuseIntents>>,
+    pub execute_intents: Vec<SignedPayload<MultiStandardPayload>>,
 
     #[serde(default, skip_serializing_if = "::core::ops::Not::not")]
     pub refund_if_fails: bool,
@@ -297,14 +300,6 @@ impl Display for DepositMessage {
     }
 }
 
-#[derive(Debug, ThisError)]
-pub enum ParseDepositMessageError {
-    #[error(transparent)]
-    Account(#[from] ParseAccountError),
-    #[error("JSON: {0}")]
-    JSON(#[from] serde_json::Error),
-}
-
 impl FromStr for DepositMessage {
     type Err = ParseDepositMessageError;
 
@@ -316,6 +311,14 @@ impl FromStr for DepositMessage {
             s.parse().map(Self::new).map_err(Into::into)
         }
     }
+}
+
+#[derive(Debug, ThisError)]
+pub enum ParseDepositMessageError {
+    #[error(transparent)]
+    Account(#[from] ParseAccountError),
+    #[error("JSON: {0}")]
+    JSON(#[from] serde_json::Error),
 }
 
 #[cfg(test)]

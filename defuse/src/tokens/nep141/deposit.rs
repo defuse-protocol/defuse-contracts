@@ -5,12 +5,12 @@ use defuse_contracts::{
     },
     utils::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
-        UnwrapOrPanic,
+        UnwrapOrPanic, UnwrapOrPanicError,
     },
 };
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_plugins::{pause, Pausable};
-use near_sdk::{json_types::U128, near, AccountId, PromiseOrValue};
+use near_sdk::{json_types::U128, near, require, AccountId, PromiseOrValue};
 
 use crate::{DefuseImpl, DefuseImplExt};
 #[near]
@@ -26,6 +26,8 @@ impl FungibleTokenReceiver for DefuseImpl {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
+        require!(amount.0 > 0, "zero amount");
+
         let msg = if !msg.is_empty() {
             msg.parse().unwrap_or_panic_display()
         } else {
@@ -35,10 +37,9 @@ impl FungibleTokenReceiver for DefuseImpl {
         self.internal_deposit(
             msg.receiver_id,
             [(TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone()), amount.0)],
+            Some("deposit"),
         )
         .unwrap_or_panic();
-
-        // TODO: log deposited
 
         if !msg.execute_intents.is_empty() {
             if msg.refund_if_fails {

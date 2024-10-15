@@ -6,7 +6,7 @@ use defuse_contracts::{
     nep245::receiver::MultiTokenReceiver,
     utils::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
-        UnwrapOrPanic,
+        UnwrapOrPanic, UnwrapOrPanicError,
     },
 };
 use near_plugins::{pause, Pausable};
@@ -47,10 +47,9 @@ impl MultiTokenReceiver for DefuseImpl {
                 .into_iter()
                 .map(|token_id| TokenId::Nep245(PREDECESSOR_ACCOUNT_ID.clone(), token_id))
                 .zip(amounts.into_iter().map(|a| a.0)),
+            Some("deposit"),
         )
         .unwrap_or_panic();
-
-        // TODO: log deposited
 
         if !msg.execute_intents.is_empty() {
             if msg.refund_if_fails {

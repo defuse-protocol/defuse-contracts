@@ -36,9 +36,6 @@ pub enum DefuseError {
 
     #[error("wrong recipient")]
     WrongRecipient,
-
-    #[error("zero amount")]
-    ZeroAmount,
 }
 
 // Remove when `!` is stabilized:

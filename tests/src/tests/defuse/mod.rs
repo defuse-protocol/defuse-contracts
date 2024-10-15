@@ -7,7 +7,8 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use defuse_contract::Role;
 use defuse_contracts::{
-    defuse::payload::{DefuseMessage, MultiStandardPayload, SignedDefuseMessage},
+    crypto::SignedPayload,
+    defuse::payload::{DefuseMessage, MultiStandardPayload},
     nep413::{Nep413Payload, U256},
     utils::{fees::Pips, Deadline},
 };
@@ -102,7 +103,7 @@ pub trait DefuseSigner: Signer {
         nonce: U256,
         deadline: Deadline,
         message: T,
-    ) -> SignedDefuseMessage<T>
+    ) -> SignedPayload<MultiStandardPayload>
     where
         T: Serialize;
 }
@@ -114,16 +115,19 @@ impl DefuseSigner for near_workspaces::Account {
         nonce: U256,
         deadline: Deadline,
         message: T,
-    ) -> SignedDefuseMessage<T>
+    ) -> SignedPayload<MultiStandardPayload>
     where
         T: Serialize,
     {
         self.sign_payload(MultiStandardPayload::Nep413(
-            Nep413Payload::new(DefuseMessage {
-                signer_id: self.id().clone(),
-                deadline,
-                message,
-            })
+            Nep413Payload::new(
+                serde_json::to_string(&DefuseMessage {
+                    signer_id: self.id().clone(),
+                    deadline,
+                    message,
+                })
+                .unwrap(),
+            )
             .with_recipient(defuse_contract.to_string())
             .with_nonce(nonce),
         ))

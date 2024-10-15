@@ -15,7 +15,7 @@ use defuse_contracts::{
 use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_plugins::{pause, Pausable};
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, serde_json, AccountId, Gas, NearToken,
+    assert_one_yocto, env, json_types::U128, near, require, serde_json, AccountId, Gas, NearToken,
     PromiseOrValue, PromiseResult,
 };
 
@@ -82,7 +82,14 @@ impl State {
             gas,
         }: FtWithdraw,
     ) -> Result<PromiseOrValue<U128>> {
-        self.internal_withdraw(sender, [(TokenId::Nep141(token.clone()), amount.0)])?;
+        require!(amount.0 > 0, "zero amount");
+
+        self.internal_withdraw(
+            &sender_id,
+            sender,
+            [(TokenId::Nep141(token.clone()), amount.0)],
+            Some("withdraw"),
+        )?;
 
         let mut ext =
             ext_ft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
@@ -132,15 +139,12 @@ impl FungibleTokenWithdrawResolver for DefuseImpl {
 
         let refund = amount.0 - used;
         if refund > 0 {
-            let token = TokenId::Nep141(token);
-            self.total_supplies
-                .deposit(token.clone(), refund)
-                .unwrap_or_panic();
-            self.accounts
-                .get_or_create(sender_id)
-                .token_balances
-                .deposit(token, refund)
-                .unwrap_or_panic();
+            self.internal_deposit(
+                sender_id,
+                [(TokenId::Nep141(token), refund)],
+                Some("refund"),
+            )
+            .unwrap_or_panic();
         }
         U128(used)
     }

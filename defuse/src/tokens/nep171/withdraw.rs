@@ -82,8 +82,10 @@ impl State {
         }: NftWithdraw,
     ) -> Result<PromiseOrValue<bool>> {
         self.internal_withdraw(
+            &sender_id,
             sender,
             [(TokenId::Nep171(token.clone(), token_id.clone()), 1)],
+            Some("withdraw"),
         )?;
 
         let mut ext =
@@ -129,15 +131,12 @@ impl NonFungibleTokenWithdrawResolver for DefuseImpl {
             PromiseResult::Failed => false,
         };
         if !used {
-            let token = TokenId::Nep171(token, token_id);
-            self.total_supplies
-                .deposit(token.clone(), 1)
-                .unwrap_or_panic();
-            self.accounts
-                .get_or_create(sender_id)
-                .token_balances
-                .deposit(token, 1)
-                .unwrap_or_panic();
+            self.internal_deposit(
+                sender_id,
+                [(TokenId::Nep171(token, token_id), 1)],
+                Some("refund"),
+            )
+            .unwrap_or_panic();
         }
         used
     }

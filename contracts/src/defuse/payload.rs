@@ -12,13 +12,7 @@ use near_sdk::{
     serde_json, AccountId, CryptoHash,
 };
 
-use crate::{
-    crypto::{Payload, SignedPayload},
-    nep413::Nep413Payload,
-    utils::Deadline,
-};
-
-pub type SignedDefuseMessage<T> = SignedPayload<MultiStandardPayload<DefuseMessage<T>>>;
+use crate::{crypto::Payload, nep413::Nep413Payload, utils::Deadline};
 
 #[near(serializers = [borsh, json])]
 #[autoimpl(Deref using self.message)]
@@ -65,18 +59,11 @@ where
 #[near(serializers = [borsh, json])]
 #[serde(tag = "standard", rename_all = "snake_case")]
 #[derive(Debug, Clone, From)]
-pub enum MultiStandardPayload<T> {
-    Nep413(
-        #[borsh(bound(serialize = "T: Display", deserialize = "T: FromStr<Err: Display>"))]
-        #[serde(bound(serialize = "T: Display", deserialize = "T: FromStr<Err: Display>"))]
-        Nep413Payload<T>,
-    ),
+pub enum MultiStandardPayload {
+    Nep413(Nep413Payload),
 }
 
-impl<T> Payload for MultiStandardPayload<T>
-where
-    T: Display,
-{
+impl Payload for MultiStandardPayload {
     #[inline]
     fn hash(&self) -> CryptoHash {
         match self {
@@ -101,11 +88,11 @@ impl<T> ValidatePayloadAs<T> for T {
     }
 }
 
-impl<T> ValidatePayloadAs<Nep413Payload<T>> for MultiStandardPayload<T> {
+impl ValidatePayloadAs<Nep413Payload> for MultiStandardPayload {
     type Error = Infallible;
 
     #[inline]
-    fn validate_as(self) -> Result<Nep413Payload<T>, Self::Error> {
+    fn validate_as(self) -> Result<Nep413Payload, Self::Error> {
         match self {
             Self::Nep413(payload) => Ok(payload),
         }
