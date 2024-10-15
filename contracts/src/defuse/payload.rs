@@ -2,7 +2,7 @@ use core::convert::Infallible;
 
 use derive_more::derive::From;
 use impl_tools::autoimpl;
-use near_sdk::{borsh::BorshSerialize, near, AccountId};
+use near_sdk::{borsh::BorshSerialize, near, AccountId, CryptoHash};
 
 use crate::{
     crypto::{Payload, SignedPayload},
@@ -35,7 +35,7 @@ where
     T: BorshSerialize,
 {
     #[inline]
-    fn hash(&self) -> [u8; 32] {
+    fn hash(&self) -> CryptoHash {
         match self {
             Self::Nep413(payload) => payload.hash(),
         }

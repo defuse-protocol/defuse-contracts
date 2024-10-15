@@ -6,7 +6,8 @@ mod tokens;
 use defuse_contracts::{
     crypto::{Payload, PublicKey},
     defuse::{
-        intents::{DefuseIntents, Intent, IntentsExecutor},
+        events::DefuseIntentEmit,
+        intents::{DefuseIntents, Intent, IntentExecutedEvent, IntentsExecutor},
         payload::{DefusePayload, SignedDefusePayload, SignerPayload, ValidatePayloadAs},
         DefuseError, Result,
     },
@@ -36,7 +37,7 @@ impl IntentsExecutor for DefuseImpl {
     ) -> Result<()> {
         self.execute_intents(intents)
     }
-    #[pause(name = "intents")]
+
     #[handle_result]
     fn simulate_intents(
         mut self,
@@ -61,20 +62,19 @@ impl DefuseImpl {
         State: IntentExecutor<T>,
     {
         // calculate intent hash
-        let intent_hash = signed.payload.hash();
+        let hash = signed.payload.hash();
 
         // verify signature of the hash
         let public_key = signed
             .signature
-            .verify(&intent_hash)
+            .verify(&hash)
             .ok_or(DefuseError::InvalidSignature)?;
 
         // extract NEP-413 payload
         let payload: DefusePayload<_> = signed.payload.validate_as()?;
 
         self.execute_payload_intent(payload, public_key)?;
-
-        // TODO: log hash
+        IntentExecutedEvent { hash: &hash }.emit();
 
         Ok(())
     }

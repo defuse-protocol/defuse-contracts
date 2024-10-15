@@ -4,7 +4,7 @@ use impl_tools::autoimpl;
 use near_sdk::{
     borsh::{self, BorshSerialize},
     env::sha256_array,
-    near,
+    near, CryptoHash,
 };
 use serde_with::{serde_as, DisplayFromStr};
 
@@ -83,7 +83,7 @@ where
     /// Returns SHA-256 hash of serialized payload according to
     /// [NEP-413](https://github.com/near/NEPs/blob/master/neps/nep-0413.md#signature)
     #[inline]
-    fn hash(&self) -> [u8; 32] {
+    fn hash(&self) -> CryptoHash {
         const NEP_NUMBER: u32 = 413;
         /// [NEP-461](https://github.com/near/NEPs/pull/461) prefix_tag
         const PREFIX_TAG: u32 = (1u32 << 31) + NEP_NUMBER;

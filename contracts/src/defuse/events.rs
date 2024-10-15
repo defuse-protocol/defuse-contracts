@@ -3,6 +3,7 @@ use near_sdk::near;
 
 use super::{
     accounts::{PublicKeyAddedEvent, PublicKeyRemovedEvent},
+    intents::IntentExecutedEvent,
     tokens::{
         nep141::{FtDepositEvent, FtWithdrawEvent},
         nep171::{NftDepositEvent, NftWithdrawEvent},
@@ -17,14 +18,19 @@ pub enum DefuseEvent<'a> {
     PublicKeyAdded(PublicKeyAddedEvent<'a>),
     #[event_version("0.1.0")]
     PublicKeyRemoved(PublicKeyRemovedEvent<'a>),
+
     #[event_version("0.1.0")]
     FtDeposit(FtDepositEvent<'a>),
     #[event_version("0.1.0")]
     FtWithdraw(FtWithdrawEvent<'a>),
+
     #[event_version("0.1.0")]
     NftDeposit(NftDepositEvent<'a>),
     #[event_version("0.1.0")]
     NftWithdraw(NftWithdrawEvent<'a>),
+
+    #[event_version("0.1.0")]
+    IntentExecuted(IntentExecutedEvent<'a>),
 }
 
 pub trait DefuseIntentEmit<'a>: Into<DefuseEvent<'a>> {

@@ -287,6 +287,7 @@ impl DepositMessage {
 }
 
 impl Display for DepositMessage {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.execute_intents.is_empty() {
             f.write_str(self.receiver_id.as_str())
@@ -307,6 +308,7 @@ pub enum ParseDepositMessageError {
 impl FromStr for DepositMessage {
     type Err = ParseDepositMessageError;
 
+    #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.starts_with('{') {
             serde_json::from_str(s).map_err(Into::into)

@@ -4,9 +4,10 @@ pub mod token_diff;
 pub mod tokens;
 
 use derive_more::derive::From;
-use near_sdk::{ext_contract, near};
+use near_sdk::{ext_contract, near, serde::Serialize, CryptoHash};
+use serde_with::serde_as;
 
-use crate::utils::Deadline;
+use crate::utils::{serde::base58::Base58, Deadline};
 
 use super::{
     fees::FeesManager,
@@ -65,11 +66,20 @@ pub enum Intent {
     MtBatchTransfer(MtBatchTransfer),
     MtBatchTransferCall(MtBatchTransferCall),
 
-    TokenDiff(TokenDiff),
-
     FtWithdraw(FtWithdraw),
     NftWithdraw(NftWithdraw),
     MtWithdraw(MtWithdraw),
+
+    TokenDiff(TokenDiff),
+}
+
+#[must_use = "make sure to `.emit()` this event"]
+#[serde_as]
+#[derive(Debug, Serialize)]
+#[serde(crate = "::near_sdk::serde")]
+pub struct IntentExecutedEvent<'a> {
+    #[serde_as(as = "Base58")]
+    pub hash: &'a CryptoHash,
 }
 
 #[cfg(test)]
@@ -105,7 +115,7 @@ mod tests {
 
         assert_eq!(
             p.hash(),
-            hex!("f33733baae0120c85180683b8cae4ec8ca6d2082886523cb59a2d69ff4163ebe")
+            hex!("54257372a8f6e8fef307828c68a91e358771fbe40cc9dd7cbdfbc06d5eea8a5e")
         );
     }
 }
