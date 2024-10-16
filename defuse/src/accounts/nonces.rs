@@ -27,6 +27,9 @@ impl Nonces {
 
     #[inline]
     pub fn commit(&mut self, n: U256) -> Result<()> {
-        (!self.0.set(n)).then_some(()).ok_or(DefuseError::NonceUsed)
+        if self.0.set(n) {
+            return Err(DefuseError::NonceUsed);
+        }
+        Ok(())
     }
 }

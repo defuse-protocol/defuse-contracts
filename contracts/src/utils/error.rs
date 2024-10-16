@@ -37,6 +37,8 @@ pub trait UnwrapOrPanic<T> {
 }
 
 impl<T> UnwrapOrPanic<T> for Option<T> {
+    #[inline]
+    #[track_caller]
     fn unwrap_or_panic(self) -> T {
         self.unwrap_or_else(|| env::abort())
     }

@@ -56,9 +56,10 @@ impl Account {
         }
         .emit();
 
-        self.maybe_add_public_key(me, public_key)
-            .then_some(())
-            .ok_or(DefuseError::PublicKeyExists)
+        if !self.maybe_add_public_key(me, public_key) {
+            return Err(DefuseError::PublicKeyExists);
+        }
+        Ok(())
     }
 
     #[inline]
@@ -80,9 +81,10 @@ impl Account {
         }
         .emit();
 
-        self.maybe_remove_public_key(me, public_key)
-            .then_some(())
-            .ok_or(DefuseError::PublicKeyNotExist)
+        if !self.maybe_remove_public_key(me, public_key) {
+            return Err(DefuseError::PublicKeyExists);
+        }
+        Ok(())
     }
 
     #[inline]

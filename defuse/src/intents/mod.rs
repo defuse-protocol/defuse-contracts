@@ -35,41 +35,45 @@ impl IntentsExecutor for DefuseImpl {
                 .ok_or(DefuseError::InvalidSignature)?;
 
             // extract NEP-413 payload
-            let payload: Nep413Payload = signed.payload.validate_as()?;
+            let Nep413Payload {
+                message,
+                nonce,
+                recipient,
+                callback_url: _,
+            } = signed.payload.validate_as()?;
 
             // check recipient
-            if payload.recipient != *CURRENT_ACCOUNT_ID {
+            if recipient != *CURRENT_ACCOUNT_ID {
                 return Err(DefuseError::WrongRecipient);
             }
 
             // deserialize message
-            let message: DefuseMessage<DefuseIntents> =
-                serde_json::from_str(&payload.message).map_err(DefuseError::JSON)?;
+            let DefuseMessage::<DefuseIntents> {
+                signer_id,
+                deadline,
+                message: intents,
+            } = serde_json::from_str(&message)?;
 
             // make message is still valid
-            if message.deadline.has_expired() {
+            if deadline.has_expired() {
                 return Err(DefuseError::DeadlineExpired);
             }
-
-            // signer_id is encoded inside the message
-            let signer_id = &message.signer_id;
 
             // get the account of the signer, create if doesn't exist
             let signer = self.accounts.get_or_create(signer_id.clone());
 
             // make sure the account has this public key
-            if !signer.has_public_key(signer_id, &public_key) {
+            if !signer.has_public_key(&signer_id, &public_key) {
                 return Err(DefuseError::InvalidSignature);
             }
 
             // commit nonce
-            signer.commit_nonce(payload.nonce)?;
+            signer.commit_nonce(nonce)?;
 
             // execute intent
-            self.state
-                .execute_intent(signer_id, signer, message.message)?;
+            self.state.execute_intent(&signer_id, signer, intents)?;
             IntentExecutedEvent {
-                signer_id,
+                signer_id: &signer_id,
                 hash: &hash,
             }
             .emit();
