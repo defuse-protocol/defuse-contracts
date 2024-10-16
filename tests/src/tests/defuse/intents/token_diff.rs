@@ -1,10 +1,8 @@
 use std::collections::BTreeMap;
 
 use defuse_contracts::{
-    crypto::SignedPayload,
     defuse::{
         intents::{token_diff::TokenDiff, DefuseIntents},
-        payload::MultiStandardPayload,
         tokens::{TokenAmounts, TokenId},
     },
     utils::{fees::Pips, Deadline},
@@ -13,12 +11,13 @@ use near_sdk::AccountId;
 use near_workspaces::Account;
 use rand::{thread_rng, Rng};
 use rstest::rstest;
-use serde_json::json;
 
 use crate::{
-    tests::defuse::{accounts::AccountManagerExt, env::Env, DefuseSigner},
+    tests::defuse::{env::Env, DefuseSigner},
     utils::mt::MtExt,
 };
+
+use super::ExecuteIntentsExt;
 
 #[rstest]
 #[tokio::test]
@@ -278,38 +277,4 @@ async fn test_invariant_violated() {
         .unwrap(),
         [0, 2000]
     );
-}
-
-pub trait SignedIntentsExt: AccountManagerExt {
-    async fn execute_intents(
-        &self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
-    ) -> anyhow::Result<()>;
-}
-
-impl SignedIntentsExt for near_workspaces::Account {
-    async fn execute_intents(
-        &self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
-    ) -> anyhow::Result<()> {
-        self.call(self.id(), "execute_intents")
-            .args_json(json!({
-                "intents": intents.into_iter().collect::<Vec<_>>(),
-            }))
-            .max_gas()
-            .transact()
-            .await?
-            .into_result()
-            .map(|_| ())
-            .map_err(Into::into)
-    }
-}
-
-impl SignedIntentsExt for near_workspaces::Contract {
-    async fn execute_intents(
-        &self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
-    ) -> anyhow::Result<()> {
-        self.as_account().execute_intents(intents).await
-    }
 }

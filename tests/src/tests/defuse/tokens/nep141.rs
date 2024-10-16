@@ -1,10 +1,16 @@
-use anyhow::anyhow;
-use defuse_contracts::defuse::tokens::{DepositMessage, TokenId};
-use near_sdk::{json_types::U128, AccountId, NearToken};
+use defuse_contracts::{
+    defuse::{
+        intents::{tokens::FtWithdraw, DefuseIntents},
+        tokens::{DepositMessage, TokenId},
+    },
+    utils::Deadline,
+};
+use near_sdk::{json_types::U128, AccountId, Gas, NearToken};
+use rand::{thread_rng, Rng};
 use serde_json::json;
 
 use crate::{
-    tests::defuse::env::Env,
+    tests::defuse::{env::Env, DefuseSigner},
     utils::{ft::FtExt, mt::MtExt},
 };
 
@@ -43,6 +49,123 @@ async fn test_deposit_withdraw() {
     assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 1000);
 }
 
+#[tokio::test]
+async fn test_deposit_withdraw_intent() {
+    let env = Env::new().await.unwrap();
+
+    env.ft_mint(env.ft1.id(), env.user1.id(), 1000)
+        .await
+        .unwrap();
+
+    assert_eq!(
+        env.user1
+            .defuse_ft_deposit(
+                env.defuse.id(),
+                env.ft1.id(),
+                1000,
+                DepositMessage {
+                    receiver_id: env.user1.id().clone(),
+                    execute_intents: [env.user1.sign_defuse_message(
+                        env.defuse.id(),
+                        thread_rng().gen(),
+                        Deadline::infinity(),
+                        DefuseIntents {
+                            intents: [
+                                // withdrawal is a detached promise
+                                FtWithdraw {
+                                    token: env.ft1.id().clone(),
+                                    receiver_id: env.user2.id().clone(),
+                                    amount: U128(1000),
+                                    memo: None,
+                                    msg: None,
+                                    gas: Some(Gas::from_tgas(30)),
+                                }
+                                .into(),
+                            ]
+                            .into(),
+                        },
+                    )]
+                    .into(),
+                    // another promise will be created for `execute_intents()`
+                    refund_if_fails: false,
+                },
+            )
+            .await
+            .unwrap(),
+        1000
+    );
+
+    let ft1 = TokenId::Nep141(env.ft1.id().clone());
+
+    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 0);
+    assert_eq!(
+        env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.mt_contract_balance_of(env.defuse.id(), env.user2.id(), &ft1.to_string())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(env.ft1.ft_balance_of(env.user2.id()).await.unwrap(), 1000);
+}
+
+#[tokio::test]
+async fn test_deposit_withdraw_intent_refund() {
+    let env = Env::new().await.unwrap();
+
+    env.ft_mint(env.ft1.id(), env.user1.id(), 1000)
+        .await
+        .unwrap();
+
+    assert_eq!(
+        env.user1
+            .defuse_ft_deposit(
+                env.defuse.id(),
+                env.ft1.id(),
+                1000,
+                DepositMessage {
+                    receiver_id: env.user1.id().clone(),
+                    execute_intents: [env.user1.sign_defuse_message(
+                        env.defuse.id(),
+                        thread_rng().gen(),
+                        Deadline::infinity(),
+                        DefuseIntents {
+                            intents: [FtWithdraw {
+                                token: env.ft1.id().clone(),
+                                receiver_id: env.user1.id().clone(),
+                                amount: U128(1001),
+                                memo: None,
+                                msg: None,
+                                gas: Some(Gas::from_tgas(30)),
+                            }
+                            .into(),]
+                            .into(),
+                        },
+                    )]
+                    .into(),
+                    refund_if_fails: true,
+                },
+            )
+            .await
+            .unwrap(),
+        0
+    );
+
+    let ft1 = TokenId::Nep141(env.ft1.id().clone());
+    assert_eq!(
+        env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 1000);
+}
+
 pub trait DefuseFtReceiver {
     async fn defuse_ft_deposit(
         &self,
@@ -50,7 +173,7 @@ pub trait DefuseFtReceiver {
         token_id: &AccountId,
         amount: u128,
         msg: DepositMessage,
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<u128>;
 }
 
 impl DefuseFtReceiver for near_workspaces::Account {
@@ -60,15 +183,9 @@ impl DefuseFtReceiver for near_workspaces::Account {
         token_id: &AccountId,
         amount: u128,
         msg: DepositMessage,
-    ) -> anyhow::Result<()> {
-        if self
-            .ft_transfer_call(token_id, defuse_id, amount, None, &msg.to_string())
-            .await?
-            != amount
-        {
-            return Err(anyhow!("refunded"));
-        }
-        Ok(())
+    ) -> anyhow::Result<u128> {
+        self.ft_transfer_call(token_id, defuse_id, amount, None, &msg.to_string())
+            .await
     }
 }
 
@@ -79,7 +196,7 @@ impl DefuseFtReceiver for near_workspaces::Contract {
         token_id: &AccountId,
         amount: u128,
         msg: DepositMessage,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<u128> {
         self.as_account()
             .defuse_ft_deposit(defuse_id, token_id, amount, msg)
             .await

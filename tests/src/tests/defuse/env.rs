@@ -1,5 +1,6 @@
 use std::{collections::HashMap, ops::Deref};
 
+use anyhow::anyhow;
 use defuse_contract::Role;
 use defuse_contracts::{defuse::tokens::DepositMessage, utils::fees::Pips};
 use near_sdk::{AccountId, Duration};
@@ -61,7 +62,8 @@ impl Env {
         amount: u128,
         to: &AccountId,
     ) -> anyhow::Result<()> {
-        self.sandbox
+        if self
+            .sandbox
             .root_account()
             .defuse_ft_deposit(
                 self.defuse.id(),
@@ -69,7 +71,12 @@ impl Env {
                 amount,
                 DepositMessage::new(to.clone()),
             )
-            .await
+            .await?
+            != amount
+        {
+            return Err(anyhow!("refunded"));
+        }
+        Ok(())
     }
 }
 
