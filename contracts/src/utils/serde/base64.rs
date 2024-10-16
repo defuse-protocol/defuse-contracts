@@ -55,7 +55,11 @@ where
 mod abi {
     use super::*;
 
-    use near_sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+    use near_sdk::schemars::{
+        gen::SchemaGenerator,
+        schema::{InstanceType, Schema, SchemaObject},
+        JsonSchema,
+    };
     use serde_with::schemars_0_8::JsonSchemaAs;
 
     impl<T, ALPHABET, FORMAT> JsonSchemaAs<T> for Base64<ALPHABET, FORMAT>
@@ -67,8 +71,17 @@ mod abi {
             String::schema_name()
         }
 
-        fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-            String::json_schema(gen)
+        fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+            // TODO: use #[schemars(extend(...))] when released
+            SchemaObject {
+                instance_type: Some(InstanceType::String.into()),
+                extensions: [("contentEncoding", "base64".into())]
+                    .into_iter()
+                    .map(|(k, v)| (k.to_string(), v))
+                    .collect(),
+                ..Default::default()
+            }
+            .into()
         }
 
         fn is_referenceable() -> bool {

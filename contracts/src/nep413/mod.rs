@@ -23,6 +23,10 @@ pub struct Nep413Payload {
     pub message: String,
 
     #[serde_as(as = "Base64")]
+    #[cfg_attr(
+        all(feature = "abi", not(target_arch = "wasm32")),
+        schemars(example = "self::examples::nonce")
+    )]
     pub nonce: U256,
 
     pub recipient: String,
@@ -71,6 +75,17 @@ impl Payload for Nep413Payload {
         const PREFIX_TAG: u32 = (1u32 << 31) + NEP_NUMBER;
 
         sha256_array(&borsh::to_vec(&(PREFIX_TAG, self)).unwrap_or_panic_display())
+    }
+}
+
+#[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
+mod examples {
+    use super::*;
+
+    use near_sdk::base64::{self, Engine};
+
+    pub fn nonce() -> String {
+        base64::engine::general_purpose::STANDARD.encode(U256::default())
     }
 }
 

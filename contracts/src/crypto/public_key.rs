@@ -101,19 +101,40 @@ impl FromStr for PublicKey {
 mod abi {
     use super::*;
 
-    use near_sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+    use near_sdk::schemars::{
+        gen::SchemaGenerator,
+        schema::{InstanceType, Schema, SchemaObject},
+        JsonSchema,
+    };
 
     impl JsonSchema for PublicKey {
         fn schema_name() -> String {
-            String::schema_name()
+            stringify!(PublicKey).to_string()
         }
 
-        fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-            String::json_schema(gen)
-        }
-
-        fn is_referenceable() -> bool {
-            false
+        fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+            SchemaObject {
+                instance_type: Some(InstanceType::String.into()),
+                extensions: [(
+                    "examples",
+                    [
+                        "ed25519:5TagutioHgKLh7KZ1VEFBYfgRkPtqnKm9LoMnJMJugxm",
+                        "secp256k1:5KN6ZfGZgH1puWwH1Nc1P8xyrFZSPHDw3WUP6iitsjCECJLrGBq",
+                    ]
+                    .into_iter()
+                    .inspect(|s| {
+                        s.parse::<Self>().unwrap();
+                    })
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .into(),
+                )]
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect(),
+                ..Default::default()
+            }
+            .into()
         }
     }
 }

@@ -17,12 +17,14 @@ use crate::utils::serde::base64::Base64;
 #[near(serializers = [borsh, json])]
 #[serde(untagged)]
 pub enum Signature {
+    /// Ed25519
     Ed25519 {
         #[serde_as(as = "Base64")]
         signature: [u8; 64],
         #[serde_as(as = "Base64")]
         public_key: [u8; 32],
     },
+    /// Secp256k1
     Secp256k1 {
         /// Concatenated `r`, `s` and `v`
         #[serde_as(as = "Base64")]

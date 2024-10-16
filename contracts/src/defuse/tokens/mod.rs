@@ -124,19 +124,37 @@ pub enum ParseTokenIdError {
 mod abi {
     use super::*;
 
-    use near_sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+    use near_sdk::schemars::{
+        gen::SchemaGenerator,
+        schema::{InstanceType, Schema, SchemaObject},
+        JsonSchema,
+    };
 
     impl JsonSchema for TokenId {
         fn schema_name() -> String {
-            String::schema_name()
+            stringify!(TokenId).to_string()
         }
 
-        fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-            String::json_schema(gen)
-        }
-
-        fn is_referenceable() -> bool {
-            false
+        fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+            SchemaObject {
+                instance_type: Some(InstanceType::String.into()),
+                extensions: [(
+                    "examples",
+                    [
+                        Self::Nep141("ft.near".parse().unwrap()),
+                        Self::Nep171("nft.near".parse().unwrap(), "token_id1".to_string()),
+                        Self::Nep245("mt.near".parse().unwrap(), "token_id1".to_string()),
+                    ]
+                    .map(|s| s.to_string())
+                    .to_vec()
+                    .into(),
+                )]
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect(),
+                ..Default::default()
+            }
+            .into()
         }
     }
 }
