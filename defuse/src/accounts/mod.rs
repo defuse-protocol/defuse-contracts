@@ -16,7 +16,8 @@ use defuse_contracts::{
 };
 
 use near_sdk::{
-    borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey, IntoStorageKey,
+    assert_one_yocto, borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey,
+    IntoStorageKey,
 };
 
 use crate::{DefuseImpl, DefuseImplExt};
@@ -39,14 +40,18 @@ impl AccountManager for DefuseImpl {
             .collect()
     }
 
+    #[payable]
     fn add_public_key(&mut self, public_key: PublicKey) {
+        assert_one_yocto();
         self.accounts
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
             .add_public_key(&PREDECESSOR_ACCOUNT_ID, public_key)
             .unwrap_or_panic()
     }
 
+    #[payable]
     fn remove_public_key(&mut self, public_key: &PublicKey) {
+        assert_one_yocto();
         self.accounts
             // create account if doesn't exist, so the user can opt out of implicit public key
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
@@ -61,8 +66,10 @@ impl AccountManager for DefuseImpl {
             .unwrap_or_default()
     }
 
+    #[payable]
     #[handle_result]
     fn invalidate_nonces(&mut self, nonces: Vec<Base64<U256>>) -> Result<()> {
+        assert_one_yocto();
         let account = self.accounts.get_or_create(PREDECESSOR_ACCOUNT_ID.clone());
         for n in nonces.into_iter().map(Base64::into_inner) {
             account.commit_nonce(n)?;

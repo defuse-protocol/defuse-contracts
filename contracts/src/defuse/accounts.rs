@@ -15,10 +15,14 @@ pub trait AccountManager {
     fn public_keys_of(&self, account_id: &AccountId) -> HashSet<PublicKey>;
 
     /// Registers or re-activates `public_key` under the caller account_id.
+    ///
+    /// NOTE: MUST attach 1 yⓃ for security purposes.
     fn add_public_key(&mut self, public_key: PublicKey);
 
     /// Deactivate `public_key` from the caller account_id,
     /// i.e. this key can't be used to make any actions unless it's re-created.
+    ///
+    /// NOTE: MUST attach 1 yⓃ for security purposes.
     fn remove_public_key(&mut self, public_key: &PublicKey);
 
     /// Returns whether given nonce was already used by the account
@@ -26,6 +30,7 @@ pub trait AccountManager {
     /// [permit2 nonce schema](https://docs.uniswap.org/contracts/permit2/reference/signature-transfer#nonce-schema).
     fn is_nonce_used(&self, account_id: &AccountId, nonce: Base64<U256>) -> bool;
 
+    /// NOTE: MUST attach 1 yⓃ for security purposes.
     #[handle_result]
     fn invalidate_nonces(&mut self, nonces: Vec<Base64<U256>>) -> Result<()>;
 }
