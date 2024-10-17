@@ -2,9 +2,7 @@ use std::sync::LazyLock;
 
 use defuse_contracts::intents::swap_ft::{Action, DetailedIntent, Intent};
 use near_sdk::{json_types::U128, AccountId, Gas, NearToken};
-use near_workspaces::{
-    operations::TransactionStatus, result::ExecutionFinalResult, Account, Contract,
-};
+use near_workspaces::{operations::TransactionStatus, Account, Contract};
 use serde_json::json;
 
 use crate::utils::{account::AccountExt, read_wasm};
@@ -52,7 +50,7 @@ pub trait SwapFtIntentExt {
         amount: U128,
         gas: Gas,
     );
-    async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> ExecutionFinalResult;
+    async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> anyhow::Result<()>;
     async fn add_solver(&self, contract_id: &AccountId, solver_id: &AccountId);
     async fn set_min_ttl(&self, contract_id: &AccountId, min_ttl: u64);
 
@@ -191,15 +189,17 @@ impl SwapFtIntentExt for Account {
             .unwrap()
     }
 
-    async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> ExecutionFinalResult {
+    async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> anyhow::Result<()> {
         self.call(contract_id, "rollback_intent")
             .args_json(json!({
                 "id": id
             }))
             .gas(Gas::from_tgas(20))
             .transact()
-            .await
-            .unwrap()
+            .await?
+            .into_result()
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
     async fn add_solver(&self, contract_id: &AccountId, solver_id: &AccountId) {
@@ -308,7 +308,7 @@ impl SwapFtIntentExt for Contract {
             .await;
     }
 
-    async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> ExecutionFinalResult {
+    async fn rollback_intent(&self, contract_id: &AccountId, id: &str) -> anyhow::Result<()> {
         self.as_account().rollback_intent(contract_id, id).await
     }
 

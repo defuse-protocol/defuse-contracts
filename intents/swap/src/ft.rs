@@ -1,6 +1,6 @@
 use defuse_contracts::{
     intents::swap::{AssetWithAccount, FtAmount, NearAsset, SwapIntentAction, SwapIntentError},
-    utils::UnwrapOrPanic,
+    utils::UnwrapOrPanicError,
 };
 use near_contract_standards::fungible_token::{core::ext_ft_core, receiver::FungibleTokenReceiver};
 use near_sdk::{
