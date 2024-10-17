@@ -24,7 +24,7 @@ impl RelayerKeys for DefuseImpl {
                 .ok_or("no deposit attached for allowance")
                 .unwrap_or_panic_static_str(),
             CURRENT_ACCOUNT_ID.clone(),
-            "execute_signed_intents".into(),
+            "execute_intents".into(),
         )
     }
 
