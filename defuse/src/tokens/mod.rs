@@ -2,6 +2,8 @@ mod nep141;
 mod nep171;
 mod nep245;
 
+use std::borrow::Cow;
+
 use defuse_contracts::{
     defuse::{tokens::TokenId, DefuseError, Result},
     nep245::{MtBurnEvent, MtEventEmit, MtMintEvent},
@@ -41,26 +43,24 @@ impl State {
         token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
         memo: Option<&str>,
     ) -> Result<()> {
-        let mut token_ids = Vec::new();
-        let mut amounts = Vec::new();
+        let mut event = MtMintEvent {
+            owner_id: Cow::Borrowed(owner_id.as_ref()),
+            token_ids: Default::default(),
+            amounts: Default::default(),
+            memo: memo.map(Into::into),
+        };
 
         for (token_id, amount) in token_amounts {
             require!(amount > 0, "zero amount");
 
-            token_ids.push(token_id.to_string());
-            amounts.push(U128(amount));
+            event.token_ids.to_mut().push(token_id.to_string());
+            event.amounts.to_mut().push(U128(amount));
 
             self.total_supplies.deposit(token_id.clone(), amount)?;
             owner.token_balances.deposit(token_id, amount)?;
         }
 
-        [MtMintEvent {
-            owner_id,
-            token_ids: &token_ids,
-            amounts: &amounts,
-            memo,
-        }]
-        .emit();
+        [event].emit();
 
         Ok(())
     }
@@ -72,27 +72,25 @@ impl State {
         token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
         memo: Option<&str>,
     ) -> Result<()> {
-        let mut token_ids = Vec::new();
-        let mut amounts = Vec::new();
+        let mut event = MtBurnEvent {
+            owner_id: Cow::Borrowed(owner_id.as_ref()),
+            authorized_id: None,
+            token_ids: Default::default(),
+            amounts: Default::default(),
+            memo: memo.map(Into::into),
+        };
 
         for (token_id, amount) in token_amounts {
             require!(amount > 0, "zero amount");
 
-            token_ids.push(token_id.to_string());
-            amounts.push(U128(amount));
+            event.token_ids.to_mut().push(token_id.to_string());
+            event.amounts.to_mut().push(U128(amount));
 
             owner.token_balances.withdraw(token_id.clone(), amount)?;
             self.total_supplies.withdraw(token_id, amount)?;
         }
 
-        [MtBurnEvent {
-            owner_id,
-            authorized_id: None,
-            token_ids: &token_ids,
-            amounts: &amounts,
-            memo,
-        }]
-        .emit();
+        [event].emit();
 
         Ok(())
     }

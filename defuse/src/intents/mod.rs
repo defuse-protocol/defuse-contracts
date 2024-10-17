@@ -7,7 +7,7 @@ use defuse_contracts::{
     crypto::{Payload, SignedPayload},
     defuse::{
         events::DefuseIntentEmit,
-        intents::{DefuseIntents, Intent, IntentExecutedEvent, IntentsExecutor},
+        intents::{DefuseIntents, Intent, IntentExecutedEvent, IntentsExecutor, SignerEvent},
         payload::{DefuseMessage, MultiStandardPayload, ValidatePayloadAs},
         DefuseError, Result,
     },
@@ -24,6 +24,7 @@ impl IntentsExecutor for DefuseImpl {
     #[pause(name = "intents")]
     #[handle_result]
     fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>) -> Result<()> {
+        let mut events = Vec::with_capacity(intents.len());
         for signed in intents {
             // calculate intent hash
             let hash = signed.payload.hash();
@@ -54,7 +55,7 @@ impl IntentsExecutor for DefuseImpl {
                 message: intents,
             } = serde_json::from_str(&message)?;
 
-            // make message is still valid
+            // make sure message is still valid
             if deadline.has_expired() {
                 return Err(DefuseError::DeadlineExpired);
             }
@@ -72,31 +73,35 @@ impl IntentsExecutor for DefuseImpl {
 
             // execute intent
             self.state.execute_intent(&signer_id, signer, intents)?;
-            IntentExecutedEvent {
-                signer_id: &signer_id,
-                hash: &hash,
-            }
-            .emit();
+            events.push(SignerEvent::new(signer_id, IntentExecutedEvent { hash }));
         }
+        events.emit();
         Ok(())
     }
 
     #[handle_result]
-    fn simulate_intents(mut self, intents: Vec<DefuseMessage<DefuseIntents>>) -> Result<()> {
-        for message in intents {
-            // make message is still valid
-            if message.deadline.has_expired() {
-                return Err(DefuseError::DeadlineExpired);
-            }
+    fn simulate_intents(
+        self,
+        #[allow(unused_variables)] intents: Vec<DefuseMessage<DefuseIntents>>,
+    ) -> Result<()> {
+        todo!()
 
-            // get the account of the signer, create if doesn't exist
-            let signer = self.accounts.get_or_create(message.signer_id.clone());
+        // WARNING: this turns out to modify the state!!!
 
-            // execute intent
-            self.state
-                .execute_intent(&message.signer_id, signer, message.message)?;
-        }
-        Ok(())
+        // for message in intents {
+        //     // make sure message is still valid
+        //     if message.deadline.has_expired() {
+        //         return Err(DefuseError::DeadlineExpired);
+        //     }
+
+        //     // get the account of the signer, create if doesn't exist
+        //     let signer = self.accounts.get_or_create(message.signer_id.clone());
+
+        //     // execute intent
+        //     self.state
+        //         .execute_intent(&message.signer_id, signer, message.message)?;
+        // }
+        // Ok(())
     }
 }
 
@@ -138,10 +143,10 @@ impl IntentExecutor<Intent> for State {
             Intent::InvalidateNonces(intent) => self.execute_intent(account_id, account, intent),
             Intent::MtBatchTransfer(intent) => self.execute_intent(account_id, account, intent),
             Intent::MtBatchTransferCall(intent) => self.execute_intent(account_id, account, intent),
-            Intent::TokenDiff(intent) => self.execute_intent(account_id, account, intent),
             Intent::FtWithdraw(intent) => self.execute_intent(account_id, account, intent),
             Intent::NftWithdraw(intent) => self.execute_intent(account_id, account, intent),
             Intent::MtWithdraw(intent) => self.execute_intent(account_id, account, intent),
+            Intent::TokenDiff(intent) => self.execute_intent(account_id, account, intent),
         }
     }
 }

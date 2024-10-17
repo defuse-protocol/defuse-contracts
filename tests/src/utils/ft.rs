@@ -154,7 +154,14 @@ impl FtExt for Account {
             .max_gas()
             .transact()
             .await?
-            .into_result()?
+            .into_result()
+            .inspect(|outcome| {
+                println!(
+                    "ft_transfer_call: total_gas_burnt: {}, logs: {:#?}",
+                    outcome.total_gas_burnt,
+                    outcome.logs()
+                );
+            })?
             .json::<U128>()
             .map(|v| v.0)
             .map_err(Into::into)

@@ -3,8 +3,10 @@ pub mod relayer;
 pub mod token_diff;
 pub mod tokens;
 
+use std::borrow::Cow;
+
 use derive_more::derive::From;
-use near_sdk::{ext_contract, near, serde::Serialize, AccountId, CryptoHash};
+use near_sdk::{ext_contract, near, AccountIdRef, CryptoHash};
 use serde_with::serde_as;
 
 use crate::{crypto::SignedPayload, utils::serde::base58::Base58};
@@ -26,6 +28,7 @@ pub trait IntentsExecutor: FeesManager {
     #[handle_result]
     fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>) -> Result<()>;
 
+    // WARNING: this turns out to modify the state!!!
     #[handle_result]
     fn simulate_intents(self, intents: Vec<DefuseMessage<DefuseIntents>>) -> Result<()>;
 }
@@ -59,14 +62,39 @@ pub enum Intent {
 }
 
 #[must_use = "make sure to `.emit()` this event"]
-#[serde_as]
-#[derive(Debug, Serialize)]
-#[serde(crate = "::near_sdk::serde")]
-pub struct IntentExecutedEvent<'a> {
-    pub signer_id: &'a AccountId,
+#[near(serializers = [json])]
+#[derive(Debug)]
+pub struct SignerEvent<'a, T> {
+    pub signer_id: Cow<'a, AccountIdRef>,
 
+    #[serde(flatten)]
+    pub event: T,
+}
+
+impl<'a, T> SignerEvent<'a, T> {
+    #[inline]
+    pub fn new(signer_id: impl Into<Cow<'a, AccountIdRef>>, event: T) -> Self {
+        Self {
+            signer_id: signer_id.into(),
+            event,
+        }
+    }
+}
+
+#[must_use = "make sure to `.emit()` this event"]
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
+#[near(serializers = [json])]
+#[derive(Debug)]
+pub struct IntentExecutedEvent {
     #[serde_as(as = "Base58")]
-    pub hash: &'a CryptoHash,
+    pub hash: CryptoHash,
 }
 
 #[cfg(test)]

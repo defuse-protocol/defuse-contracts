@@ -1,10 +1,12 @@
+use std::borrow::Cow;
+
 use derive_more::derive::From;
 use near_sdk::near;
 
 use super::{
     accounts::{PublicKeyAddedEvent, PublicKeyRemovedEvent},
     fees::{FeeChangedEvent, FeeCollectorChangedEvent},
-    intents::{token_diff::TokenDiffEvent, IntentExecutedEvent},
+    intents::{token_diff::TokenDiff, IntentExecutedEvent, SignerEvent},
 };
 
 #[must_use = "make sure to `.emit()` this event"]
@@ -17,15 +19,15 @@ pub enum DefuseEvent<'a> {
     PublicKeyRemoved(PublicKeyRemovedEvent<'a>),
 
     #[event_version("0.1.0")]
-    FeeChanged(FeeChangedEvent<'a>),
+    FeeChanged(FeeChangedEvent),
     #[event_version("0.1.0")]
     FeeCollectorChanged(FeeCollectorChangedEvent<'a>),
 
     #[event_version("0.1.0")]
-    IntentExecuted(IntentExecutedEvent<'a>),
+    IntentsExecuted(&'a [SignerEvent<'a, IntentExecutedEvent>]),
 
     #[event_version("0.1.0")]
-    TokenDiff(TokenDiffEvent<'a>),
+    TokenDiff(SignerEvent<'a, Cow<'a, TokenDiff>>),
 }
 
 pub trait DefuseIntentEmit<'a>: Into<DefuseEvent<'a>> {

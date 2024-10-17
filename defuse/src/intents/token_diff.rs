@@ -1,12 +1,13 @@
+use std::borrow::Cow;
+
 use defuse_contracts::{
     defuse::{
         events::DefuseIntentEmit,
-        intents::token_diff::{TokenDiff, TokenDiffEvent},
+        intents::{token_diff::TokenDiff, SignerEvent},
         tokens::TokenId,
         DefuseError, Result,
     },
     nep245::{self, MtEventEmit, MtTransferEvent},
-    utils::cache::CURRENT_ACCOUNT_ID,
 };
 use near_sdk::{json_types::U128, require, AccountId};
 
@@ -23,13 +24,9 @@ impl IntentExecutor<TokenDiff> for State {
     ) -> Result<()> {
         require!(!intent.diff.is_empty(), "empty token_diff");
 
-        TokenDiffEvent {
-            signer_id,
-            token_diff: &intent,
-        }
-        .emit();
-        let mut events = TransferEventsBuilder::default();
+        SignerEvent::new(Cow::Borrowed(signer_id.as_ref()), Cow::Borrowed(&intent)).emit();
 
+        let mut transfer_events = DeltaTransferEventsBuilder::default();
         let fees_collected = self
             .runtime
             .postponed_deposits
@@ -39,35 +36,35 @@ impl IntentExecutor<TokenDiff> for State {
         for (token_id, delta) in intent.diff {
             require!(delta != 0, "zero delta");
 
-            events.push_delta(&token_id, delta);
             signer.token_balances.add_delta(token_id.clone(), delta)?;
 
             let fee = self.fee.fee_ceil(delta.unsigned_abs());
             fees_collected.add(token_id.clone(), fee)?;
 
+            transfer_events.push_delta(&token_id, delta);
             self.runtime.total_supply_deltas.add(
-                token_id.clone(),
+                token_id,
                 delta
                     .checked_add_unsigned(fee)
                     .ok_or(DefuseError::IntegerOverflow)?,
             )?;
         }
 
-        events.emit_for(signer_id);
+        transfer_events.emit_for(signer_id, &self.fee_collector);
 
         Ok(())
     }
 }
 
 #[derive(Debug, Default)]
-struct TransferEventsBuilder {
+struct DeltaTransferEventsBuilder {
     withdraw_token_ids: Vec<nep245::TokenId>,
     withdraw_amounts: Vec<U128>,
     deposit_token_ids: Vec<nep245::TokenId>,
     deposit_amounts: Vec<U128>,
 }
 
-impl TransferEventsBuilder {
+impl DeltaTransferEventsBuilder {
     #[inline]
     pub fn push_delta(&mut self, token_id: &TokenId, delta: i128) {
         let (token_ids, amounts) = if delta.is_negative() {
@@ -79,18 +76,23 @@ impl TransferEventsBuilder {
         amounts.push(U128(delta.unsigned_abs()));
     }
 
-    pub fn emit_for(self, signer: &AccountId) {
+    pub fn emit_for(self, signer: &AccountId, collector: &AccountId) {
         [
             (!self.withdraw_amounts.is_empty()).then(|| {
                 Self::make_event(
                     signer,
-                    false,
+                    collector,
                     &self.withdraw_token_ids,
                     &self.withdraw_amounts,
                 )
             }),
             (!self.deposit_amounts.is_empty()).then(|| {
-                Self::make_event(signer, true, &self.deposit_token_ids, &self.deposit_amounts)
+                Self::make_event(
+                    collector,
+                    signer,
+                    &self.deposit_token_ids,
+                    &self.deposit_amounts,
+                )
             }),
         ]
         .into_iter()
@@ -101,18 +103,18 @@ impl TransferEventsBuilder {
 
     #[inline]
     fn make_event<'a>(
-        signer: &'a AccountId,
-        deposit: bool,
+        old_owner_id: &'a AccountId,
+        new_owner_id: &'a AccountId,
         token_ids: &'a [nep245::TokenId],
         amounts: &'a [U128],
     ) -> MtTransferEvent<'a> {
         MtTransferEvent {
             authorized_id: None,
-            old_owner_id: if deposit { &CURRENT_ACCOUNT_ID } else { signer },
-            new_owner_id: if deposit { signer } else { &CURRENT_ACCOUNT_ID },
-            token_ids,
-            amounts,
-            memo: Some("token_diff"),
+            old_owner_id: Cow::Borrowed(old_owner_id.as_ref()),
+            new_owner_id: Cow::Borrowed(new_owner_id.as_ref()),
+            token_ids: token_ids.into(),
+            amounts: amounts.into(),
+            memo: Some("token_diff".into()),
         }
     }
 }

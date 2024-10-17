@@ -32,26 +32,26 @@ impl IntentExecutor<MtBatchTransfer> for State {
             "token_ids.len() != amounts.len()"
         );
 
-        [MtTransferEvent {
+        let mut event = MtTransferEvent {
             authorized_id: None,
-            old_owner_id: sender_id,
-            new_owner_id: &receiver_id,
-            token_ids: &token_ids
-                .iter()
-                .map(ToString::to_string)
-                .collect::<Vec<_>>(),
-            amounts: &amounts,
-            memo: memo.as_deref(),
-        }]
-        .emit();
+            old_owner_id: sender_id.into(),
+            new_owner_id: receiver_id.clone().into(),
+            token_ids: Vec::with_capacity(token_ids.len()).into(),
+            amounts: amounts.clone().into(),
+            memo: memo.map(Into::into),
+        };
 
         let receiver_deposit = self.postponed_deposits.entry(receiver_id).or_default();
 
         for (token_id, amount) in token_ids.into_iter().zip(amounts.into_iter().map(|a| a.0)) {
             require!(amount > 0, "zero amount");
+            event.token_ids.to_mut().push(token_id.to_string());
+
             sender.token_balances.withdraw(token_id.clone(), amount)?;
             receiver_deposit.add(token_id, amount)?;
         }
+
+        [event].emit();
 
         Ok(())
     }

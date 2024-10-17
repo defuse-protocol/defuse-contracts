@@ -62,6 +62,7 @@ impl MultiTokenResolver for DefuseImpl {
 
         for ((token_id, previous_owner_id), (amount, refund)) in token_ids
             .iter()
+            .map(|token_id| token_id.parse().unwrap_or_panic_display())
             .zip(previous_owner_ids)
             .zip(amounts.iter_mut().zip(&mut refunds))
         {
@@ -69,7 +70,6 @@ impl MultiTokenResolver for DefuseImpl {
                 sender_id == previous_owner_id,
                 "approvals are not supported"
             );
-            let token_id = token_id.parse().unwrap_or_panic_display();
 
             refund.0 = refund.0.min(amount.0);
             if refund.0 == 0 {
@@ -107,11 +107,11 @@ impl MultiTokenResolver for DefuseImpl {
 
         [MtTransferEvent {
             authorized_id: None,
-            old_owner_id: &receiver_id,
-            new_owner_id: &sender_id,
-            token_ids: &token_ids,
-            amounts: &refunds,
-            memo: Some("refund"),
+            old_owner_id: receiver_id.into(),
+            new_owner_id: sender_id.into(),
+            token_ids: token_ids.into(),
+            amounts: refunds.into(),
+            memo: Some("refund".into()),
         }]
         .emit();
 

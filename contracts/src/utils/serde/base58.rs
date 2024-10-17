@@ -38,3 +38,38 @@ where
         })
     }
 }
+
+#[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
+mod abi {
+    use super::*;
+
+    use near_sdk::schemars::{
+        gen::SchemaGenerator,
+        schema::{InstanceType, Schema, SchemaObject},
+        JsonSchema,
+    };
+    use serde_with::schemars_0_8::JsonSchemaAs;
+
+    impl<T> JsonSchemaAs<T> for Base58 {
+        fn schema_name() -> String {
+            String::schema_name()
+        }
+
+        fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+            // TODO: use #[schemars(extend(...))] when released
+            SchemaObject {
+                instance_type: Some(InstanceType::String.into()),
+                extensions: [("contentEncoding", "base58".into())]
+                    .into_iter()
+                    .map(|(k, v)| (k.to_string(), v))
+                    .collect(),
+                ..Default::default()
+            }
+            .into()
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+    }
+}

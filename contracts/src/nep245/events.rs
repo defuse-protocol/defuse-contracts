@@ -1,10 +1,13 @@
+use std::borrow::Cow;
+
 use derive_more::derive::From;
-use near_sdk::{json_types::U128, near, serde::Serialize, AccountId};
+use near_sdk::{json_types::U128, near, AccountIdRef};
 
 use super::TokenId;
 
 #[must_use = "make sure to `.emit()` this event"]
 #[near(event_json(standard = "nep245"))]
+// TODO: #[derive(Deserialize)]
 #[derive(Debug, From)]
 pub enum MtEvent<'a> {
     #[event_version("0.1.0")]
@@ -16,41 +19,41 @@ pub enum MtEvent<'a> {
 }
 
 #[must_use = "make sure to `.emit()` this event"]
-#[derive(Debug, Serialize)]
-#[serde(crate = "::near_sdk::serde")]
+#[near(serializers = [json])]
+#[derive(Debug)]
 pub struct MtMintEvent<'a> {
-    pub owner_id: &'a AccountId,
-    pub token_ids: &'a [TokenId],
-    pub amounts: &'a [U128],
+    pub owner_id: Cow<'a, AccountIdRef>,
+    pub token_ids: Cow<'a, [TokenId]>,
+    pub amounts: Cow<'a, [U128]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub memo: Option<&'a str>,
+    pub memo: Option<Cow<'a, str>>,
 }
 
 #[must_use = "make sure to `.emit()` this event"]
-#[derive(Debug, Serialize)]
-#[serde(crate = "::near_sdk::serde")]
+#[near(serializers = [json])]
+#[derive(Debug)]
 pub struct MtBurnEvent<'a> {
-    pub owner_id: &'a AccountId,
+    pub owner_id: Cow<'a, AccountIdRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub authorized_id: Option<&'a AccountId>,
-    pub token_ids: &'a [TokenId],
-    pub amounts: &'a [U128],
+    pub authorized_id: Option<Cow<'a, AccountIdRef>>,
+    pub token_ids: Cow<'a, [TokenId]>,
+    pub amounts: Cow<'a, [U128]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub memo: Option<&'a str>,
+    pub memo: Option<Cow<'a, str>>,
 }
 
 #[must_use = "make sure to `.emit()` this event"]
-#[derive(Debug, Serialize)]
-#[serde(crate = "::near_sdk::serde")]
+#[near(serializers = [json])]
+#[derive(Debug)]
 pub struct MtTransferEvent<'a> {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub authorized_id: Option<&'a AccountId>,
-    pub old_owner_id: &'a AccountId,
-    pub new_owner_id: &'a AccountId,
-    pub token_ids: &'a [TokenId],
-    pub amounts: &'a [U128],
+    pub authorized_id: Option<Cow<'a, AccountIdRef>>,
+    pub old_owner_id: Cow<'a, AccountIdRef>,
+    pub new_owner_id: Cow<'a, AccountIdRef>,
+    pub token_ids: Cow<'a, [TokenId]>,
+    pub amounts: Cow<'a, [U128]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub memo: Option<&'a str>,
+    pub memo: Option<Cow<'a, str>>,
 }
 
 pub trait MtEventEmit<'a>: Into<MtEvent<'a>> {

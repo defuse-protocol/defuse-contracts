@@ -172,7 +172,7 @@ pub trait DefuseFtReceiver {
         defuse_id: &AccountId,
         token_id: &AccountId,
         amount: u128,
-        msg: DepositMessage,
+        msg: impl Into<Option<DepositMessage>>,
     ) -> anyhow::Result<u128>;
 }
 
@@ -182,10 +182,19 @@ impl DefuseFtReceiver for near_workspaces::Account {
         defuse_id: &AccountId,
         token_id: &AccountId,
         amount: u128,
-        msg: DepositMessage,
+        msg: impl Into<Option<DepositMessage>>,
     ) -> anyhow::Result<u128> {
-        self.ft_transfer_call(token_id, defuse_id, amount, None, &msg.to_string())
-            .await
+        self.ft_transfer_call(
+            token_id,
+            defuse_id,
+            amount,
+            None,
+            &msg.into()
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_default(),
+        )
+        .await
     }
 }
 
@@ -195,7 +204,7 @@ impl DefuseFtReceiver for near_workspaces::Contract {
         defuse_id: &AccountId,
         token_id: &AccountId,
         amount: u128,
-        msg: DepositMessage,
+        msg: impl Into<Option<DepositMessage>>,
     ) -> anyhow::Result<u128> {
         self.as_account()
             .defuse_ft_deposit(defuse_id, token_id, amount, msg)

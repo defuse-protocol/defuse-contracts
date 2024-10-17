@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use defuse_contracts::{
     crypto::PublicKey,
     defuse::{
@@ -51,8 +53,8 @@ impl Account {
     #[inline]
     pub fn add_public_key(&mut self, me: &AccountId, public_key: PublicKey) -> Result<()> {
         PublicKeyAddedEvent {
-            account_id: me,
-            public_key: &public_key,
+            account_id: Cow::Borrowed(me.as_ref()),
+            public_key: Cow::Borrowed(&public_key),
         }
         .emit();
 
@@ -76,8 +78,8 @@ impl Account {
     #[inline]
     pub fn remove_public_key(&mut self, me: &AccountId, public_key: &PublicKey) -> Result<()> {
         PublicKeyRemovedEvent {
-            account_id: me,
-            public_key,
+            account_id: Cow::Borrowed(me.as_ref()),
+            public_key: Cow::Borrowed(public_key),
         }
         .emit();
 
