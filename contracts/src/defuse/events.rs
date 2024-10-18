@@ -6,7 +6,7 @@ use near_sdk::near;
 use super::{
     accounts::PublicKeyEvent,
     fees::{FeeChangedEvent, FeeCollectorChangedEvent},
-    intents::{token_diff::TokenDiff, IntentExecutedEvent, SignerEvent},
+    intents::{token_diff::TokenDiff, AccountEvent, IntentExecutedEvent},
 };
 
 #[must_use = "make sure to `.emit()` this event"]
@@ -15,10 +15,10 @@ use super::{
 pub enum DefuseEvent<'a> {
     #[event_version("0.1.0")]
     #[from(skip)]
-    PublicKeyAdded(SignerEvent<'a, PublicKeyEvent<'a>>),
+    PublicKeyAdded(AccountEvent<'a, PublicKeyEvent<'a>>),
     #[event_version("0.1.0")]
     #[from(skip)]
-    PublicKeyRemoved(SignerEvent<'a, PublicKeyEvent<'a>>),
+    PublicKeyRemoved(AccountEvent<'a, PublicKeyEvent<'a>>),
 
     #[event_version("0.1.0")]
     FeeChanged(FeeChangedEvent),
@@ -26,10 +26,10 @@ pub enum DefuseEvent<'a> {
     FeeCollectorChanged(FeeCollectorChangedEvent<'a>),
 
     #[event_version("0.1.0")]
-    IntentsExecuted(&'a [SignerEvent<'a, IntentExecutedEvent>]),
+    IntentsExecuted(&'a [AccountEvent<'a, IntentExecutedEvent>]),
 
     #[event_version("0.1.0")]
-    TokenDiff(SignerEvent<'a, Cow<'a, TokenDiff>>),
+    TokenDiff(AccountEvent<'a, Cow<'a, TokenDiff>>),
 }
 
 pub trait DefuseIntentEmit<'a>: Into<DefuseEvent<'a>> {

@@ -5,7 +5,7 @@ use defuse_contracts::{
     defuse::{
         accounts::PublicKeyEvent,
         events::{DefuseEvent, DefuseIntentEmit},
-        intents::SignerEvent,
+        intents::AccountEvent,
         DefuseError, Result,
     },
     nep413::U256,
@@ -53,7 +53,7 @@ impl Account {
 
     #[inline]
     pub fn add_public_key(&mut self, me: &AccountId, public_key: PublicKey) -> Result<()> {
-        DefuseEvent::PublicKeyAdded(SignerEvent::new(
+        DefuseEvent::PublicKeyAdded(AccountEvent::new(
             Cow::Borrowed(me.as_ref()),
             PublicKeyEvent {
                 public_key: Cow::Borrowed(&public_key),
@@ -80,7 +80,7 @@ impl Account {
 
     #[inline]
     pub fn remove_public_key(&mut self, me: &AccountId, public_key: &PublicKey) -> Result<()> {
-        DefuseEvent::PublicKeyRemoved(SignerEvent::new(
+        DefuseEvent::PublicKeyRemoved(AccountEvent::new(
             Cow::Borrowed(me.as_ref()),
             PublicKeyEvent {
                 public_key: Cow::Borrowed(public_key),

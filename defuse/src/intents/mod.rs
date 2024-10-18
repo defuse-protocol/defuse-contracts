@@ -7,7 +7,7 @@ use defuse_contracts::{
     crypto::{Payload, SignedPayload},
     defuse::{
         events::DefuseIntentEmit,
-        intents::{DefuseIntents, Intent, IntentExecutedEvent, IntentsExecutor, SignerEvent},
+        intents::{AccountEvent, DefuseIntents, Intent, IntentExecutedEvent, IntentsExecutor},
         payload::{DefuseMessage, MultiStandardPayload, ValidatePayloadAs},
         DefuseError, Result,
     },
@@ -73,7 +73,7 @@ impl IntentsExecutor for DefuseImpl {
 
             // execute intent
             self.state.execute_intent(&signer_id, signer, intents)?;
-            events.push(SignerEvent::new(signer_id, IntentExecutedEvent { hash }));
+            events.push(AccountEvent::new(signer_id, IntentExecutedEvent { hash }));
         }
         events.emit();
         Ok(())

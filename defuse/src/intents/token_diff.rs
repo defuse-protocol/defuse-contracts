@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use defuse_contracts::{
     defuse::{
         events::DefuseIntentEmit,
-        intents::{token_diff::TokenDiff, SignerEvent},
+        intents::{token_diff::TokenDiff, AccountEvent},
         tokens::TokenId,
         DefuseError, Result,
     },
@@ -24,7 +24,7 @@ impl IntentExecutor<TokenDiff> for State {
     ) -> Result<()> {
         require!(!intent.diff.is_empty(), "empty token_diff");
 
-        SignerEvent::new(Cow::Borrowed(signer_id.as_ref()), Cow::Borrowed(&intent)).emit();
+        AccountEvent::new(Cow::Borrowed(signer_id.as_ref()), Cow::Borrowed(&intent)).emit();
 
         let mut transfer_events = DeltaTransferEventsBuilder::default();
         let fees_collected = self

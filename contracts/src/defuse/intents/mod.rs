@@ -64,18 +64,18 @@ pub enum Intent {
 #[must_use = "make sure to `.emit()` this event"]
 #[near(serializers = [json])]
 #[derive(Debug)]
-pub struct SignerEvent<'a, T> {
-    pub signer_id: Cow<'a, AccountIdRef>,
+pub struct AccountEvent<'a, T> {
+    pub account_id: Cow<'a, AccountIdRef>,
 
     #[serde(flatten)]
     pub event: T,
 }
 
-impl<'a, T> SignerEvent<'a, T> {
+impl<'a, T> AccountEvent<'a, T> {
     #[inline]
-    pub fn new(signer_id: impl Into<Cow<'a, AccountIdRef>>, event: T) -> Self {
+    pub fn new(account_id: impl Into<Cow<'a, AccountIdRef>>, event: T) -> Self {
         Self {
-            signer_id: signer_id.into(),
+            account_id: account_id.into(),
             event,
         }
     }
