@@ -28,10 +28,15 @@ impl ExecuteIntentsExt for near_workspaces::Account {
         &self,
         intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
     ) -> anyhow::Result<()> {
+        let args = json!({
+            "intents": intents.into_iter().collect::<Vec<_>>(),
+        });
+        println!(
+            "execute_intents({})",
+            serde_json::to_string_pretty(&args).unwrap()
+        );
         self.call(self.id(), "execute_intents")
-            .args_json(json!({
-                "intents": intents.into_iter().collect::<Vec<_>>(),
-            }))
+            .args_json(args)
             .max_gas()
             .transact()
             .await?

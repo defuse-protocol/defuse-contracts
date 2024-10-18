@@ -34,10 +34,12 @@ impl AccountManager for DefuseImpl {
     fn public_keys_of(&self, account_id: &AccountId) -> HashSet<PublicKey> {
         self.accounts
             .get(account_id)
-            .into_iter()
-            .flat_map(Account::iter_public_keys)
-            .cloned()
-            .collect()
+            .map(|account| account.iter_public_keys(account_id).collect())
+            .unwrap_or(
+                PublicKey::from_implicit_account_id(account_id)
+                    .into_iter()
+                    .collect(),
+            )
     }
 
     #[payable]

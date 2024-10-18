@@ -13,6 +13,10 @@ use super::{AsCurve, Curve, Ed25519, PublicKey, Secp256k1};
     serde_as(schemars = false)
 )]
 #[near(serializers = [borsh, json])]
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    schemars(example = "Self::example_ed25519")
+)]
 #[serde(untagged)]
 pub enum Signature {
     /// Ed25519
@@ -47,6 +51,23 @@ impl Signature {
             Signature::Secp256k1 {
                 signature: [signature @ .., v],
             } => env::ecrecover(hash, signature, *v, true).map(PublicKey::Secp256k1),
+        }
+    }
+}
+
+#[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
+mod abi {
+    use super::*;
+
+    impl Signature {
+        pub(super) fn example_ed25519() -> Self {
+            Self::Ed25519 {
+                signature: Ed25519::parse_base58(
+                    "ed25519:DNxoVu7L7sHr9pcHGWQoJtPsrwheB8akht1JxaGpc9hGrpehdycXBMLJg4ph1bQ9bXdfoxJCbbwxj3Bdrda52eF")
+                    .unwrap(),
+                public_key: Ed25519::parse_base58("ed25519:5TagutioHgKLh7KZ1VEFBYfgRkPtqnKm9LoMnJMJugxm")
+                    .unwrap(),
+            }
         }
     }
 }

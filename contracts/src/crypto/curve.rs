@@ -22,7 +22,7 @@ pub trait Curve {
         )
     }
 
-    fn from_base58<const N: usize>(s: impl AsRef<str>) -> Result<[u8; N], ParseCurveError> {
+    fn parse_base58<const N: usize>(s: impl AsRef<str>) -> Result<[u8; N], ParseCurveError> {
         let s = s.as_ref();
         let data = if let Some((curve, data)) = s.split_once(':') {
             if !curve.eq_ignore_ascii_case(Self::PREFIX) {
@@ -82,7 +82,7 @@ impl<'de, C: Curve, const N: usize> DeserializeAs<'de, [u8; N]> for AsCurve<C> {
         D: Deserializer<'de>,
     {
         let s = <&str as Deserialize>::deserialize(deserializer)?;
-        C::from_base58(s).map_err(de::Error::custom)
+        C::parse_base58(s).map_err(de::Error::custom)
     }
 }
 

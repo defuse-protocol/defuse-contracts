@@ -112,8 +112,12 @@ impl Account {
     }
 
     #[inline]
-    pub fn iter_public_keys(&self) -> impl Iterator<Item = &'_ PublicKey> {
-        self.public_keys.iter()
+    pub fn iter_public_keys(&self, me: &AccountId) -> impl Iterator<Item = PublicKey> + '_ {
+        self.public_keys.iter().cloned().chain(
+            (!self.implicit_public_key_removed)
+                .then(|| PublicKey::from_implicit_account_id(me))
+                .flatten(),
+        )
     }
 
     #[inline]
