@@ -305,6 +305,21 @@ impl DepositMessage {
             refund_if_fails: false,
         }
     }
+
+    #[inline]
+    pub fn with_execute_intents(
+        mut self,
+        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+    ) -> Self {
+        self.execute_intents.extend(intents);
+        self
+    }
+
+    #[inline]
+    pub fn with_refund_if_fails(mut self) -> Self {
+        self.refund_if_fails = true;
+        self
+    }
 }
 
 impl Display for DepositMessage {

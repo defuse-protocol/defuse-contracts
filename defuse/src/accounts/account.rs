@@ -89,7 +89,7 @@ impl Account {
         .emit();
 
         if !self.maybe_remove_public_key(me, public_key) {
-            return Err(DefuseError::PublicKeyExists);
+            return Err(DefuseError::PublicKeyNotExist);
         }
         Ok(())
     }

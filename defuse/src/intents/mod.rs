@@ -65,7 +65,7 @@ impl IntentsExecutor for DefuseImpl {
 
             // make sure the account has this public key
             if !signer.has_public_key(&signer_id, &public_key) {
-                return Err(DefuseError::InvalidSignature);
+                return Err(DefuseError::PublicKeyNotExist);
             }
 
             // commit nonce
