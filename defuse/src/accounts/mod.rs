@@ -35,11 +35,11 @@ impl AccountManager for DefuseImpl {
         self.accounts
             .get(account_id)
             .map(|account| account.iter_public_keys(account_id).collect())
-            .unwrap_or(
+            .unwrap_or_else(|| {
                 PublicKey::from_implicit_account_id(account_id)
                     .into_iter()
-                    .collect(),
-            )
+                    .collect()
+            })
     }
 
     #[payable]
