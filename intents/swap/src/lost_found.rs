@@ -1,6 +1,6 @@
 use defuse_contracts::{
     intents::swap::{IntentId, LostFound, SwapIntentError},
-    utils::UnwrapOrPanic,
+    utils::UnwrapOrPanicError,
 };
 use near_sdk::{env, near, Gas, Promise, PromiseError};
 

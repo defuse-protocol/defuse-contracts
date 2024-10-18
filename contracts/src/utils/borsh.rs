@@ -1,26 +1,60 @@
+use std::{fmt::Display, str::FromStr};
+
 use near_sdk::{
     base64::{engine::general_purpose::STANDARD, Engine},
-    borsh::{self, io, BorshDeserialize, BorshSerialize},
+    borsh::{self, io, BorshSerialize},
 };
 
-#[inline]
-pub fn as_base64<T, W>(obj: &T, writer: &mut W) -> Result<(), io::Error>
-where
-    T: BorshSerialize,
-    W: io::Write,
-{
-    let v = borsh::to_vec(obj)?;
-    let s = STANDARD.encode(v);
-    s.serialize(writer)
+pub struct Base64;
+
+impl Base64 {
+    #[inline]
+    pub fn serialize<T, W>(obj: &T, writer: &mut W) -> io::Result<()>
+    where
+        T: AsRef<[u8]>,
+        W: io::Write,
+    {
+        let s = STANDARD.encode(obj.as_ref());
+        s.serialize(writer)
+    }
+
+    #[inline]
+    pub fn deserialize<T, R>(reader: &mut R) -> io::Result<T>
+    where
+        T: TryFrom<Vec<u8>>,
+        R: io::Read,
+    {
+        let s: String = borsh::BorshDeserialize::deserialize_reader(reader)?;
+        let v = STANDARD.decode(s).map_err(io::Error::other)?;
+        let length = v.len();
+        v.try_into().map_err(|_| {
+            io::Error::other(format!(
+                "can't convert a byte vector of length {length} into the output type"
+            ))
+        })
+    }
 }
 
-#[inline]
-pub fn from_base64<T, R>(reader: &mut R) -> Result<T, io::Error>
-where
-    T: BorshDeserialize,
-    R: io::Read,
-{
-    let s: String = borsh::BorshDeserialize::deserialize_reader(reader)?;
-    let v = STANDARD.decode(s).map_err(io::Error::other)?;
-    borsh::from_slice(&v)
+pub struct DisplayFromStr;
+
+impl DisplayFromStr {
+    #[inline]
+    pub fn serialize<T, W>(obj: &T, writer: &mut W) -> io::Result<()>
+    where
+        T: Display,
+        W: io::Write,
+    {
+        obj.to_string().serialize(writer)
+    }
+
+    #[inline]
+    pub fn deserialize<T, R>(reader: &mut R) -> io::Result<T>
+    where
+        T: FromStr,
+        T::Err: Display,
+        R: io::Read,
+    {
+        let s: String = borsh::BorshDeserialize::deserialize_reader(reader)?;
+        T::from_str(&s).map_err(|e| io::Error::other(e.to_string()))
+    }
 }

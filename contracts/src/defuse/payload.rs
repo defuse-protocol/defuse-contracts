@@ -1,43 +1,74 @@
-use core::convert::Infallible;
-use std::collections::HashMap;
-
-use near_sdk::{borsh::BorshSerialize, near, AccountId};
-
-use crate::{
-    crypto::{Payload, SignedPayload},
-    nep413::Nep413Payload,
+use core::{
+    convert::Infallible,
+    fmt::{self, Display},
+    str::FromStr,
 };
 
-pub type SignedPayloads<T> = HashMap<
-    // Signer account
-    AccountId,
-    // Payloads signed by the account
-    Vec<SignedPayload<MultiStandardPayload<T>>>,
->;
+use derive_more::derive::From;
+use impl_tools::autoimpl;
+use near_sdk::{
+    near,
+    serde::{de::DeserializeOwned, Serialize},
+    serde_json, AccountId, CryptoHash,
+};
 
-#[derive(Debug, Clone)]
+use crate::{crypto::Payload, nep413::Nep413Payload, utils::Deadline};
+
 #[near(serializers = [borsh, json])]
-#[serde(tag = "standard", rename_all = "snake_case")]
-pub enum MultiStandardPayload<T> {
-    Nep413(Nep413Payload<T>),
+#[autoimpl(Deref using self.message)]
+#[autoimpl(DerefMut using self.message)]
+#[derive(Debug, Clone)]
+pub struct DefuseMessage<T> {
+    pub signer_id: AccountId,
+
+    pub deadline: Deadline,
+
+    #[serde(flatten)]
+    pub message: T,
 }
 
-impl<T> Payload for MultiStandardPayload<T>
+impl<T> Display for DefuseMessage<T>
 where
-    T: BorshSerialize,
+    T: Serialize,
 {
     #[inline]
-    fn hash(&self) -> [u8; 32] {
-        match self {
-            Self::Nep413(payload) => payload.hash(),
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = if f.alternate() {
+            serde_json::to_string_pretty(self)
+        } else {
+            serde_json::to_string(self)
         }
+        .map_err(|_| fmt::Error)?;
+
+        f.write_str(&s)
     }
 }
 
-impl<T> From<Nep413Payload<T>> for MultiStandardPayload<T> {
+impl<T> FromStr for DefuseMessage<T>
+where
+    T: DeserializeOwned,
+{
+    type Err = serde_json::Error;
+
     #[inline]
-    fn from(value: Nep413Payload<T>) -> Self {
-        Self::Nep413(value)
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s)
+    }
+}
+
+#[near(serializers = [borsh, json])]
+#[serde(tag = "standard", rename_all = "snake_case")]
+#[derive(Debug, Clone, From)]
+pub enum MultiStandardPayload {
+    Nep413(Nep413Payload),
+}
+
+impl Payload for MultiStandardPayload {
+    #[inline]
+    fn hash(&self) -> CryptoHash {
+        match self {
+            Self::Nep413(payload) => payload.hash(),
+        }
     }
 }
 
@@ -57,11 +88,11 @@ impl<T> ValidatePayloadAs<T> for T {
     }
 }
 
-impl<T> ValidatePayloadAs<Nep413Payload<T>> for MultiStandardPayload<T> {
+impl ValidatePayloadAs<Nep413Payload> for MultiStandardPayload {
     type Error = Infallible;
 
     #[inline]
-    fn validate_as(self) -> Result<Nep413Payload<T>, Self::Error> {
+    fn validate_as(self) -> Result<Nep413Payload, Self::Error> {
         match self {
             Self::Nep413(payload) => Ok(payload),
         }

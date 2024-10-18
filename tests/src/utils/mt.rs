@@ -40,13 +40,13 @@ pub trait MtExt {
         &self,
         token_contract: &AccountId,
         account_id: &AccountId,
-        token_ids: impl IntoIterator<Item = TokenId>,
+        token_ids: impl IntoIterator<Item = &TokenId>,
     ) -> anyhow::Result<Vec<u128>>;
 
     async fn mt_batch_balance_of(
         &self,
         account_id: &AccountId,
-        token_ids: impl IntoIterator<Item = TokenId>,
+        token_ids: impl IntoIterator<Item = &TokenId>,
     ) -> anyhow::Result<Vec<u128>>;
 }
 
@@ -132,7 +132,7 @@ impl MtExt for near_workspaces::Account {
         &self,
         token_contract: &AccountId,
         account_id: &AccountId,
-        token_ids: impl IntoIterator<Item = TokenId>,
+        token_ids: impl IntoIterator<Item = &TokenId>,
     ) -> anyhow::Result<Vec<u128>> {
         self.view(token_contract, "mt_batch_balance_of")
             .args_json(json!({
@@ -148,7 +148,7 @@ impl MtExt for near_workspaces::Account {
     async fn mt_batch_balance_of(
         &self,
         account_id: &AccountId,
-        token_ids: impl IntoIterator<Item = TokenId>,
+        token_ids: impl IntoIterator<Item = &TokenId>,
     ) -> anyhow::Result<Vec<u128>> {
         self.mt_contract_batch_balance_of(self.id(), account_id, token_ids)
             .await
@@ -221,7 +221,7 @@ impl MtExt for near_workspaces::Contract {
         &self,
         token_contract: &AccountId,
         account_id: &AccountId,
-        token_ids: impl IntoIterator<Item = TokenId>,
+        token_ids: impl IntoIterator<Item = &TokenId>,
     ) -> anyhow::Result<Vec<u128>> {
         self.as_account()
             .mt_contract_batch_balance_of(token_contract, account_id, token_ids)
@@ -231,7 +231,7 @@ impl MtExt for near_workspaces::Contract {
     async fn mt_batch_balance_of(
         &self,
         account_id: &AccountId,
-        token_ids: impl IntoIterator<Item = TokenId>,
+        token_ids: impl IntoIterator<Item = &TokenId>,
     ) -> anyhow::Result<Vec<u128>> {
         self.as_account()
             .mt_batch_balance_of(account_id, token_ids)
