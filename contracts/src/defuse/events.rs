@@ -4,7 +4,7 @@ use derive_more::derive::From;
 use near_sdk::near;
 
 use super::{
-    accounts::{PublicKeyAddedEvent, PublicKeyRemovedEvent},
+    accounts::PublicKeyEvent,
     fees::{FeeChangedEvent, FeeCollectorChangedEvent},
     intents::{token_diff::TokenDiff, IntentExecutedEvent, SignerEvent},
 };
@@ -14,9 +14,11 @@ use super::{
 #[derive(Debug, From)]
 pub enum DefuseEvent<'a> {
     #[event_version("0.1.0")]
-    PublicKeyAdded(PublicKeyAddedEvent<'a>),
+    #[from(skip)]
+    PublicKeyAdded(SignerEvent<'a, PublicKeyEvent<'a>>),
     #[event_version("0.1.0")]
-    PublicKeyRemoved(PublicKeyRemovedEvent<'a>),
+    #[from(skip)]
+    PublicKeyRemoved(SignerEvent<'a, PublicKeyEvent<'a>>),
 
     #[event_version("0.1.0")]
     FeeChanged(FeeChangedEvent),

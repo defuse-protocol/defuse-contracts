@@ -3,8 +3,9 @@ use std::borrow::Cow;
 use defuse_contracts::{
     crypto::PublicKey,
     defuse::{
-        accounts::{PublicKeyAddedEvent, PublicKeyRemovedEvent},
-        events::DefuseIntentEmit,
+        accounts::PublicKeyEvent,
+        events::{DefuseEvent, DefuseIntentEmit},
+        intents::SignerEvent,
         DefuseError, Result,
     },
     nep413::U256,
@@ -52,10 +53,12 @@ impl Account {
 
     #[inline]
     pub fn add_public_key(&mut self, me: &AccountId, public_key: PublicKey) -> Result<()> {
-        PublicKeyAddedEvent {
-            account_id: Cow::Borrowed(me.as_ref()),
-            public_key: Cow::Borrowed(&public_key),
-        }
+        DefuseEvent::PublicKeyAdded(SignerEvent::new(
+            Cow::Borrowed(me.as_ref()),
+            PublicKeyEvent {
+                public_key: Cow::Borrowed(&public_key),
+            },
+        ))
         .emit();
 
         if !self.maybe_add_public_key(me, public_key) {
@@ -77,10 +80,12 @@ impl Account {
 
     #[inline]
     pub fn remove_public_key(&mut self, me: &AccountId, public_key: &PublicKey) -> Result<()> {
-        PublicKeyRemovedEvent {
-            account_id: Cow::Borrowed(me.as_ref()),
-            public_key: Cow::Borrowed(public_key),
-        }
+        DefuseEvent::PublicKeyRemoved(SignerEvent::new(
+            Cow::Borrowed(me.as_ref()),
+            PublicKeyEvent {
+                public_key: Cow::Borrowed(public_key),
+            },
+        ))
         .emit();
 
         if !self.maybe_remove_public_key(me, public_key) {

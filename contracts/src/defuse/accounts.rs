@@ -1,6 +1,6 @@
 use std::{borrow::Cow, collections::HashSet};
 
-use near_sdk::{ext_contract, near, AccountId, AccountIdRef};
+use near_sdk::{ext_contract, near, AccountId};
 
 use crate::{crypto::PublicKey, nep413::U256, utils::serde::wrappers::Base64};
 
@@ -38,15 +38,6 @@ pub trait AccountManager {
 #[must_use = "make sure to `.emit()` this event"]
 #[near(serializers = [json])]
 #[derive(Debug)]
-pub struct PublicKeyAddedEvent<'a> {
-    pub account_id: Cow<'a, AccountIdRef>,
-    pub public_key: Cow<'a, PublicKey>,
-}
-
-#[must_use = "make sure to `.emit()` this event"]
-#[near(serializers = [json])]
-#[derive(Debug)]
-pub struct PublicKeyRemovedEvent<'a> {
-    pub account_id: Cow<'a, AccountIdRef>,
+pub struct PublicKeyEvent<'a> {
     pub public_key: Cow<'a, PublicKey>,
 }
