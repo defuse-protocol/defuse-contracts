@@ -3,38 +3,34 @@ use core::{
     str::FromStr,
 };
 
-use near_sdk::{bs58, env, near, AccountId};
+use near_sdk::{bs58, env, near, AccountId, CurveType};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
-use strum::{EnumDiscriminants, EnumString};
-use thiserror::Error as ThisError;
+
+use super::{Curve, Ed25519, ParseCurveError, Secp256k1};
 
 #[derive(
-    Clone,
-    Copy,
-    Hash,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    EnumDiscriminants,
-    SerializeDisplay,
-    DeserializeFromStr,
-)]
-#[strum_discriminants(
-    name(PublicKeyType),
-    derive(strum::Display, EnumString),
-    strum(serialize_all = "snake_case")
+    Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, SerializeDisplay, DeserializeFromStr,
 )]
 #[near(serializers = [borsh])]
 pub enum PublicKey {
-    Ed25519([u8; 32]),
-    Secp256k1([u8; 64]),
+    Ed25519(<Ed25519 as Curve>::PublicKey),
+    Secp256k1(<Secp256k1 as Curve>::PublicKey),
 }
 
 impl PublicKey {
     #[inline]
-    pub fn typ(&self) -> PublicKeyType {
-        self.into()
+    pub const fn curve_type(&self) -> CurveType {
+        match self {
+            Self::Ed25519(_) => CurveType::ED25519,
+            Self::Secp256k1(_) => CurveType::SECP256K1,
+        }
+    }
+
+    const fn curve_prefix(&self) -> &'static str {
+        match self {
+            Self::Ed25519(_) => Ed25519::PREFIX,
+            Self::Secp256k1(_) => Secp256k1::PREFIX,
+        }
     }
 
     #[inline]
@@ -65,7 +61,7 @@ impl Debug for PublicKey {
         write!(
             f,
             "{}:{}",
-            self.typ(),
+            self.curve_prefix(),
             bs58::encode(self.data()).into_string()
         )
     }
@@ -79,19 +75,28 @@ impl Display for PublicKey {
 }
 
 impl FromStr for PublicKey {
-    type Err = ParseKeyError;
+    type Err = ParseCurveError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (typ, data) = if let Some((typ, data)) = s.split_once(':') {
-            (typ.parse()?, data.as_bytes())
+        let (curve, data) = if let Some((curve, data)) = s.split_once(':') {
+            (
+                if curve.eq_ignore_ascii_case(Ed25519::PREFIX) {
+                    CurveType::ED25519
+                } else if curve.eq_ignore_ascii_case(Secp256k1::PREFIX) {
+                    CurveType::SECP256K1
+                } else {
+                    return Err(ParseCurveError::InvalidCurveType);
+                },
+                data.as_bytes(),
+            )
         } else {
             // defaults to Ed25519
-            (PublicKeyType::Ed25519, s.as_bytes())
+            (CurveType::ED25519, s.as_bytes())
         };
 
-        match typ {
-            PublicKeyType::Ed25519 => bs58::decode(data).into_array_const().map(Self::Ed25519),
-            PublicKeyType::Secp256k1 => bs58::decode(data).into_array_const().map(Self::Secp256k1),
+        match curve {
+            CurveType::ED25519 => bs58::decode(data).into_array_const().map(Self::Ed25519),
+            CurveType::SECP256K1 => bs58::decode(data).into_array_const().map(Self::Secp256k1),
         }
         .map_err(Into::into)
     }
@@ -137,12 +142,4 @@ mod abi {
             .into()
         }
     }
-}
-
-#[derive(Debug, ThisError)]
-pub enum ParseKeyError {
-    #[error("key type: '{0}'")]
-    KeyType(#[from] strum::ParseError),
-    #[error("base58: {0}")]
-    Base58(#[from] bs58::decode::Error),
 }

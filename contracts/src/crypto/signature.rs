@@ -1,9 +1,7 @@
 use near_sdk::{env, near};
 use serde_with::serde_as;
 
-use super::PublicKey;
-
-use crate::utils::serde::base64::Base64;
+use super::{AsCurve, Curve, Ed25519, PublicKey, Secp256k1};
 
 #[derive(Debug, Clone)]
 #[cfg_attr(
@@ -19,16 +17,16 @@ use crate::utils::serde::base64::Base64;
 pub enum Signature {
     /// Ed25519
     Ed25519 {
-        #[serde_as(as = "Base64")]
-        signature: [u8; 64],
-        #[serde_as(as = "Base64")]
-        public_key: [u8; 32],
+        #[serde_as(as = "AsCurve<Ed25519>")]
+        signature: <Ed25519 as Curve>::Signature,
+
+        #[serde_as(as = "AsCurve<Ed25519>")]
+        public_key: <Ed25519 as Curve>::PublicKey,
     },
     /// Secp256k1
     Secp256k1 {
-        /// Concatenated `r`, `s` and `v`
-        #[serde_as(as = "Base64")]
-        signature: [u8; 65],
+        #[serde_as(as = "AsCurve<Secp256k1>")]
+        signature: <Secp256k1 as Curve>::Signature,
     },
     // TODO: Secp256k1Compressed
 }
