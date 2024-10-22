@@ -19,6 +19,7 @@ use crate::{
     serde_as(schemars = false)
 )]
 #[near(serializers = [borsh, json])]
+#[serde(rename_all = "camelCase")]
 pub struct Nep413Payload {
     pub message: String,
 

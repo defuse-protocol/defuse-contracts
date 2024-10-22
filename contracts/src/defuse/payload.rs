@@ -57,7 +57,7 @@ where
 }
 
 #[near(serializers = [borsh, json])]
-#[serde(tag = "standard", rename_all = "snake_case")]
+#[serde(tag = "standard", content = "payload", rename_all = "snake_case")]
 #[derive(Debug, Clone, From)]
 pub enum MultiStandardPayload {
     Nep413(Nep413Payload),
