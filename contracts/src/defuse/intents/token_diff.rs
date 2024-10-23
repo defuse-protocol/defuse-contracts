@@ -49,7 +49,7 @@ impl TokenDiff {
                         .add(
                             token_id,
                             Self::delta_in_with_fee(delta, fee)
-                                .ok_or(DefuseError::IntegerOverflow)?,
+                                .ok_or(DefuseError::BalanceOverflow)?,
                         )
                         .map(|_| deltas)
                 },
@@ -60,7 +60,7 @@ impl TokenDiff {
                 deltas
                     .add(
                         token_id,
-                        Self::delta_out(delta, fee).ok_or(DefuseError::IntegerOverflow)?,
+                        Self::delta_out(delta, fee).ok_or(DefuseError::BalanceOverflow)?,
                     )
                     .map(|_| deltas)
             })

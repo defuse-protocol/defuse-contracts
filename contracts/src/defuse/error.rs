@@ -10,11 +10,11 @@ pub enum DefuseError {
     #[error("account not found")]
     AccountNotFound,
 
+    #[error("insufficient balance or overflow")]
+    BalanceOverflow,
+
     #[error("deadline has expired")]
     DeadlineExpired,
-
-    #[error("integer overflow")]
-    IntegerOverflow,
 
     #[error("invalid signature")]
     InvalidSignature,

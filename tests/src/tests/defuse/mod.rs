@@ -128,7 +128,7 @@ impl DefuseSigner for near_workspaces::Account {
                 })
                 .unwrap(),
             )
-            .with_recipient(defuse_contract.to_string())
+            .with_recipient(defuse_contract)
             .with_nonce(nonce),
         ))
     }

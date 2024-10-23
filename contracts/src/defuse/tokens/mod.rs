@@ -185,7 +185,7 @@ impl<A> TokenAmounts<A> {
         A: CheckedAdd<T> + Default + Eq + Copy,
     {
         self.try_apply(token_id, |a| {
-            a.checked_add(amount).ok_or(DefuseError::IntegerOverflow)
+            a.checked_add(amount).ok_or(DefuseError::BalanceOverflow)
         })
     }
 
@@ -195,7 +195,7 @@ impl<A> TokenAmounts<A> {
         A: CheckedSub<T> + Default + Eq + Copy,
     {
         self.try_apply(token_id, |a| {
-            a.checked_sub(amount).ok_or(DefuseError::IntegerOverflow)
+            a.checked_sub(amount).ok_or(DefuseError::BalanceOverflow)
         })
     }
 

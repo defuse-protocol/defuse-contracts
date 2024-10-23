@@ -115,3 +115,19 @@ mod abi {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_secp256k1() {
+        let pk: PublicKey = "secp256k1:62dVbWHiN4JCcWpetYs2zEqHYoDzhz5Eb1bEhqWxTzEdor2ndPM1WCrkJSr1911uANxZLezQwEaxMaywqMc6jPSM".parse().unwrap();
+        assert_eq!(
+            pk.to_implicit_account_id(),
+            "0xd63b006b0cfd2fe3ab95db515cd59e519f92fe55"
+                .parse::<AccountId>()
+                .unwrap()
+        );
+    }
+}

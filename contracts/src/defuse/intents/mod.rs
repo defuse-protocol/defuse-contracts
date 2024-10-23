@@ -65,6 +65,7 @@ pub enum Intent {
 #[near(serializers = [json])]
 #[derive(Debug)]
 pub struct AccountEvent<'a, T> {
+    #[serde(borrow)]
     pub account_id: Cow<'a, AccountIdRef>,
 
     #[serde(flatten)]

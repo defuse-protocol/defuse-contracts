@@ -27,6 +27,8 @@ pub struct FeeChangedEvent {
 #[near(serializers = [json])]
 #[derive(Debug)]
 pub struct FeeCollectorChangedEvent<'a> {
+    #[serde(borrow)]
     pub old_fee_collector: Cow<'a, AccountIdRef>,
+    #[serde(borrow)]
     pub new_fee_collector: Cow<'a, AccountIdRef>,
 }

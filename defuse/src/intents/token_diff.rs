@@ -46,7 +46,7 @@ impl IntentExecutor<TokenDiff> for State {
                 token_id,
                 delta
                     .checked_add_unsigned(fee)
-                    .ok_or(DefuseError::IntegerOverflow)?,
+                    .ok_or(DefuseError::BalanceOverflow)?,
             )?;
         }
 
