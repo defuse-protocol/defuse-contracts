@@ -3,11 +3,13 @@ use core::{
     str::FromStr,
 };
 
-use serde_with::{DeserializeFromStr, SerializeDisplay};
+use derive_more::derive::From;
+use near_sdk::serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DeserializeFromStr, SerializeDisplay};
 
 /// Helper type to implement `#[derive(Serialize, Deserialize)]`,
 /// as `#[near_bindgen]` doesn't support `#[serde(...)]` attributes on method arguments
-#[derive(Debug, Clone, Copy, Default, SerializeDisplay, DeserializeFromStr)]
+#[derive(Debug, Clone, Copy, Default, SerializeDisplay, DeserializeFromStr, From)]
 pub struct DisplayFromStr<T>(pub T);
 
 impl<T> DisplayFromStr<T> {
@@ -37,10 +39,35 @@ where
     }
 }
 
-impl<T> From<T> for DisplayFromStr<T> {
+/// Helper type to implement `#[derive(Serialize, Deserialize)]`,
+/// as `#[near_bindgen]` doesn't support `#[serde(...)]` attributes on method arguments
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, From)]
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    derive(::near_sdk::schemars::JsonSchema)
+)]
+#[serde(
+    crate = "::near_sdk::serde",
+    bound(serialize = "T: AsRef<[u8]>", deserialize = "T: TryFrom<Vec<u8>>")
+)]
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    schemars(crate = "::near_sdk::schemars", transparent)
+)]
+pub struct Base64<T>(#[serde_as(as = "super::base64::Base64")] pub T);
+
+impl<T> Base64<T> {
     #[inline]
-    fn from(value: T) -> Self {
-        Self(value)
+    pub fn into_inner(self) -> T {
+        self.0
     }
 }
 

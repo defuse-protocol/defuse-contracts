@@ -4,6 +4,7 @@ use near_sdk::{env, FunctionError};
 
 pub trait PanicError {
     #[inline]
+    #[track_caller]
     fn panic_str(&self) -> !
     where
         Self: AsRef<str>,
@@ -12,6 +13,7 @@ pub trait PanicError {
     }
 
     #[inline]
+    #[track_caller]
     fn panic_static_str(self) -> !
     where
         Self: Into<&'static str>,
@@ -20,6 +22,7 @@ pub trait PanicError {
     }
 
     #[inline]
+    #[track_caller]
     fn panic_display(&self) -> !
     where
         Self: Display,
@@ -29,11 +32,33 @@ pub trait PanicError {
 }
 impl<E> PanicError for E {}
 
-pub trait UnwrapOrPanic<T, E> {
+pub trait UnwrapOrPanic<T> {
+    fn unwrap_or_panic(self) -> T;
+}
+
+impl<T> UnwrapOrPanic<T> for Option<T> {
+    #[inline]
+    #[track_caller]
+    fn unwrap_or_panic(self) -> T {
+        self.unwrap_or_else(|| env::abort())
+    }
+}
+
+impl<T, E> UnwrapOrPanic<T> for Result<T, E>
+where
+    E: FunctionError,
+{
+    #[inline]
+    #[track_caller]
     fn unwrap_or_panic(self) -> T
     where
-        E: FunctionError;
+        E: FunctionError,
+    {
+        self.unwrap_or_else(|err| err.panic())
+    }
+}
 
+pub trait UnwrapOrPanicError<T, E> {
     fn unwrap_or_panic_str(self) -> T
     where
         E: AsRef<str>;
@@ -47,16 +72,9 @@ pub trait UnwrapOrPanic<T, E> {
         E: Display;
 }
 
-impl<T, E> UnwrapOrPanic<T, E> for Result<T, E> {
+impl<T, E> UnwrapOrPanicError<T, E> for Result<T, E> {
     #[inline]
-    fn unwrap_or_panic(self) -> T
-    where
-        E: FunctionError,
-    {
-        self.unwrap_or_else(|err| err.panic())
-    }
-
-    #[inline]
+    #[track_caller]
     fn unwrap_or_panic_str(self) -> T
     where
         E: AsRef<str>,
@@ -65,6 +83,7 @@ impl<T, E> UnwrapOrPanic<T, E> for Result<T, E> {
     }
 
     #[inline]
+    #[track_caller]
     fn unwrap_or_panic_static_str(self) -> T
     where
         E: Into<&'static str>,
@@ -73,6 +92,7 @@ impl<T, E> UnwrapOrPanic<T, E> for Result<T, E> {
     }
 
     #[inline]
+    #[track_caller]
     fn unwrap_or_panic_display(self) -> T
     where
         E: Display,

@@ -1,5 +1,5 @@
 use defuse_contracts::crypto::PublicKey;
-use near_sdk::AccountId;
+use near_sdk::{AccountId, NearToken};
 use serde_json::json;
 
 pub trait AccountManagerExt {
@@ -18,6 +18,7 @@ impl AccountManagerExt for near_workspaces::Account {
     ) -> anyhow::Result<()> {
         // TODO: check bool output
         self.call(defuse_contract_id, "add_public_key")
+            .deposit(NearToken::from_yoctonear(1))
             .args_json(json!({
                 "public_key": public_key,
             }))

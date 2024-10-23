@@ -1,6 +1,6 @@
 use defuse_contracts::{
     intents::swap::{IntentId, Rollback, SwapIntentError},
-    utils::UnwrapOrPanic,
+    utils::UnwrapOrPanicError,
 };
 use near_sdk::{env, near, AccountId, Gas, PromiseError, PromiseOrValue};
 

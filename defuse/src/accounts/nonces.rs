@@ -1,8 +1,6 @@
-use core::iter;
-
 use defuse_contracts::{
     defuse::{DefuseError, Result},
-    nep413::Nonce,
+    nep413::U256,
     utils::bitmap::BitMap256,
 };
 use near_sdk::{near, IntoStorageKey};
@@ -23,24 +21,13 @@ impl Nonces {
 
     #[must_use]
     #[inline]
-    pub fn is_used(&self, n: Nonce) -> bool {
+    pub fn is_used(&self, n: U256) -> bool {
         self.0.get(n)
     }
 
     #[inline]
-    fn iter_unused(&self, start: Nonce) -> impl Iterator<Item = Nonce> + '_ {
-        iter::successors(Some(start), |n| n.checked_add(Nonce::ONE)).filter(|n| !self.is_used(*n))
-    }
-
-    /// Returns the first nonce available starting from `start` or `0` otherwise.
-    #[inline]
-    pub fn next_unused(&self, start: impl Into<Option<Nonce>>) -> Option<Nonce> {
-        self.iter_unused(start.into().unwrap_or_default()).next()
-    }
-
-    #[inline]
-    pub fn commit(&mut self, n: Nonce) -> Result<()> {
-        if self.0.set(n, true) {
+    pub fn commit(&mut self, n: U256) -> Result<()> {
+        if self.0.set(n) {
             return Err(DefuseError::NonceUsed);
         }
         Ok(())

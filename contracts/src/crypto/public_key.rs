@@ -3,45 +3,38 @@ use core::{
     str::FromStr,
 };
 
-use near_sdk::{bs58, env, near, AccountId};
-use serde_with::{DeserializeFromStr, SerializeDisplay};
-use strum::{EnumDiscriminants, EnumString};
-use thiserror::Error as ThisError;
+use near_account_id::AccountType;
+use near_sdk::{env, near, AccountId, AccountIdRef, CurveType};
+use serde_with::serde_as;
 
-#[derive(
-    Clone,
-    Copy,
-    Hash,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    EnumDiscriminants,
-    SerializeDisplay,
-    DeserializeFromStr,
+use super::{AsCurve, Curve, Ed25519, ParseCurveError, Secp256k1};
+
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
 )]
-#[strum_discriminants(
-    name(PublicKeyType),
-    derive(strum::Display, EnumString),
-    strum(serialize_all = "snake_case")
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
 )]
-#[near(serializers = [borsh])]
+#[near(serializers = [borsh, json])]
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    schemars(example = "Self::example_ed25519", example = "Self::example_secp256k1")
+)]
+#[serde(untagged)]
 pub enum PublicKey {
-    Ed25519([u8; 32]),
-    Secp256k1([u8; 64]),
+    Ed25519(#[serde_as(as = "AsCurve<Ed25519>")] <Ed25519 as Curve>::PublicKey),
+    Secp256k1(#[serde_as(as = "AsCurve<Secp256k1>")] <Secp256k1 as Curve>::PublicKey),
 }
 
 impl PublicKey {
     #[inline]
-    pub fn typ(&self) -> PublicKeyType {
-        self.into()
-    }
-
-    #[inline]
-    const fn data(&self) -> &[u8] {
+    pub const fn curve_type(&self) -> CurveType {
         match self {
-            Self::Ed25519(data) => data,
-            Self::Secp256k1(data) => data,
+            Self::Ed25519(_) => CurveType::ED25519,
+            Self::Secp256k1(_) => CurveType::SECP256K1,
         }
     }
 
@@ -57,17 +50,29 @@ impl PublicKey {
         .try_into()
         .unwrap_or_else(|_| unreachable!())
     }
+
+    #[inline]
+    pub fn from_implicit_account_id(account_id: impl AsRef<AccountIdRef>) -> Option<Self> {
+        Some(account_id.as_ref())
+            .filter(|account_id| {
+                matches!(
+                    account_id.get_account_type(),
+                    AccountType::NearImplicitAccount
+                )
+            })
+            .and_then(|a| hex::decode(a.as_str()).ok())
+            .and_then(|bytes| bytes.try_into().ok())
+            .map(Self::Ed25519)
+    }
 }
 
 impl Debug for PublicKey {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}:{}",
-            self.typ(),
-            bs58::encode(self.data()).into_string()
-        )
+        f.write_str(&match self {
+            PublicKey::Ed25519(pk) => Ed25519::to_base58(pk),
+            PublicKey::Secp256k1(pk) => Secp256k1::to_base58(pk),
+        })
     }
 }
 
@@ -79,21 +84,16 @@ impl Display for PublicKey {
 }
 
 impl FromStr for PublicKey {
-    type Err = ParseKeyError;
+    type Err = ParseCurveError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (typ, data) = if let Some((typ, data)) = s.split_once(':') {
-            (typ.parse()?, data.as_bytes())
-        } else {
-            // defaults to Ed25519
-            (PublicKeyType::Ed25519, s.as_bytes())
-        };
-
-        match typ {
-            PublicKeyType::Ed25519 => bs58::decode(data).into_array_const().map(Self::Ed25519),
-            PublicKeyType::Secp256k1 => bs58::decode(data).into_array_const().map(Self::Secp256k1),
+        match Ed25519::parse_base58(s) {
+            Ok(pk) => Ok(Self::Ed25519(pk)),
+            Err(ParseCurveError::InvalidCurveType) => {
+                Secp256k1::parse_base58(s).map(Self::Secp256k1)
+            }
+            Err(err) => Err(err),
         }
-        .map_err(Into::into)
     }
 }
 
@@ -101,27 +101,33 @@ impl FromStr for PublicKey {
 mod abi {
     use super::*;
 
-    use near_sdk::schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
-
-    impl JsonSchema for PublicKey {
-        fn schema_name() -> String {
-            String::schema_name()
+    impl PublicKey {
+        pub(super) fn example_ed25519() -> Self {
+            "ed25519:5TagutioHgKLh7KZ1VEFBYfgRkPtqnKm9LoMnJMJugxm"
+                .parse()
+                .unwrap()
         }
 
-        fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-            String::json_schema(gen)
-        }
-
-        fn is_referenceable() -> bool {
-            false
+        pub(super) fn example_secp256k1() -> Self {
+            "secp256k1:5KN6ZfGZgH1puWwH1Nc1P8xyrFZSPHDw3WUP6iitsjCECJLrGBq"
+                .parse()
+                .unwrap()
         }
     }
 }
 
-#[derive(Debug, ThisError)]
-pub enum ParseKeyError {
-    #[error("key type: '{0}'")]
-    KeyType(#[from] strum::ParseError),
-    #[error("base58: {0}")]
-    Base58(#[from] bs58::decode::Error),
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_secp256k1() {
+        let pk: PublicKey = "secp256k1:62dVbWHiN4JCcWpetYs2zEqHYoDzhz5Eb1bEhqWxTzEdor2ndPM1WCrkJSr1911uANxZLezQwEaxMaywqMc6jPSM".parse().unwrap();
+        assert_eq!(
+            pk.to_implicit_account_id(),
+            "0xd63b006b0cfd2fe3ab95db515cd59e519f92fe55"
+                .parse::<AccountId>()
+                .unwrap()
+        );
+    }
 }

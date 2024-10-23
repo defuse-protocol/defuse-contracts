@@ -36,6 +36,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ github.ref }}
+          cache-all-crates: true
       - name: Install cargo-make
         run: cargo install cargo-make
       - name: Run clippy
@@ -63,6 +64,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ github.ref }}
+          cache-all-crates: true
       - name: Install Cargo Plugins
         run: cargo install cargo-make cargo-near
       - name: Build
@@ -95,6 +97,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ github.ref }}
+          cache-all-crates: true
       - name: Install cargo-make
         run: cargo install cargo-make
       - name: Download Artifacts
