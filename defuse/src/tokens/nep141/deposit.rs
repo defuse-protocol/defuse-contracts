@@ -43,7 +43,7 @@ impl FungibleTokenReceiver for DefuseImpl {
 
         if !msg.execute_intents.is_empty() {
             if msg.refund_if_fails {
-                self.execute_intents(msg.execute_intents).unwrap_or_panic();
+                self.execute_intents(msg.execute_intents);
             } else {
                 // detach promise
                 ext_intents_executor::ext(CURRENT_ACCOUNT_ID.clone())

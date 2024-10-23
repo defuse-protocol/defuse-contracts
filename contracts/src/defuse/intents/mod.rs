@@ -14,7 +14,6 @@ use crate::{crypto::SignedPayload, utils::serde::base58::Base58};
 use super::{
     fees::FeesManager,
     payload::{DefuseMessage, MultiStandardPayload},
-    Result,
 };
 
 use self::{
@@ -25,12 +24,10 @@ use self::{
 
 #[ext_contract(ext_intents_executor)]
 pub trait IntentsExecutor: FeesManager {
-    #[handle_result]
-    fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>) -> Result<()>;
+    fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>);
 
     // WARNING: this turns out to modify the state!!!
-    #[handle_result]
-    fn simulate_intents(self, intents: Vec<DefuseMessage<DefuseIntents>>) -> Result<()>;
+    fn simulate_intents(self, intents: Vec<DefuseMessage<DefuseIntents>>);
 }
 
 #[near(serializers = [borsh, json])]
