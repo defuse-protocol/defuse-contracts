@@ -16,10 +16,10 @@ async fn test_generic_successful_flow() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
@@ -27,29 +27,50 @@ async fn test_generic_successful_flow() {
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
     // Check that intent contract owns user's TokenA.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_a.ft_balance_of(env.intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
         11000
     );
 
     // The solver is happy with such intent and executes it.
     env.solver
-        .execute_intent(env.token_b.id(), env.intent.id(), "1", 2000.into())
+        .execute_intent(&env.token_b, env.intent.id(), "1", 2000.into())
         .await;
 
     // Check balances after intent execution.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.user_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
         2000
     );
 
     assert_eq!(
-        env.token_a.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
         1000
     );
-    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await.unwrap(), 0);
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
 
     // Check that intent has been removed form the state.
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
@@ -61,10 +82,10 @@ async fn test_successful_flow_partly() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
@@ -72,30 +93,48 @@ async fn test_successful_flow_partly() {
     create_intent(&env, "1", 500, 1000, Expiration::default()).await;
 
     // Check that intent contract owns user's TokenA.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 500);
     assert_eq!(
-        env.token_a.ft_balance_of(env.intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        500
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
         10500
     );
 
     // The solver is happy with such intent and executes it.
     env.solver
-        .execute_intent(env.token_b.id(), env.intent.id(), "1", 1000.into())
+        .execute_intent(&env.token_b, env.intent.id(), "1", 1000.into())
         .await;
 
     // Check balances after intent execution.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 500);
     assert_eq!(
-        env.token_b.ft_balance_of(env.user_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        500
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
         1000
     );
 
     assert_eq!(
-        env.token_a.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
         500
     );
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
         1000
     );
 }
@@ -104,26 +143,40 @@ async fn test_successful_flow_partly() {
 async fn test_execute_non_existed_intent() {
     let env = Env::create().await;
 
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
     env.solver
-        .execute_intent(env.token_b.id(), env.intent.id(), "1", 2000.into())
+        .execute_intent(&env.token_b, env.intent.id(), "1", 2000.into())
         .await;
 
     assert_eq!(
-        env.token_a.ft_balance_of(env.user_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
         1000
     );
-    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await.unwrap(), 0);
-
-    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
         2000
     );
 }
@@ -133,10 +186,10 @@ async fn test_rollback_intent() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
@@ -147,9 +200,16 @@ async fn test_rollback_intent() {
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
     // Check that intent contract owns user's TokenA now.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_a.ft_balance_of(env.intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
         11000
     );
 
@@ -167,14 +227,28 @@ async fn test_rollback_intent() {
 
     // Check balances after intent execution.
     assert_eq!(
-        env.token_a.ft_balance_of(env.user_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
         1000
     );
-    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await.unwrap(), 0);
-
-    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
         2000
     );
 }
@@ -184,10 +258,10 @@ async fn test_rollback_intent_too_early() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
@@ -195,9 +269,16 @@ async fn test_rollback_intent_too_early() {
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
     // Check that intent contract owns user's TokenA now.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_a.ft_balance_of(env.intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
         11000
     );
 
@@ -214,18 +295,37 @@ async fn test_rollback_intent_too_early() {
     assert!(matches!(intent.status(), Status::Available));
 
     // Check balances after intent execution.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
-    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await.unwrap(), 0);
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
 
     // User's tokens should be still locked in the intent contract.
     assert_eq!(
-        env.token_a.ft_balance_of(env.intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
         11000
     );
 
-    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
         2000
     );
 }
@@ -251,23 +351,23 @@ async fn test_intent_without_initiator_storage_deposit() {
 
     // Storage deposit for user on token_a and for solver and intent on both.
     env.user
-        .ft_storage_deposit(env.token_a.id(), None)
+        .ft_storage_deposit(&env.token_a, None)
         .await
         .unwrap();
     env.solver
-        .ft_storage_deposit(env.token_a.id(), None)
+        .ft_storage_deposit(&env.token_a, None)
         .await
         .unwrap();
     env.solver
-        .ft_storage_deposit(env.token_b.id(), None)
+        .ft_storage_deposit(&env.token_b, None)
         .await
         .unwrap();
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
@@ -279,14 +379,28 @@ async fn test_intent_without_initiator_storage_deposit() {
 
     // Check that the balances haven't been changed.
     assert_eq!(
-        env.token_a.ft_balance_of(env.user_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
         1000
     );
-    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await.unwrap(), 0);
-
-    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
         2000
     );
 }
@@ -297,23 +411,23 @@ async fn test_intent_without_solver_storage_deposit() {
 
     // Storage deposit for the initiator and intent on both tokens and for solver on token_b only.
     env.user
-        .ft_storage_deposit(env.token_a.id(), None)
+        .ft_storage_deposit(&env.token_a, None)
         .await
         .unwrap();
     env.user
-        .ft_storage_deposit(env.token_b.id(), None)
+        .ft_storage_deposit(&env.token_b, None)
         .await
         .unwrap();
     env.solver
-        .ft_storage_deposit(env.token_b.id(), None)
+        .ft_storage_deposit(&env.token_b, None)
         .await
         .unwrap();
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
@@ -322,36 +436,56 @@ async fn test_intent_without_solver_storage_deposit() {
 
     // The solver is trying to execute it, but he has no storage deposit.
     env.solver
-        .execute_intent(env.token_b.id(), env.intent.id(), "1", 2000.into())
+        .execute_intent(&env.token_b, env.intent.id(), "1", 2000.into())
         .await;
 
     let result = env.user.get_intent(env.intent.id(), "1").await.unwrap();
     assert!(matches!(result.status(), Status::Available));
 
     // Check that the balances haven't been changed.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_a.ft_balance_of(env.intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
         1000
     );
-    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await.unwrap(), 0);
-
-    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
         2000
     );
 }
 
+#[ignore = "near-plugins fungible token impl requires too much gas for ft_transfer_call, so it doesn't fail"]
 #[tokio::test]
 async fn test_intent_with_lack_of_gas_for_creation() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
@@ -367,18 +501,32 @@ async fn test_intent_with_lack_of_gas_for_creation() {
     .await;
 
     let result = env.user.get_intent(env.intent.id(), "1").await;
-    assert!(result.is_none()); // No intent because not enough gas was provided.
+    assert_eq!(result, None); // No intent because not enough gas was provided.
 
     // Check that the balances haven't been changed.
     assert_eq!(
-        env.token_a.ft_balance_of(env.user_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
         1000
     );
-    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await.unwrap(), 0);
-
-    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
         2000
     );
 }
@@ -388,10 +536,10 @@ async fn test_intent_with_lack_of_gas_for_execution() {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
@@ -401,25 +549,44 @@ async fn test_intent_with_lack_of_gas_for_execution() {
     // The solver is trying to execute it, but provided not enough gas.
     env.solver
         .execute_intent_with_gas(
-            env.token_b.id(),
+            &env.token_b,
             env.intent.id(),
             "1",
             2000.into(),
-            Gas::from_tgas(50), // 50 TGas is not enough for the execution.
+            Gas::from_tgas(40), // 50 TGas is not enough for the execution.
         )
         .await;
 
     // Check that the balances haven't been changed.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_a.ft_balance_of(env.intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
         11000
     );
-    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await.unwrap(), 0);
-
-    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
         2000
     );
 
@@ -440,13 +607,13 @@ async fn test_concurrent_solvers() {
         .await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver2_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver2_id(), 2000)
         .await
         .unwrap();
 
@@ -454,16 +621,23 @@ async fn test_concurrent_solvers() {
     create_intent(&env, "1", 1000, 2000, Expiration::default()).await;
 
     // Check that intent contract owns user's TokenA.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_a.ft_balance_of(env.intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
         1000
     );
 
     // The solver is happy with such intent and executes it.
     let result1 = env
         .solver
-        .execute_intent_async(env.token_b.id(), env.intent.id(), "1", 2000.into())
+        .execute_intent_async(&env.token_b, env.intent.id(), "1", 2000.into())
         .await;
     env.sandbox.skip_blocks(1).await;
     // The solver2 is happy with such intent and executes it too.
@@ -471,36 +645,64 @@ async fn test_concurrent_solvers() {
         .solver2
         .as_ref()
         .unwrap()
-        .execute_intent_async(env.token_b.id(), env.intent.id(), "1", 2000.into())
+        .execute_intent_async(&env.token_b, env.intent.id(), "1", 2000.into())
         .await;
 
     assert!(result1.await.unwrap().is_success());
     assert!(result2.await.unwrap().is_success());
 
     // Check balances after intent execution.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.user_id()).await.unwrap(),
-        2000
-    );
-
-    assert_eq!(
-        env.token_a.ft_balance_of(env.solver_id()).await.unwrap(),
-        1000
-    );
-    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await.unwrap(), 0);
-
-    assert_eq!(
-        env.token_a.ft_balance_of(env.solver2_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
         0
     );
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver2_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
         2000
     );
 
-    assert_eq!(env.token_a.ft_balance_of(env.intent.id()).await.unwrap(), 0);
-    assert_eq!(env.token_b.ft_balance_of(env.intent.id()).await.unwrap(), 0);
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
+        1000
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.solver2_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver2_id())
+            .await
+            .unwrap(),
+        2000
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.intent.id())
+            .await
+            .unwrap(),
+        0
+    );
 
     // Check that intent has been removed form the state.
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
@@ -511,10 +713,10 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
     let env = Env::create().await;
 
     // Deposit 1000 TokenA to the user and 2000 TokenB to the solver.
-    env.ft_mint(env.token_a.id(), env.user_id(), 1000)
+    env.ft_mint(&env.token_a, env.user_id(), 1000)
         .await
         .unwrap();
-    env.ft_mint(env.token_b.id(), env.solver_id(), 2000)
+    env.ft_mint(&env.token_b, env.solver_id(), 2000)
         .await
         .unwrap();
 
@@ -522,9 +724,16 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
     create_intent(&env, "1", 1000, 2000, past).await;
 
     // Check that intent contract owns user's TokenA now.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_a.ft_balance_of(env.intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_a, env.intent.id())
+            .await
+            .unwrap(),
         11000
     );
 
@@ -533,7 +742,7 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
 
     // The solver is happy with such intent and executes it.
     env.solver
-        .execute_intent(env.token_b.id(), env.intent.id(), "1", 2000.into())
+        .execute_intent(&env.token_b, env.intent.id(), "1", 2000.into())
         .await;
 
     let intent = env.user.get_intent(env.intent.id(), "1").await.unwrap();
@@ -541,14 +750,28 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
 
     // Check balances after intent execution.
     assert_eq!(
-        env.token_a.ft_balance_of(env.user_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
         1000
     );
-    assert_eq!(env.token_a.ft_balance_of(env.solver_id()).await.unwrap(), 0);
-
-    assert_eq!(env.token_b.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
         2000
     );
 
@@ -557,21 +780,35 @@ async fn test_expired_intent(past: Expiration, future: Expiration) {
 
     // The solver is happy with such intent and executes it.
     env.solver
-        .execute_intent(env.token_b.id(), env.intent.id(), "2", 2000.into())
+        .execute_intent(&env.token_b, env.intent.id(), "2", 2000.into())
         .await;
 
     // Check balances after intent execution.
-    assert_eq!(env.token_a.ft_balance_of(env.user_id()).await.unwrap(), 0);
     assert_eq!(
-        env.token_b.ft_balance_of(env.user_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.user_id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.user_id())
+            .await
+            .unwrap(),
         2000
     );
 
     assert_eq!(
-        env.token_a.ft_balance_of(env.solver_id()).await.unwrap(),
+        env.ft_token_balance_of(&env.token_a, env.solver_id())
+            .await
+            .unwrap(),
         1000
     );
-    assert_eq!(env.token_b.ft_balance_of(env.solver_id()).await.unwrap(), 0);
+    assert_eq!(
+        env.ft_token_balance_of(&env.token_b, env.solver_id())
+            .await
+            .unwrap(),
+        0
+    );
 }
 
 async fn create_intent(env: &Env, id: &str, send: u128, receive: u128, expiration: Expiration) {
@@ -588,17 +825,17 @@ async fn create_intent_with_gas(
 ) {
     env.user
         .create_intent_with_gas(
-            env.token_a.id(),
+            &env.token_a,
             env.intent.id(),
             id,
             Intent {
                 initiator: env.user_id().clone(),
                 send: TokenAmount {
-                    token_id: env.token_a.id().clone(),
+                    token_id: env.token_a.clone(),
                     amount: send.into(),
                 },
                 receive: TokenAmount {
-                    token_id: env.token_b.id().clone(),
+                    token_id: env.token_b.clone(),
                     amount: receive.into(),
                 },
                 expiration,

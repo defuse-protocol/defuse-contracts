@@ -5,15 +5,15 @@ use defuse_contracts::{
 use near_contract_standards::{
     fungible_token::{
         events::{FtBurn, FtMint},
-        metadata::{FungibleTokenMetadata, FungibleTokenMetadataProvider},
+        metadata::{FungibleTokenMetadata, FungibleTokenMetadataProvider, FT_METADATA_SPEC},
         FungibleToken, FungibleTokenCore, FungibleTokenResolver,
     },
-    storage_management::StorageManagement,
+    storage_management::{StorageBalance, StorageBalanceBounds, StorageManagement},
 };
-use near_plugins::{only, Ownable};
+use near_plugins::{events::AsEvent, only, ownable::OwnershipTransferred, Ownable};
 use near_sdk::{
-    assert_one_yocto, borsh::BorshSerialize, json_types::U128, near, require, store::Lazy,
-    AccountId, BorshStorageKey, PanicOnDefault, PromiseOrValue,
+    assert_one_yocto, borsh::BorshSerialize, env, json_types::U128, near, require, store::Lazy,
+    AccountId, BorshStorageKey, NearToken, PanicOnDefault, PromiseOrValue,
 };
 
 #[near(contract_state)]
@@ -26,15 +26,33 @@ pub struct POAFungibleTokenImpl {
 #[near]
 impl POAFungibleTokenImpl {
     #[init]
-    pub fn new(owner_id: Option<AccountId>, metadata: FungibleTokenMetadata) -> Self {
+    pub fn new(owner_id: Option<AccountId>, metadata: Option<FungibleTokenMetadata>) -> Self {
+        let metadata = metadata.unwrap_or_else(|| FungibleTokenMetadata {
+            spec: FT_METADATA_SPEC.to_string(),
+            name: Default::default(),
+            symbol: Default::default(),
+            icon: Default::default(),
+            reference: Default::default(),
+            reference_hash: Default::default(),
+            decimals: Default::default(),
+        });
         metadata.assert_valid();
-        let mut contract = Self {
+
+        let contract = Self {
             token: FungibleToken::new(Prefix::FungibleToken),
             metadata: Lazy::new(Prefix::Metadata, metadata),
         };
-        contract.owner_set(Some(
-            owner_id.unwrap_or_else(|| PREDECESSOR_ACCOUNT_ID.clone()),
+
+        let owner = owner_id.unwrap_or_else(|| PREDECESSOR_ACCOUNT_ID.clone());
+        require!(!env::storage_write(
+            contract.owner_storage_key(),
+            owner.as_bytes()
         ));
+        OwnershipTransferred {
+            previous_owner: None,
+            new_owner: Some(owner),
+        }
+        .emit();
         contract
     }
 }
@@ -96,6 +114,7 @@ impl FungibleTokenCore for POAFungibleTokenImpl {
 
 #[near]
 impl FungibleTokenResolver for POAFungibleTokenImpl {
+    #[private]
     fn ft_resolve_transfer(
         &mut self,
         sender_id: AccountId,
@@ -105,6 +124,36 @@ impl FungibleTokenResolver for POAFungibleTokenImpl {
         // TODO
         self.token
             .ft_resolve_transfer(sender_id, receiver_id, amount)
+    }
+}
+
+#[near]
+impl StorageManagement for POAFungibleTokenImpl {
+    #[payable]
+    fn storage_deposit(
+        &mut self,
+        account_id: Option<AccountId>,
+        registration_only: Option<bool>,
+    ) -> StorageBalance {
+        self.token.storage_deposit(account_id, registration_only)
+    }
+
+    #[payable]
+    fn storage_withdraw(&mut self, amount: Option<NearToken>) -> StorageBalance {
+        self.token.storage_withdraw(amount)
+    }
+
+    #[payable]
+    fn storage_unregister(&mut self, force: Option<bool>) -> bool {
+        self.token.storage_unregister(force)
+    }
+
+    fn storage_balance_bounds(&self) -> StorageBalanceBounds {
+        self.token.storage_balance_bounds()
+    }
+
+    fn storage_balance_of(&self, account_id: AccountId) -> Option<StorageBalance> {
+        self.token.storage_balance_of(account_id)
     }
 }
 

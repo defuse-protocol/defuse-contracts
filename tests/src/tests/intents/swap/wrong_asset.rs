@@ -18,25 +18,21 @@ async fn test_execute_wrong_asset() {
     let env = Env::new().await.unwrap();
     env.root_account()
         .ft_storage_deposit_many(
-            env.ft1.id(),
+            &env.ft1,
             &[env.user1.id(), env.user2.id(), env.swap_intent.id()],
         )
         .await
         .unwrap();
     env.root_account()
         .ft_storage_deposit_many(
-            env.ft2.id(),
+            &env.ft2,
             &[env.user1.id(), env.user2.id(), env.swap_intent.id()],
         )
         .await
         .unwrap();
 
-    env.ft_mint(env.ft1.id(), env.user2.id(), 500)
-        .await
-        .unwrap();
-    env.ft_mint(env.ft2.id(), env.user2.id(), 500)
-        .await
-        .unwrap();
+    env.ft_mint(&env.ft1, env.user2.id(), 500).await.unwrap();
+    env.ft_mint(&env.ft2, env.user2.id(), 500).await.unwrap();
 
     let intent_id = "1".to_string();
 
@@ -51,7 +47,7 @@ async fn test_execute_wrong_asset() {
                 id: intent_id.clone(),
                 asset_out: AssetWithAccount::Near {
                     account: env.user1.id().clone(),
-                    asset: NearAsset::Nep141(FtAmount::new(env.ft1.id().clone(), 500))
+                    asset: NearAsset::Nep141(FtAmount::new(env.ft1.clone(), 500))
                 },
                 lockup_until: None,
                 expiration: Deadline::timeout(Duration::from_secs(60)),
@@ -77,7 +73,7 @@ async fn test_execute_wrong_asset() {
         .user2
         .swap_intent_action(
             env.swap_intent.id(),
-            Asset::Near(NearAsset::Nep141(FtAmount::new(env.ft2.id().clone(), 500))),
+            Asset::Near(NearAsset::Nep141(FtAmount::new(env.ft2.clone(), 500))),
             SwapIntentAction::Execute(ExecuteSwapIntentAction {
                 id: intent_id.clone(),
                 recipient: GenericAccount::Near(env.user2.id().clone()),
@@ -97,5 +93,10 @@ async fn test_execute_wrong_asset() {
         .unwrap()
         .is_available());
 
-    assert_eq!(env.ft2.ft_balance_of(env.user2.id()).await.unwrap(), 500);
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft2, env.user2.id())
+            .await
+            .unwrap(),
+        500
+    );
 }

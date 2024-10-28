@@ -10,7 +10,10 @@ use rand::{thread_rng, Rng};
 use serde_json::json;
 
 use crate::{
-    tests::defuse::{env::Env, DefuseSigner},
+    tests::{
+        defuse::{env::Env, DefuseSigner},
+        poa::factory::PoAFactoryExt,
+    },
     utils::{ft::FtExt, mt::MtExt},
 };
 
@@ -55,10 +58,56 @@ async fn test_deposit_withdraw() {
 }
 
 #[tokio::test]
+async fn test_poa_deposit() {
+    let env = Env::new().await.unwrap();
+    let ft1 = TokenId::Nep141(env.ft1.clone());
+
+    env.poa_factory_ft_mint(
+        env.poa_factory.id(),
+        env.poa_ft1_name(),
+        env.user1.id(),
+        1000,
+        Some(
+            DepositMessage {
+                receiver_id: env.user1.id().clone(),
+                execute_intents: Default::default(),
+                refund_if_fails: Default::default(),
+            }
+            .to_string(),
+        ),
+        None,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft1, env.user1.id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
+            .await
+            .unwrap(),
+        0
+    );
+}
+
+#[tokio::test]
 async fn test_deposit_withdraw_intent() {
     let env = Env::new().await.unwrap();
 
-    env.ft_mint(&env.ft1, env.user1.id(), 1000).await.unwrap();
+    env.poa_factory_ft_mint(
+        env.poa_factory.id(),
+        env.poa_ft1_name(),
+        env.user1.id(),
+        1000,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(
         env.user1
@@ -131,7 +180,16 @@ async fn test_deposit_withdraw_intent() {
 async fn test_deposit_withdraw_intent_refund() {
     let env = Env::new().await.unwrap();
 
-    env.ft_mint(&env.ft1, env.user1.id(), 1000).await.unwrap();
+    env.poa_factory_ft_mint(
+        env.poa_factory.id(),
+        env.poa_ft1_name(),
+        env.user1.id(),
+        1000,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(
         env.user1

@@ -1,27 +1,23 @@
 use defuse_contracts::{
     poa::{factory::POAFactory, token::ext_poa_fungible_token},
-    utils::{cache::CURRENT_ACCOUNT_ID, UnwrapOrPanicError},
+    utils::{self, cache::CURRENT_ACCOUNT_ID, UnwrapOrPanicError},
 };
 use near_account_id::ParseAccountError;
 use near_contract_standards::fungible_token::{core::ext_ft_core, Balance};
 use near_sdk::{
-    borsh::BorshSerialize,
-    env,
-    json_types::U128,
-    near, require,
-    serde_json::{self, json},
-    store::IterableSet,
-    AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise,
+    borsh::BorshSerialize, env, json_types::U128, near, require, store::IterableSet, AccountId,
+    BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise,
 };
 
-const POA_TOKEN_WASM: &'static [u8] = include_bytes!(std::env!(
+const POA_TOKEN_WASM: &[u8] = include_bytes!(std::env!(
     "POA_TOKEN_WASM",
     "Set ${POA_TOKEN_WASM} to be the path of the PoA token binary",
 ));
-
 const POA_TOKEN_INIT_BALANCE: NearToken = NearToken::from_near(3);
 const POA_TOKEN_NEW_GAS: Gas = Gas::from_tgas(10);
 const POA_TOKEN_FT_MINT_GAS: Gas = Gas::from_tgas(10);
+// Copied from `near_contract_standards::fungible_token::core_impl::GAS_FOR_FT_TRANSFER_CALL`
+const POA_TOKEN_FT_TRANSFER_CALL_MIN_GAS: Gas = Gas::from_tgas(30);
 
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
@@ -30,6 +26,7 @@ pub struct POAFactoryImpl {
     bridge_token_storage_deposit_required: NearToken,
 }
 
+// TODO: ACL
 #[near]
 impl POAFactoryImpl {
     #[init]
@@ -46,6 +43,7 @@ impl POAFactoryImpl {
 
 #[near]
 impl POAFactory for POAFactoryImpl {
+    // TODO: ACL
     #[payable]
     fn deploy_token(&mut self, token: String) -> Promise {
         let token_id = Self::token_id(token.clone()).unwrap_or_panic_display();
@@ -59,7 +57,7 @@ impl POAFactory for POAFactoryImpl {
                     env::storage_byte_cost()
                         .saturating_mul(current_storage.saturating_sub(initial_storage))
                 ),
-            "not enough attached deposit to deploy PoA token"
+            "not enough deposit attached to deploy PoA token"
         );
 
         Promise::new(token_id)
@@ -68,12 +66,13 @@ impl POAFactory for POAFactoryImpl {
             .deploy_contract(POA_TOKEN_WASM.to_vec())
             .function_call(
                 "new".to_string(),
-                // TODO: metadata?
-                serde_json::to_vec(&json!({})).unwrap_or_panic_display(),
+                b"{}".to_vec(),
                 NearToken::from_yoctonear(0),
                 POA_TOKEN_NEW_GAS,
             )
     }
+
+    // TODO: update_metadata
 
     // TODO: ACL
     #[payable]
@@ -87,14 +86,18 @@ impl POAFactory for POAFactoryImpl {
     ) -> Promise {
         require!(
             env::attached_deposit() >= self.bridge_token_storage_deposit_required,
-            "not enough attached deposit"
+            "not enough deposit attached for token storage_deposit"
         );
-
         require!(self.tokens.contains(&token), "token does not exist");
 
         let token_id = Self::token_id(token).unwrap_or_panic_display();
 
         if let Some(msg) = msg {
+            require!(
+                utils::gas_left()
+                    > POA_TOKEN_FT_MINT_GAS.saturating_add(POA_TOKEN_FT_TRANSFER_CALL_MIN_GAS),
+                "insufficient gas"
+            );
             ext_poa_fungible_token::ext(token_id.clone())
                 .with_attached_deposit(env::attached_deposit())
                 .with_static_gas(POA_TOKEN_FT_MINT_GAS)
@@ -102,7 +105,6 @@ impl POAFactory for POAFactoryImpl {
                 .then(
                     ext_ft_core::ext(token_id)
                         .with_attached_deposit(NearToken::from_yoctonear(1))
-                        // TODO: gas?
                         .ft_transfer_call(owner_id, amount, memo, msg),
                 )
         } else {

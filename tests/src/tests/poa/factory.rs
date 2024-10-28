@@ -45,6 +45,9 @@ pub trait PoAFactoryExt {
 impl PoAFactoryExt for near_workspaces::Account {
     async fn deploy_poa_factory(&self, name: &str) -> anyhow::Result<Contract> {
         let contract = self.deploy_contract(name, &POA_FACTORY_WASM).await?;
+        self.transfer_near(contract.id(), NearToken::from_near(100))
+            .await?
+            .into_result()?;
         contract
             .call("new")
             .args_json(json!({}))

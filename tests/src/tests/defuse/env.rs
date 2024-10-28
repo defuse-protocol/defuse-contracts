@@ -69,6 +69,27 @@ impl Env {
         }
         Ok(())
     }
+
+    pub fn poa_ft1_name(&self) -> &str {
+        self.ft1
+            .as_str()
+            .strip_suffix(&format!(".{}", self.poa_factory.id()))
+            .unwrap()
+    }
+
+    pub fn poa_ft2_name(&self) -> &str {
+        self.ft2
+            .as_str()
+            .strip_suffix(&format!(".{}", self.poa_factory.id()))
+            .unwrap()
+    }
+
+    pub fn poa_ft3_name(&self) -> &str {
+        self.ft3
+            .as_str()
+            .strip_suffix(&format!(".{}", self.poa_factory.id()))
+            .unwrap()
+    }
 }
 
 impl Deref for Env {
