@@ -79,13 +79,13 @@ impl FtExt for Account {
             .call("new")
             .args_json(json!({
                 "owner_id": self.id(),
-                    "total_supply": TOTAL_SUPPLY.to_string(),
-                    "metadata": {
-                        "spec": "ft-1.0.0",
-                        "name": format!("Token {}", token),
-                        "symbol": "TKN",
-                        "decimals": 18
-                    }
+                "total_supply": TOTAL_SUPPLY.to_string(),
+                "metadata": {
+                    "spec": "ft-1.0.0",
+                    "name": format!("Token {}", token),
+                    "symbol": "TKN",
+                    "decimals": 18
+                }
             }))
             .max_gas()
             .transact()

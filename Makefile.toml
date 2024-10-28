@@ -14,14 +14,60 @@ args = ["clippy", "--workspace", "--all-targets"]
 
 [tasks.build]
 dependencies = [
+    "build-defuse",
+    "build-poa-factory",
     "build-account",
     "build-swap-intent",
     "build-swap-ft-intent",
-    "build-defuse",
-    "build-controller",
     "contract-stats",
 ]
 
+[tasks.build-defuse]
+command = "cargo"
+args = [
+    "near",
+    "build",
+    "--manifest-path",
+    "./defuse/Cargo.toml",
+    "--features",
+    "abi",
+    "--out-dir",
+    "${TARGET_DIR}",
+    "--no-docker",
+    "--no-embed-abi",
+]
+
+[tasks.build-poa-factory]
+dependencies = ["build-poa-token"]
+env.POA_TOKEN_WASM = "${TARGET_DIR}/defuse_poa_token_contract.wasm"
+command = "cargo"
+args = [
+    "near",
+    "build",
+    "--manifest-path",
+    "./poa-factory/Cargo.toml",
+    "--features",
+    "abi",
+    "--out-dir",
+    "${TARGET_DIR}",
+    "--no-docker",
+    "--no-embed-abi",
+]
+
+[tasks.build-poa-token]
+command = "cargo"
+args = [
+    "near",
+    "build",
+    "--manifest-path",
+    "./poa-token/Cargo.toml",
+    "--features",
+    "abi",
+    "--out-dir",
+    "${TARGET_DIR}",
+    "--no-docker",
+    "--no-embed-abi",
+]
 
 [tasks.build-account]
 command = "cargo"
@@ -60,36 +106,6 @@ args = [
     "build",
     "--manifest-path",
     "./intents/swap-ft/Cargo.toml",
-    "--features",
-    "abi",
-    "--out-dir",
-    "${TARGET_DIR}",
-    "--no-docker",
-    "--no-embed-abi",
-]
-
-[tasks.build-defuse]
-command = "cargo"
-args = [
-    "near",
-    "build",
-    "--manifest-path",
-    "./defuse/Cargo.toml",
-    "--features",
-    "abi",
-    "--out-dir",
-    "${TARGET_DIR}",
-    "--no-docker",
-    "--no-embed-abi",
-]
-
-[tasks.build-controller]
-command = "cargo"
-args = [
-    "near",
-    "build",
-    "--manifest-path",
-    "./controller/Cargo.toml",
     "--features",
     "abi",
     "--out-dir",

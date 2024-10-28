@@ -18,11 +18,11 @@ use crate::{
 async fn test_deposit_withdraw() {
     let env = Env::new().await.unwrap();
 
-    env.defuse_ft_mint(env.ft1.id(), 1000, env.user1.id())
+    env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
         .await
         .unwrap();
 
-    let ft1 = TokenId::Nep141(env.ft1.id().clone());
+    let ft1 = TokenId::Nep141(env.ft1.clone());
 
     assert_eq!(
         env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
@@ -33,7 +33,7 @@ async fn test_deposit_withdraw() {
 
     assert_eq!(
         env.user1
-            .defuse_ft_withdraw(env.defuse.id(), env.ft1.id(), env.user1.id(), 1000, None)
+            .defuse_ft_withdraw(env.defuse.id(), &env.ft1, env.user1.id(), 1000, None)
             .await
             .unwrap(),
         1000,
@@ -46,22 +46,25 @@ async fn test_deposit_withdraw() {
         0
     );
 
-    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 1000);
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft1, env.user1.id())
+            .await
+            .unwrap(),
+        1000
+    );
 }
 
 #[tokio::test]
 async fn test_deposit_withdraw_intent() {
     let env = Env::new().await.unwrap();
 
-    env.ft_mint(env.ft1.id(), env.user1.id(), 1000)
-        .await
-        .unwrap();
+    env.ft_mint(&env.ft1, env.user1.id(), 1000).await.unwrap();
 
     assert_eq!(
         env.user1
             .defuse_ft_deposit(
                 env.defuse.id(),
-                env.ft1.id(),
+                &env.ft1,
                 1000,
                 DepositMessage {
                     receiver_id: env.user1.id().clone(),
@@ -73,7 +76,7 @@ async fn test_deposit_withdraw_intent() {
                             intents: [
                                 // withdrawal is a detached promise
                                 FtWithdraw {
-                                    token: env.ft1.id().clone(),
+                                    token: env.ft1.clone(),
                                     receiver_id: env.user2.id().clone(),
                                     amount: U128(1000),
                                     memo: None,
@@ -95,9 +98,14 @@ async fn test_deposit_withdraw_intent() {
         1000
     );
 
-    let ft1 = TokenId::Nep141(env.ft1.id().clone());
+    let ft1 = TokenId::Nep141(env.ft1.clone());
 
-    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 0);
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft1, env.user1.id())
+            .await
+            .unwrap(),
+        0
+    );
     assert_eq!(
         env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
             .await
@@ -111,22 +119,25 @@ async fn test_deposit_withdraw_intent() {
             .unwrap(),
         0
     );
-    assert_eq!(env.ft1.ft_balance_of(env.user2.id()).await.unwrap(), 1000);
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft1, env.user2.id())
+            .await
+            .unwrap(),
+        1000
+    );
 }
 
 #[tokio::test]
 async fn test_deposit_withdraw_intent_refund() {
     let env = Env::new().await.unwrap();
 
-    env.ft_mint(env.ft1.id(), env.user1.id(), 1000)
-        .await
-        .unwrap();
+    env.ft_mint(&env.ft1, env.user1.id(), 1000).await.unwrap();
 
     assert_eq!(
         env.user1
             .defuse_ft_deposit(
                 env.defuse.id(),
-                env.ft1.id(),
+                &env.ft1,
                 1000,
                 DepositMessage {
                     receiver_id: env.user1.id().clone(),
@@ -136,7 +147,7 @@ async fn test_deposit_withdraw_intent_refund() {
                         Deadline::infinity(),
                         DefuseIntents {
                             intents: [FtWithdraw {
-                                token: env.ft1.id().clone(),
+                                token: env.ft1.clone(),
                                 receiver_id: env.user1.id().clone(),
                                 amount: U128(1001),
                                 memo: None,
@@ -156,14 +167,19 @@ async fn test_deposit_withdraw_intent_refund() {
         0
     );
 
-    let ft1 = TokenId::Nep141(env.ft1.id().clone());
+    let ft1 = TokenId::Nep141(env.ft1.clone());
     assert_eq!(
         env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
             .await
             .unwrap(),
         0
     );
-    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 1000);
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft1, env.user1.id())
+            .await
+            .unwrap(),
+        1000
+    );
 }
 
 pub trait DefuseFtReceiver {

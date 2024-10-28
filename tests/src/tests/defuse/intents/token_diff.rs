@@ -28,35 +28,35 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
         [
             AccountFtDiff {
                 account: &env.user1,
-                init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
+                init_balances: [(&env.ft1, 100)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
-                        (TokenId::Nep141(env.ft1.id().clone()), -100),
+                        (TokenId::Nep141(env.ft1.clone()), -100),
                         (
-                            TokenId::Nep141(env.ft2.id().clone()),
+                            TokenId::Nep141(env.ft2.clone()),
                             TokenDiff::closure_delta(-200, fee).unwrap(),
                         ),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(env.ft2.id(), TokenDiff::closure_delta(-200, fee).unwrap())]
+                result_balances: [(&env.ft2, TokenDiff::closure_delta(-200, fee).unwrap())]
                     .into_iter()
                     .collect(),
             },
             AccountFtDiff {
                 account: &env.user2,
-                init_balances: [(env.ft2.id(), 200)].into_iter().collect(),
+                init_balances: [(&env.ft2, 200)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
                         (
-                            TokenId::Nep141(env.ft1.id().clone()),
+                            TokenId::Nep141(env.ft1.clone()),
                             TokenDiff::closure_delta(-100, fee).unwrap(),
                         ),
-                        (TokenId::Nep141(env.ft2.id().clone()), -200),
+                        (TokenId::Nep141(env.ft2.clone()), -200),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(env.ft1.id(), TokenDiff::closure_delta(-100, fee).unwrap())]
+                result_balances: [(&env.ft1, TokenDiff::closure_delta(-100, fee).unwrap())]
                     .into_iter()
                     .collect(),
             },
@@ -75,28 +75,28 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
         [
             AccountFtDiff {
                 account: &env.user1,
-                init_balances: [(env.ft1.id(), 100)].into_iter().collect(),
+                init_balances: [(&env.ft1, 100)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
-                        (TokenId::Nep141(env.ft1.id().clone()), -100),
-                        (TokenId::Nep141(env.ft2.id().clone()), 200),
+                        (TokenId::Nep141(env.ft1.clone()), -100),
+                        (TokenId::Nep141(env.ft2.clone()), 200),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(env.ft2.id(), 200)].into_iter().collect(),
+                result_balances: [(&env.ft2, 200)].into_iter().collect(),
             },
             AccountFtDiff {
                 account: &env.user2,
-                init_balances: [(env.ft2.id(), 1000)].into_iter().collect(),
+                init_balances: [(&env.ft2, 1000)].into_iter().collect(),
                 diff: [
                     TokenAmounts::<i128>::default()
                         .with_try_extend::<i128>([
                             (
-                                TokenId::Nep141(env.ft1.id().clone()),
+                                TokenId::Nep141(env.ft1.clone()),
                                 TokenDiff::closure_delta(-100, fee).unwrap(),
                             ),
                             (
-                                TokenId::Nep141(env.ft2.id().clone()),
+                                TokenId::Nep141(env.ft2.clone()),
                                 TokenDiff::closure_delta(200, fee).unwrap(),
                             ),
                         ])
@@ -104,11 +104,11 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
                     TokenAmounts::<i128>::default()
                         .with_try_extend::<i128>([
                             (
-                                TokenId::Nep141(env.ft2.id().clone()),
+                                TokenId::Nep141(env.ft2.clone()),
                                 TokenDiff::closure_delta(300, fee).unwrap(),
                             ),
                             (
-                                TokenId::Nep141(env.ft3.id().clone()),
+                                TokenId::Nep141(env.ft3.clone()),
                                 TokenDiff::closure_delta(-500, fee).unwrap(),
                             ),
                         ])
@@ -116,28 +116,28 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
                 ]
                 .into(),
                 result_balances: [
-                    (env.ft1.id(), TokenDiff::closure_delta(-100, fee).unwrap()),
+                    (&env.ft1, TokenDiff::closure_delta(-100, fee).unwrap()),
                     (
-                        env.ft2.id(),
+                        &env.ft2,
                         1000 + TokenDiff::closure_delta(200, fee).unwrap()
                             + TokenDiff::closure_delta(300, fee).unwrap(),
                     ),
-                    (env.ft3.id(), TokenDiff::closure_delta(-500, fee).unwrap()),
+                    (&env.ft3, TokenDiff::closure_delta(-500, fee).unwrap()),
                 ]
                 .into_iter()
                 .collect(),
             },
             AccountFtDiff {
                 account: &env.user3,
-                init_balances: [(env.ft3.id(), 500)].into_iter().collect(),
+                init_balances: [(&env.ft3, 500)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
-                        (TokenId::Nep141(env.ft2.id().clone()), 300),
-                        (TokenId::Nep141(env.ft3.id().clone()), -500),
+                        (TokenId::Nep141(env.ft2.clone()), 300),
+                        (TokenId::Nep141(env.ft3.clone()), -500),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(env.ft2.id(), 300)].into_iter().collect(),
+                result_balances: [(&env.ft2, 300)].into_iter().collect(),
             },
         ]
         .into(),
@@ -211,14 +211,14 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
 async fn test_invariant_violated() {
     let env = Env::new().await.unwrap();
 
-    let ft1 = TokenId::Nep141(env.ft1.id().clone());
-    let ft2 = TokenId::Nep141(env.ft2.id().clone());
+    let ft1 = TokenId::Nep141(env.ft1.clone());
+    let ft2 = TokenId::Nep141(env.ft2.clone());
 
     // deposit
-    env.defuse_ft_mint(env.ft1.id(), 1000, env.user1.id())
+    env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
         .await
         .unwrap();
-    env.defuse_ft_mint(env.ft2.id(), 2000, env.user2.id())
+    env.defuse_ft_mint(&env.ft2, 2000, env.user2.id())
         .await
         .unwrap();
 
