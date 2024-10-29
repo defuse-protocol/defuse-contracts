@@ -4,6 +4,7 @@ use std::{
 };
 
 use defuse_poa_factory_contract::Role;
+use near_contract_standards::fungible_token::metadata::FungibleTokenMetadata;
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use near_workspaces::Contract;
 use serde_json::json;
@@ -30,8 +31,13 @@ pub trait PoAFactoryExt {
         &self,
         factory: &AccountId,
         token: &str,
+        metadata: impl Into<Option<FungibleTokenMetadata>>,
     ) -> anyhow::Result<AccountId>;
-    async fn poa_deploy_token(&self, token: &str) -> anyhow::Result<AccountId>;
+    async fn poa_deploy_token(
+        &self,
+        token: &str,
+        metadata: impl Into<Option<FungibleTokenMetadata>>,
+    ) -> anyhow::Result<AccountId>;
 
     async fn poa_factory_ft_deposit(
         &self,
@@ -88,10 +94,12 @@ impl PoAFactoryExt for near_workspaces::Account {
         &self,
         factory: &AccountId,
         token: &str,
+        metadata: impl Into<Option<FungibleTokenMetadata>>,
     ) -> anyhow::Result<AccountId> {
         self.call(factory, "deploy_token")
             .args_json(json!({
                 "token": token,
+                "metadata": metadata.into(),
             }))
             .deposit(NearToken::from_near(4))
             .max_gas()
@@ -101,8 +109,13 @@ impl PoAFactoryExt for near_workspaces::Account {
         Ok(Self::token_id(token, factory))
     }
 
-    async fn poa_deploy_token(&self, token: &str) -> anyhow::Result<AccountId> {
-        self.poa_factory_deploy_token(self.id(), token).await
+    async fn poa_deploy_token(
+        &self,
+        token: &str,
+        metadata: impl Into<Option<FungibleTokenMetadata>>,
+    ) -> anyhow::Result<AccountId> {
+        self.poa_factory_deploy_token(self.id(), token, metadata)
+            .await
     }
 
     async fn poa_factory_ft_deposit(
@@ -160,14 +173,19 @@ impl PoAFactoryExt for near_workspaces::Contract {
         &self,
         factory: &AccountId,
         token: &str,
+        metadata: impl Into<Option<FungibleTokenMetadata>>,
     ) -> anyhow::Result<AccountId> {
         self.as_account()
-            .poa_factory_deploy_token(factory, token)
+            .poa_factory_deploy_token(factory, token, metadata)
             .await
     }
 
-    async fn poa_deploy_token(&self, token: &str) -> anyhow::Result<AccountId> {
-        self.as_account().poa_deploy_token(token).await
+    async fn poa_deploy_token(
+        &self,
+        token: &str,
+        metadata: impl Into<Option<FungibleTokenMetadata>>,
+    ) -> anyhow::Result<AccountId> {
+        self.as_account().poa_deploy_token(token, metadata).await
     }
 
     async fn poa_factory_ft_deposit(
@@ -226,16 +244,16 @@ mod tests {
             .await
             .unwrap();
 
-        user.poa_factory_deploy_token(poa_factory.id(), "ft1")
+        user.poa_factory_deploy_token(poa_factory.id(), "ft1", None)
             .await
             .unwrap_err();
 
         let ft1 = root
-            .poa_factory_deploy_token(poa_factory.id(), "ft1")
+            .poa_factory_deploy_token(poa_factory.id(), "ft1", None)
             .await
             .unwrap();
 
-        root.poa_factory_deploy_token(poa_factory.id(), "ft1")
+        root.poa_factory_deploy_token(poa_factory.id(), "ft1", None)
             .await
             .unwrap_err();
 

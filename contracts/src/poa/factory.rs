@@ -10,7 +10,7 @@ use crate::utils::access_keys::AccessKeys;
 pub trait POAFactory: AccessControllable + AccessKeys {
     /// Deploys new token to `token.<CURRENT_ACCOUNT_ID>`.
     /// Requires to attach enough Ⓝ to cover storage costs.
-    fn deploy_token(&mut self, token: String) -> Promise;
+    fn deploy_token(&mut self, token: String, metadata: Option<FungibleTokenMetadata>) -> Promise;
 
     /// Sets metadata on `token.<CURRENT_ACCOUNT_ID>`.
     /// NOTE: MUST attach 1 yⓃ for security purposes.

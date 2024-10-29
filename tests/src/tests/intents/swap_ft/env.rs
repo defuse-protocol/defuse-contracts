@@ -129,11 +129,11 @@ impl EnvBuilder {
             .unwrap();
 
         let token_a = root
-            .poa_factory_deploy_token(poa_factory.id(), "token_a")
+            .poa_factory_deploy_token(poa_factory.id(), "token_a", None)
             .await
             .unwrap();
         let token_b = root
-            .poa_factory_deploy_token(poa_factory.id(), "token_b")
+            .poa_factory_deploy_token(poa_factory.id(), "token_b", None)
             .await
             .unwrap();
         let intent = root.deploy_swap_ft_intent_contract().await.unwrap();

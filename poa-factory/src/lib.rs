@@ -22,6 +22,7 @@ use near_sdk::{
     env,
     json_types::U128,
     near, require,
+    serde_json::{self, json},
     store::IterableSet,
     AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise, PublicKey,
 };
@@ -93,7 +94,11 @@ impl POAFactory for POAFactoryImpl {
     #[pause]
     #[access_control_any(roles(Role::TokenDeployer))]
     #[payable]
-    fn deploy_token(&mut self, token: String) -> Promise {
+    fn deploy_token(&mut self, token: String, metadata: Option<FungibleTokenMetadata>) -> Promise {
+        if let Some(metadata) = metadata.as_ref() {
+            metadata.assert_valid()
+        }
+
         let initial_storage = env::storage_usage() as u128;
         require!(self.tokens.insert(token.clone()), "token exists");
         let current_storage = env::storage_usage() as u128;
@@ -112,7 +117,10 @@ impl POAFactory for POAFactoryImpl {
             .deploy_contract(POA_TOKEN_WASM.to_vec())
             .function_call(
                 "new".to_string(),
-                b"{}".to_vec(),
+                serde_json::to_vec(&json!({
+                    "metadata": metadata,
+                }))
+                .unwrap_or_panic_display(),
                 NearToken::from_yoctonear(0),
                 POA_TOKEN_NEW_GAS,
             )

@@ -71,10 +71,10 @@ impl Env {
             user3: sandbox.create_account("user3").await,
             swap_intent: root.deploy_swap_intent_shard("swap-intent").await?,
             ft1: root
-                .poa_factory_deploy_token(poa_factory.id(), "ft1")
+                .poa_factory_deploy_token(poa_factory.id(), "ft1", None)
                 .await?,
             ft2: root
-                .poa_factory_deploy_token(poa_factory.id(), "ft2")
+                .poa_factory_deploy_token(poa_factory.id(), "ft2", None)
                 .await?,
             account_shard1: root.deploy_account_shard("account-shard1", None).await?,
             account_shard2: root.deploy_account_shard("account-shard2", None).await?,

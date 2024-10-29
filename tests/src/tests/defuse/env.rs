@@ -195,13 +195,13 @@ impl EnvBuilder {
                 )
                 .await?,
             ft1: root
-                .poa_factory_deploy_token(poa_factory.id(), "ft1")
+                .poa_factory_deploy_token(poa_factory.id(), "ft1", None)
                 .await?,
             ft2: root
-                .poa_factory_deploy_token(poa_factory.id(), "ft2")
+                .poa_factory_deploy_token(poa_factory.id(), "ft2", None)
                 .await?,
             ft3: root
-                .poa_factory_deploy_token(poa_factory.id(), "ft3")
+                .poa_factory_deploy_token(poa_factory.id(), "ft3", None)
                 .await?,
             poa_factory,
             sandbox,
