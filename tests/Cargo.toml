@@ -9,6 +9,7 @@ workspace = true
 [dev-dependencies]
 defuse-contracts.workspace = true
 defuse-contract.workspace = true
+defuse-poa-factory-contract.workspace = true
 
 anyhow.workspace = true
 bnum = { workspace = true, features = ["rand"] }

@@ -3,6 +3,7 @@ use std::{collections::HashMap, ops::Deref};
 use anyhow::anyhow;
 use defuse_contract::Role;
 use defuse_contracts::{defuse::tokens::DepositMessage, utils::fees::Pips};
+use defuse_poa_factory_contract::Role as POAFactoryRole;
 use near_sdk::{AccountId, Duration};
 use near_workspaces::{Account, Contract};
 
@@ -157,7 +158,20 @@ impl EnvBuilder {
         let sandbox = Sandbox::new().await?;
         let root = sandbox.root_account().clone();
 
-        let poa_factory = root.deploy_poa_factory("poa-factory").await?;
+        let poa_factory = root
+            .deploy_poa_factory(
+                "poa-factory",
+                [root.id().clone()],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+            )
+            .await?;
 
         let s = Env {
             user1: sandbox.create_account("user1").await,
@@ -180,9 +194,15 @@ impl EnvBuilder {
                     self.staging_duration,
                 )
                 .await?,
-            ft1: poa_factory.poa_deploy_token("ft1").await?,
-            ft2: poa_factory.poa_deploy_token("ft2").await?,
-            ft3: poa_factory.poa_deploy_token("ft3").await?,
+            ft1: root
+                .poa_factory_deploy_token(poa_factory.id(), "ft1")
+                .await?,
+            ft2: root
+                .poa_factory_deploy_token(poa_factory.id(), "ft2")
+                .await?,
+            ft3: root
+                .poa_factory_deploy_token(poa_factory.id(), "ft3")
+                .await?,
             poa_factory,
             sandbox,
         };
@@ -221,7 +241,7 @@ impl EnvBuilder {
         )
         .await?;
         for token in ["ft1", "ft2", "ft3"] {
-            s.poa_factory_ft_mint(
+            s.poa_factory_ft_deposit(
                 s.poa_factory.id(),
                 token,
                 root.id(),

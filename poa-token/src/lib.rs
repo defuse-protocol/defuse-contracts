@@ -1,6 +1,9 @@
 use defuse_contracts::{
     poa::token::{POAFungibleToken, WITHDRAW_MEMO_PREFIX},
-    utils::cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+    utils::{
+        access_keys::AccessKeys,
+        cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
+    },
 };
 use near_contract_standards::{
     fungible_token::{
@@ -13,7 +16,7 @@ use near_contract_standards::{
 use near_plugins::{events::AsEvent, only, ownable::OwnershipTransferred, Ownable};
 use near_sdk::{
     assert_one_yocto, borsh::BorshSerialize, env, json_types::U128, near, require, store::Lazy,
-    AccountId, BorshStorageKey, NearToken, PanicOnDefault, PromiseOrValue,
+    AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise, PromiseOrValue, PublicKey,
 };
 
 #[near(contract_state)]
@@ -44,6 +47,7 @@ impl POAFungibleTokenImpl {
         };
 
         let owner = owner_id.unwrap_or_else(|| PREDECESSOR_ACCOUNT_ID.clone());
+        // Ownable::owner_set requires it to be a promise
         require!(!env::storage_write(
             contract.owner_storage_key(),
             owner.as_bytes()
@@ -59,9 +63,17 @@ impl POAFungibleTokenImpl {
 
 #[near]
 impl POAFungibleToken for POAFungibleTokenImpl {
-    #[only(owner)]
+    #[only(self, owner)]
     #[payable]
-    fn ft_mint(&mut self, owner_id: AccountId, amount: U128, memo: Option<String>) {
+    fn set_metadata(&mut self, metadata: FungibleTokenMetadata) {
+        assert_one_yocto();
+        metadata.assert_valid();
+        self.metadata.set(metadata);
+    }
+
+    #[only(self, owner)]
+    #[payable]
+    fn ft_deposit(&mut self, owner_id: AccountId, amount: U128, memo: Option<String>) {
         self.token.storage_deposit(Some(owner_id.clone()), None);
         self.token.internal_deposit(&owner_id, amount.into());
         FtMint {
@@ -80,7 +92,6 @@ impl FungibleTokenCore for POAFungibleTokenImpl {
         if receiver_id == *CURRENT_ACCOUNT_ID
             && memo
                 .as_deref()
-                // TODO: check if non-empty after prefix?
                 .map_or(false, |memo| memo.starts_with(WITHDRAW_MEMO_PREFIX))
         {
             self.ft_withdraw(&PREDECESSOR_ACCOUNT_ID, amount, memo);
@@ -97,9 +108,6 @@ impl FungibleTokenCore for POAFungibleTokenImpl {
         memo: Option<String>,
         msg: String,
     ) -> PromiseOrValue<U128> {
-        // TODO: storage management?
-        // TODO: check if receiver self and withdraw msg
-        // self.token.internal_deposit(account_id, amount);
         self.token.ft_transfer_call(receiver_id, amount, memo, msg)
     }
 
@@ -121,7 +129,6 @@ impl FungibleTokenResolver for POAFungibleTokenImpl {
         receiver_id: AccountId,
         amount: U128,
     ) -> U128 {
-        // TODO
         self.token
             .ft_resolve_transfer(sender_id, receiver_id, amount)
     }
@@ -167,7 +174,7 @@ impl FungibleTokenMetadataProvider for POAFungibleTokenImpl {
 impl POAFungibleTokenImpl {
     fn ft_withdraw(&mut self, account_id: &AccountId, amount: U128, memo: Option<String>) {
         assert_one_yocto();
-        require!(amount.0 > 0, "The amount should be a positive number");
+        require!(amount.0 > 0, "zero amount");
         self.token.internal_withdraw(account_id, amount.into());
         FtBurn {
             owner_id: account_id,
@@ -175,6 +182,19 @@ impl POAFungibleTokenImpl {
             memo: memo.as_deref(),
         }
         .emit();
+    }
+}
+
+#[near]
+impl AccessKeys for POAFungibleTokenImpl {
+    #[only(self, owner)]
+    fn add_full_access_key(&mut self, public_key: PublicKey) -> Promise {
+        Promise::new(CURRENT_ACCOUNT_ID.clone()).add_full_access_key(public_key)
+    }
+
+    #[only(self, owner)]
+    fn delete_key(&mut self, public_key: PublicKey) -> Promise {
+        Promise::new(CURRENT_ACCOUNT_ID.clone()).delete_key(public_key)
     }
 }
 

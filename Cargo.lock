@@ -686,6 +686,7 @@ dependencies = [
  "bnum",
  "defuse-contract",
  "defuse-contracts",
+ "defuse-poa-factory-contract",
  "impl-tools",
  "near-contract-standards",
  "near-crypto",
@@ -702,7 +703,6 @@ name = "defuse-poa-factory-contract"
 version = "0.1.0"
 dependencies = [
  "defuse-contracts",
- "near-account-id",
  "near-contract-standards",
  "near-plugins",
  "near-sdk",

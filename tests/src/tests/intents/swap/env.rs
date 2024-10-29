@@ -1,5 +1,6 @@
 use std::sync::LazyLock;
 
+use defuse_poa_factory_contract::Role as POAFactoryRole;
 use impl_tools::autoimpl;
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
@@ -49,15 +50,32 @@ impl Env {
         let sandbox = Sandbox::new().await?;
         let root = sandbox.root_account();
 
-        let poa_factory = root.deploy_poa_factory("poa-factory").await?;
+        let poa_factory = root
+            .deploy_poa_factory(
+                "poa-factory",
+                [root.id().clone()],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+            )
+            .await?;
 
         Ok(Self {
             user1: sandbox.create_account("user1").await,
             user2: sandbox.create_account("user2").await,
             user3: sandbox.create_account("user3").await,
             swap_intent: root.deploy_swap_intent_shard("swap-intent").await?,
-            ft1: poa_factory.poa_deploy_token("ft1").await?,
-            ft2: poa_factory.poa_deploy_token("ft2").await?,
+            ft1: root
+                .poa_factory_deploy_token(poa_factory.id(), "ft1")
+                .await?,
+            ft2: root
+                .poa_factory_deploy_token(poa_factory.id(), "ft2")
+                .await?,
             account_shard1: root.deploy_account_shard("account-shard1", None).await?,
             account_shard2: root.deploy_account_shard("account-shard2", None).await?,
             poa_factory,
@@ -79,7 +97,7 @@ impl Env {
         account_id: &AccountId,
         amount: u128,
     ) -> anyhow::Result<()> {
-        self.poa_factory_ft_mint(
+        self.poa_factory_ft_deposit(
             self.poa_factory.id(),
             token
                 .as_str()

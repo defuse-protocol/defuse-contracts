@@ -1,3 +1,4 @@
+use defuse_poa_factory_contract::Role as POAFactoryRole;
 use impl_tools::autoimpl;
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
@@ -62,7 +63,7 @@ impl Env {
     ) -> anyhow::Result<()> {
         self.sandbox
             .root_account()
-            .poa_factory_ft_mint(
+            .poa_factory_ft_deposit(
                 self.poa_factory.id(),
                 token
                     .as_str()
@@ -109,28 +110,33 @@ impl EnvBuilder {
 
     pub async fn build(self) -> Env {
         let sandbox = Sandbox::new().await.unwrap();
+        let root = sandbox.root_account();
 
-        let poa_factory = sandbox
-            .root_account()
-            .deploy_poa_factory("poa-factory")
+        let poa_factory = root
+            .deploy_poa_factory(
+                "poa-factory",
+                [root.id().clone()],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+            )
             .await
             .unwrap();
 
-        let token_a = sandbox
-            .root_account()
+        let token_a = root
             .poa_factory_deploy_token(poa_factory.id(), "token_a")
             .await
             .unwrap();
-        let token_b = sandbox
-            .root_account()
+        let token_b = root
             .poa_factory_deploy_token(poa_factory.id(), "token_b")
             .await
             .unwrap();
-        let intent = sandbox
-            .root_account()
-            .deploy_swap_ft_intent_contract()
-            .await
-            .unwrap();
+        let intent = root.deploy_swap_ft_intent_contract().await.unwrap();
 
         let user = sandbox.create_account("user").await;
         let solver = sandbox.create_account("solver").await;
@@ -167,16 +173,26 @@ impl EnvBuilder {
         intent.ft_storage_deposit(&token_b, None).await.unwrap();
 
         if self.fund_intent {
-            sandbox
-                .root_account()
-                .poa_factory_ft_mint(poa_factory.id(), "token_a", intent.id(), 10_000, None, None)
-                .await
-                .unwrap();
-            sandbox
-                .root_account()
-                .poa_factory_ft_mint(poa_factory.id(), "token_b", intent.id(), 10_000, None, None)
-                .await
-                .unwrap();
+            root.poa_factory_ft_deposit(
+                poa_factory.id(),
+                "token_a",
+                intent.id(),
+                10_000,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+            root.poa_factory_ft_deposit(
+                poa_factory.id(),
+                "token_b",
+                intent.id(),
+                10_000,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
         }
 
         Env {

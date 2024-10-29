@@ -62,7 +62,7 @@ async fn test_poa_deposit() {
     let env = Env::new().await.unwrap();
     let ft1 = TokenId::Nep141(env.ft1.clone());
 
-    env.poa_factory_ft_mint(
+    env.poa_factory_ft_deposit(
         env.poa_factory.id(),
         env.poa_ft1_name(),
         env.user1.id(),
@@ -98,7 +98,7 @@ async fn test_poa_deposit() {
 async fn test_deposit_withdraw_intent() {
     let env = Env::new().await.unwrap();
 
-    env.poa_factory_ft_mint(
+    env.poa_factory_ft_deposit(
         env.poa_factory.id(),
         env.poa_ft1_name(),
         env.user1.id(),
@@ -180,7 +180,7 @@ async fn test_deposit_withdraw_intent() {
 async fn test_deposit_withdraw_intent_refund() {
     let env = Env::new().await.unwrap();
 
-    env.poa_factory_ft_mint(
+    env.poa_factory_ft_deposit(
         env.poa_factory.id(),
         env.poa_ft1_name(),
         env.user1.id(),
