@@ -195,7 +195,9 @@ impl POAFactoryImpl {
     #[track_caller]
     #[inline]
     fn token_id(token: impl AsRef<str>) -> AccountId {
-        format!("{}.{}", token.as_ref(), *CURRENT_ACCOUNT_ID)
+        let token = token.as_ref();
+        require!(!token.contains('.'), "invalid token name");
+        format!("{token}.{}", *CURRENT_ACCOUNT_ID)
             .parse()
             .unwrap_or_panic_display()
     }

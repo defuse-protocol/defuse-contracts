@@ -56,6 +56,10 @@ pub trait PoAFactoryExt {
         msg: Option<String>,
         memo: Option<String>,
     ) -> anyhow::Result<()>;
+    async fn poa_factory_tokens(
+        &self,
+        poa_factory: &AccountId,
+    ) -> anyhow::Result<HashMap<String, AccountId>>;
 }
 
 impl PoAFactoryExt for near_workspaces::Account {
@@ -154,6 +158,16 @@ impl PoAFactoryExt for near_workspaces::Account {
         self.poa_factory_ft_deposit(self.id(), token, owner_id, amount, msg, memo)
             .await
     }
+
+    async fn poa_factory_tokens(
+        &self,
+        poa_factory: &AccountId,
+    ) -> anyhow::Result<HashMap<String, AccountId>> {
+        self.view(poa_factory, "tokens")
+            .await?
+            .json()
+            .map_err(Into::into)
+    }
 }
 
 impl PoAFactoryExt for near_workspaces::Contract {
@@ -214,6 +228,13 @@ impl PoAFactoryExt for near_workspaces::Contract {
             .poa_ft_deposit(token, owner_id, amount, msg, memo)
             .await
     }
+
+    async fn poa_factory_tokens(
+        &self,
+        poa_factory: &AccountId,
+    ) -> anyhow::Result<HashMap<String, AccountId>> {
+        self.as_account().poa_factory_tokens(poa_factory).await
+    }
 }
 
 #[cfg(test)]
@@ -245,6 +266,10 @@ mod tests {
             .unwrap();
 
         user.poa_factory_deploy_token(poa_factory.id(), "ft1", None)
+            .await
+            .unwrap_err();
+
+        root.poa_factory_deploy_token(poa_factory.id(), "ft1.abc", None)
             .await
             .unwrap_err();
 
