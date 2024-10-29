@@ -10,6 +10,7 @@ POA_TOKEN_WASM = "${TARGET_DIR}/defuse_poa_token_contract.wasm"
 alias = "build"
 
 [tasks.clippy]
+dependencies = ["build-poa-token"]
 command = "cargo"
 args = ["clippy", "--workspace", "--all-targets"]
 
