@@ -1,0 +1,19 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: defuse-contract
+  description: Defuse on NEAR
+  tags:
+    - contract
+    - near
+  links: []
+  annotations:
+    aurora.dev/security-tier: "1"
+spec:
+  owner: defuse-team
+  type: contract
+  lifecycle: production
+  system: defuse-protocol
+  deployedAt:
+    - contract:near/mainnet/defuse-alpha.near
