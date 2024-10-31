@@ -1,6 +1,6 @@
 use core::fmt::Display;
 
-use near_sdk::{borsh, env::sha256_array, near, CryptoHash};
+use near_sdk::{borsh, env, near, CryptoHash};
 use serde_with::serde_as;
 
 pub use crate::utils::bitmap::U256;
@@ -75,7 +75,7 @@ impl Payload for Nep413Payload {
         /// [NEP-461](https://github.com/near/NEPs/pull/461) prefix_tag
         const PREFIX_TAG: u32 = (1u32 << 31) + NEP_NUMBER;
 
-        sha256_array(&borsh::to_vec(&(PREFIX_TAG, self)).unwrap_or_panic_display())
+        env::sha256_array(&borsh::to_vec(&(PREFIX_TAG, self)).unwrap_or_panic_display())
     }
 }
 

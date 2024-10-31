@@ -13,7 +13,7 @@ use crate::{crypto::SignedPayload, utils::serde::base58::Base58};
 
 use super::{
     fees::FeesManager,
-    payload::{DefuseMessage, MultiStandardPayload},
+    payload::{multi::MultiStandardPayload, DefusePayload},
 };
 
 use self::{
@@ -27,7 +27,7 @@ pub trait IntentsExecutor: FeesManager {
     fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>);
 
     // WARNING: this turns out to modify the state!!!
-    fn simulate_intents(self, intents: Vec<DefuseMessage<DefuseIntents>>);
+    fn simulate_intents(self, intents: Vec<DefusePayload<DefuseIntents>>);
 }
 
 #[near(serializers = [borsh, json])]
@@ -35,7 +35,7 @@ pub trait IntentsExecutor: FeesManager {
 pub struct DefuseIntents {
     /// Sequence of intents to execute in given order. Empty list is also
     /// a valid sequence, i.e. it doesn't do anything, but still invalidates
-    /// the [`nonce`](crate::nep413::Nep413Payload::nonce) for the signer
+    /// the [`nonce`](crate::defuse::DefusePayload::nonce) for the signer
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub intents: Vec<Intent>,
 }

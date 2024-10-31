@@ -24,7 +24,7 @@ use crate::{
     },
 };
 
-use super::{payload::MultiStandardPayload, DefuseError, Result};
+use super::{payload::multi::MultiStandardPayload, DefuseError, Result};
 
 #[derive(
     Clone,

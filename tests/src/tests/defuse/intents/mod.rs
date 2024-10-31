@@ -2,12 +2,13 @@ use defuse_contracts::{
     crypto::SignedPayload,
     defuse::{
         intents::{tokens::MtBatchTransfer, DefuseIntents},
-        payload::{DefuseMessage, MultiStandardPayload},
+        payload::{multi::MultiStandardPayload, DefusePayload},
         tokens::TokenId,
     },
     utils::Deadline,
 };
 use near_sdk::json_types::U128;
+use rand::{thread_rng, Rng};
 use serde_json::json;
 
 use crate::utils::mt::MtExt;
@@ -77,9 +78,11 @@ async fn test_simulate_is_view_method() {
         .defuse
         .call("simulate_intents")
         .args_json(json!({
-            "intents": [DefuseMessage {
+            "intents": [DefusePayload {
                 signer_id: env.user1.id().clone(),
+                verifying_contract: env.defuse.id().clone(),
                 deadline: Deadline::infinity(),
+                nonce: thread_rng().gen(),
                 message: DefuseIntents {
                     intents: [MtBatchTransfer {
                         receiver_id: env.user2.id().clone(),

@@ -8,14 +8,13 @@ use defuse_contracts::{
     defuse::{
         events::DefuseIntentEmit,
         intents::{AccountEvent, DefuseIntents, Intent, IntentExecutedEvent, IntentsExecutor},
-        payload::{DefuseMessage, MultiStandardPayload, ValidatePayloadAs},
+        payload::{multi::MultiStandardPayload, DefusePayload},
         DefuseError, Result,
     },
-    nep413::Nep413Payload,
     utils::{cache::CURRENT_ACCOUNT_ID, UnwrapOrPanic},
 };
 use near_plugins::{pause, Pausable};
-use near_sdk::{near, serde_json, AccountId};
+use near_sdk::{near, AccountId};
 
 use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 
@@ -30,7 +29,7 @@ impl IntentsExecutor for DefuseImpl {
     #[handle_result]
     fn simulate_intents(
         self,
-        #[allow(unused_variables)] intents: Vec<DefuseMessage<DefuseIntents>>,
+        #[allow(unused_variables)] intents: Vec<DefusePayload<DefuseIntents>>,
     ) {
         todo!()
         // WARNING: this turns out to modify the state!!!
@@ -79,24 +78,18 @@ impl DefuseImpl {
             .ok_or(DefuseError::InvalidSignature)?;
 
         // extract NEP-413 payload
-        let Nep413Payload {
-            message,
+        let DefusePayload::<DefuseIntents> {
+            signer_id,
+            verifying_contract,
+            deadline,
             nonce,
-            recipient,
-            callback_url: _,
-        } = signed.payload.validate_as()?;
+            message: intents,
+        } = signed.payload.try_into()?;
 
         // check recipient
-        if recipient != *CURRENT_ACCOUNT_ID {
+        if verifying_contract != *CURRENT_ACCOUNT_ID {
             return Err(DefuseError::WrongRecipient);
         }
-
-        // deserialize message
-        let DefuseMessage::<DefuseIntents> {
-            signer_id,
-            deadline,
-            message: intents,
-        } = serde_json::from_str(&message)?;
 
         // make sure message is still valid
         if deadline.has_expired() {
