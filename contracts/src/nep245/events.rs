@@ -10,11 +10,11 @@ use super::TokenId;
 // TODO: #[derive(Deserialize)]
 #[derive(Debug, From)]
 pub enum MtEvent<'a> {
-    #[event_version("0.1.0")]
+    #[event_version("1.0.0")]
     MtMint(&'a [MtMintEvent<'a>]),
-    #[event_version("0.1.0")]
+    #[event_version("1.0.0")]
     MtBurn(&'a [MtBurnEvent<'a>]),
-    #[event_version("0.1.0")]
+    #[event_version("1.0.0")]
     MtTransfer(&'a [MtTransferEvent<'a>]),
 }
 
