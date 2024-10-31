@@ -4,6 +4,8 @@ pub mod account;
 pub mod crypto;
 #[cfg(feature = "defuse")]
 pub mod defuse;
+#[cfg(feature = "erc191")]
+pub mod erc191;
 #[cfg(feature = "intents")]
 pub mod intents;
 #[cfg(feature = "mpc")]

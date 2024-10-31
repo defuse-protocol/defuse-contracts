@@ -48,9 +48,24 @@ impl Signature {
                 ref public_key,
             } => env::ed25519_verify(signature, hash, public_key)
                 .then_some(PublicKey::Ed25519(*public_key)),
+
             Signature::Secp256k1 {
                 signature: [signature @ .., v],
-            } => env::ecrecover(hash, signature, *v, true).map(PublicKey::Secp256k1),
+            } => {
+                // Note: Ethereum clients shift the recovery byte and this
+                // logic might depend on chain id, so clients must rollback
+                // these changes to v ∈ {0, 1}.
+                // References:
+                // * https://github.com/ethereumjs/ethereumjs-monorepo/blob/dc7169c16df6d36adeb6e234fcc66eb6cfc5ea3f/packages/util/src/signature.ts#L31-L62
+                // * https://github.com/ethereum/go-ethereum/issues/19751#issuecomment-504900739
+                env::ecrecover(
+                    hash, signature, *v,
+                    // Do not accept malleabile signatures:
+                    // https://github.com/near/nearcore/blob/d73041cc1d1a70af4456fceefaceb1bf7f684fde/core/crypto/src/signature.rs#L448-L455
+                    true,
+                )
+                .map(PublicKey::Secp256k1)
+            }
         }
     }
 }

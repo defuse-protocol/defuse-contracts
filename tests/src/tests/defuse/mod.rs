@@ -8,7 +8,7 @@ use std::{collections::HashMap, sync::LazyLock};
 use defuse_contract::Role;
 use defuse_contracts::{
     crypto::SignedPayload,
-    defuse::payload::{DefuseMessage, MultiStandardPayload},
+    defuse::payload::{multi::MultiStandardPayload, nep413::Nep413DefuseMessage},
     nep413::{Nep413Payload, U256},
     utils::{fees::Pips, Deadline},
 };
@@ -121,7 +121,7 @@ impl DefuseSigner for near_workspaces::Account {
     {
         self.sign_payload(MultiStandardPayload::Nep413(
             Nep413Payload::new(
-                serde_json::to_string(&DefuseMessage {
+                serde_json::to_string(&Nep413DefuseMessage {
                     signer_id: self.id().clone(),
                     deadline,
                     message,
