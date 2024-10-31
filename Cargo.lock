@@ -686,6 +686,7 @@ dependencies = [
  "bnum",
  "defuse-contract",
  "defuse-contracts",
+ "defuse-poa-factory-contract",
  "impl-tools",
  "near-contract-standards",
  "near-crypto",
@@ -698,10 +699,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "defuse-controller-contract"
+name = "defuse-poa-factory-contract"
 version = "0.1.0"
 dependencies = [
  "defuse-contracts",
+ "near-contract-standards",
+ "near-plugins",
+ "near-sdk",
+]
+
+[[package]]
+name = "defuse-poa-token-contract"
+version = "0.1.0"
+dependencies = [
+ "defuse-contracts",
+ "near-contract-standards",
+ "near-plugins",
  "near-sdk",
 ]
 

@@ -3,10 +3,11 @@ resolver = "2"
 members = [
     "account",
     "contracts",
-    "controller",
     "defuse",
     "intents/swap",
     "intents/swap-ft",
+    "poa-factory",
+    "poa-token",
     "tests",
 ]
 default-members = ["contracts"]
@@ -17,10 +18,11 @@ edition = "2021"
 [workspace.dependencies]
 defuse-account-contract.path = "account"
 defuse-contracts = { path = "contracts", default-features = false }
-defuse-controller-contract.path = "controller"
 defuse-contract.path = "defuse"
 defuse-swap-intent-contract.path = "intents/swap"
 defuse-swap-ft-intent-contract.path = "intents/swap-ft"
+defuse-poa-factory-contract.path = "poa-factory"
+defuse-poa-token-contract.path = "poa-token"
 
 anyhow = "1"
 bnum = { version = "0.12", features = ["borsh"] }

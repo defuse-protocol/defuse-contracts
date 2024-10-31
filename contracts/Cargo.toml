@@ -23,7 +23,7 @@ strum.workspace = true
 thiserror.workspace = true
 
 [features]
-default = ["account", "controller", "defuse", "intents", "mpc"]
+default = ["account", "controller", "defuse", "intents", "mpc", "poa"]
 
 account = []
 controller = []
@@ -33,6 +33,7 @@ intents = []
 mpc = []
 nep245 = []
 nep413 = ["crypto"]
+poa = []
 
 # HACK: Semi-feature to enable `#[derive(JsonSchema)]` only when
 # `not(target_arch = "wasm32"))`. This is needed to make

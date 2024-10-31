@@ -1,7 +1,5 @@
 #[cfg(feature = "account")]
 pub mod account;
-#[cfg(feature = "controller")]
-pub mod controller;
 #[cfg(feature = "crypto")]
 pub mod crypto;
 #[cfg(feature = "defuse")]
@@ -14,5 +12,7 @@ pub mod mpc;
 pub mod nep245;
 #[cfg(feature = "nep413")]
 pub mod nep413;
+#[cfg(feature = "poa")]
+pub mod poa;
 
 pub mod utils;

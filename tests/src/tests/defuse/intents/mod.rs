@@ -65,10 +65,10 @@ impl ExecuteIntentsExt for near_workspaces::Contract {
 async fn test_simulate_is_view_method() {
     let env = Env::new().await.unwrap();
 
-    let ft1 = TokenId::Nep141(env.ft1.id().clone());
+    let ft1 = TokenId::Nep141(env.ft1.clone());
 
     // deposit
-    env.defuse_ft_mint(env.ft1.id(), 1000, env.user1.id())
+    env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
         .await
         .unwrap();
 
