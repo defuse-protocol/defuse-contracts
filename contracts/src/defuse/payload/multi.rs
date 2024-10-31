@@ -11,7 +11,9 @@ use super::DefusePayload;
 pub enum MultiStandardPayload {
     /// See [NEP-413](https://github.com/near/NEPs/blob/master/neps/nep-0413.md)
     Nep413(Nep413Payload),
-    // /// See [ERC-191](https://github.com/ethereum/ercs/blob/master/ERCS/erc-191.md)
+
+    /// See [ERC-191](https://github.com/ethereum/ercs/blob/master/ERCS/erc-191.md),
+    /// [personal_sign](https://docs.metamask.io/wallet/reference/json-rpc-methods/personal_sign)
     #[from(ignore)]
     Erc191(String),
 }
