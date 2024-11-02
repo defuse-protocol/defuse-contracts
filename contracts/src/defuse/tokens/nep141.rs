@@ -4,7 +4,7 @@ use near_sdk::{ext_contract, json_types::U128, AccountId, NearToken, PromiseOrVa
 #[ext_contract(ext_ft_withdraw)]
 pub trait FungibleTokenWithdrawer: FungibleTokenReceiver + FungibleTokenWithdrawResolver {
     /// Returns number of tokens were successfully withdrawn.
-    /// 
+    ///
     /// Optionally can specify `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
     ///
