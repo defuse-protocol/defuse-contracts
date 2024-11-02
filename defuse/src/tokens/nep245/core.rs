@@ -10,7 +10,7 @@ use defuse_contracts::{
     },
 };
 use near_plugins::{pause, Pausable};
-use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, Gas, PromiseOrValue};
+use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, PromiseOrValue};
 
 use crate::{accounts::Account, intents::IntentExecutor, state::State, DefuseImpl, DefuseImplExt};
 
