@@ -25,13 +25,10 @@ impl IntentExecutor<MtBatchTransfer> for State {
             memo,
         }: MtBatchTransfer,
     ) -> Result<()> {
-        require!(sender_id != &receiver_id, "sender_id == receiver_id");
-        require!(!amounts.is_empty(), "zero amounts");
         require!(
-            token_ids.len() == amounts.len(),
-            "token_ids.len() != amounts.len()"
+            sender_id != &receiver_id && token_ids.len() == amounts.len() && !amounts.is_empty(),
+            "invalid args"
         );
-        // TODO: check receiver != self ?
 
         let mut event = MtTransferEvent {
             authorized_id: None,

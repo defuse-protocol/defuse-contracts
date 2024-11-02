@@ -25,7 +25,6 @@ pub struct MtBatchTransferCall {
     /// `msg` to pass in `mt_on_transfer`
     pub msg: String,
 
-    // TODO
     /// Optional static gas to attach to `mt_on_transfer`
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gas_for_mt_on_transfer: Option<Gas>,
