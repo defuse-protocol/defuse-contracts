@@ -18,9 +18,10 @@ args = ["clippy", "--workspace", "--all-targets"]
 dependencies = [
     "build-defuse",
     "build-poa-factory",
-    "build-account",
-    "build-swap-intent",
-    "build-swap-ft-intent",
+    # TODO: remove legacy:
+    # "build-account",
+    # "build-swap-intent",
+    # "build-swap-ft-intent",
     "contract-stats",
 ]
 
