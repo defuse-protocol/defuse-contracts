@@ -7,7 +7,7 @@ use defuse_contracts::{
     },
     utils::Deadline,
 };
-use near_sdk::json_types::U128;
+use near_sdk::{json_types::U128, AccountId};
 use rand::{thread_rng, Rng};
 use serde_json::json;
 
@@ -15,10 +15,15 @@ use crate::utils::mt::MtExt;
 
 use super::{accounts::AccountManagerExt, env::Env};
 
-mod token_diff;
 mod ft_withdraw;
+mod token_diff;
 
 pub trait ExecuteIntentsExt: AccountManagerExt {
+    async fn defuse_execute_intents(
+        &self,
+        defuse_id: &AccountId,
+        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+    ) -> anyhow::Result<()>;
     async fn execute_intents(
         &self,
         intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
@@ -26,8 +31,9 @@ pub trait ExecuteIntentsExt: AccountManagerExt {
 }
 
 impl ExecuteIntentsExt for near_workspaces::Account {
-    async fn execute_intents(
+    async fn defuse_execute_intents(
         &self,
+        defuse_id: &AccountId,
         intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
     ) -> anyhow::Result<()> {
         let args = json!({
@@ -37,7 +43,7 @@ impl ExecuteIntentsExt for near_workspaces::Account {
             "execute_intents({})",
             serde_json::to_string_pretty(&args).unwrap()
         );
-        self.call(self.id(), "execute_intents")
+        self.call(defuse_id, "execute_intents")
             .args_json(args)
             .max_gas()
             .transact()
@@ -52,9 +58,24 @@ impl ExecuteIntentsExt for near_workspaces::Account {
             })
             .map_err(Into::into)
     }
+    async fn execute_intents(
+        &self,
+        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+    ) -> anyhow::Result<()> {
+        self.defuse_execute_intents(self.id(), intents).await
+    }
 }
 
 impl ExecuteIntentsExt for near_workspaces::Contract {
+    async fn defuse_execute_intents(
+        &self,
+        defuse_id: &AccountId,
+        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+    ) -> anyhow::Result<()> {
+        self.as_account()
+            .defuse_execute_intents(defuse_id, intents)
+            .await
+    }
     async fn execute_intents(
         &self,
         intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,

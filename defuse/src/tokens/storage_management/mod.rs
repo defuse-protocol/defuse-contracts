@@ -1,75 +1,42 @@
 use defuse_contracts::{
-    defuse::{intents::tokens::StorageDeposit, tokens::TokenId, Result},
-    utils::UnwrapOrPanicError,
+    defuse::{tokens::TokenId, Result},
+    utils::cache::CURRENT_ACCOUNT_ID,
     wnear::{ext_wnear, NEAR_WITHDRAW_GAS},
 };
-use near_sdk::{
-    env,
-    json_types::U128,
-    require,
-    serde_json::{self, json},
-    AccountId, Gas, NearToken, Promise,
-};
+use near_sdk::{json_types::U128, AccountId, Gas, NearToken, Promise};
 
-use crate::{accounts::Account, state::State};
+use crate::{accounts::Account, state::State, DefuseImpl};
 
-const STORAGE_DEPOSIT_GAS: Gas = Gas::from_tgas(10);
+pub const STORAGE_DEPOSIT_GAS: Gas = Gas::from_tgas(10);
 
 impl State {
-    pub fn storage_deposit(
+    pub fn unwrap_wnear(
         &mut self,
-        sender_id: &AccountId,
-        sender: &mut Account,
-        storage_deposit @ StorageDeposit { amount, .. }: StorageDeposit,
+        account_id: AccountId,
+        account: &mut Account,
+        amount: NearToken,
+        memo: Option<&str>,
     ) -> Result<Promise> {
         self.internal_withdraw(
-            sender_id,
-            sender,
+            &account_id,
+            account,
             [(
                 TokenId::Nep141(self.wnear_id.clone()),
                 amount.as_yoctonear(),
             )],
-            Some("storage_deposit"),
+            memo,
         )?;
-        Ok(self.internal_storage_deposit(storage_deposit))
-    }
 
-    pub fn internal_storage_deposit(
-        &mut self,
-        StorageDeposit {
-            contract_id,
-            account_id,
-            amount,
-        }: StorageDeposit,
-    ) -> Promise {
-        // TODO: what if receiver == self
-        // TODO: check storage_deposit balance on self
-        require!(
-            // TODO: mul self storage
-            amount.saturating_add(env::storage_byte_cost()) < env::account_balance(),
-            "not enough"
-        );
-        let near_withdraw = ext_wnear::ext(self.wnear_id.clone())
+        let amount = U128(amount.as_yoctonear());
+
+        Ok(ext_wnear::ext(self.wnear_id.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .with_static_gas(NEAR_WITHDRAW_GAS)
-            .near_withdraw(U128(amount.as_yoctonear()));
-        if contract_id == self.wnear_id {
-            // reuse the same promise
-            near_withdraw
-        } else {
-            // near_withdraw will be dropped
-            Promise::new(contract_id)
-        }
-        .function_call(
-            "storage_deposit".to_string(),
-            serde_json::to_vec(&json!({
-                "account_id": Some(account_id),
-                // TODO
-                "registration_only": Some(false),
-            }))
-            .unwrap_or_panic_display(),
-            amount,
-            STORAGE_DEPOSIT_GAS,
-        )
+            .near_withdraw(amount)
+            .then(
+                DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
+                    .with_static_gas(DefuseImpl::FT_RESOLVE_WITHDRAW_GAS)
+                    .ft_resolve_withdraw(self.wnear_id.clone(), account_id, amount),
+            ))
     }
 }

@@ -11,11 +11,7 @@ use rand::{thread_rng, Rng};
 use super::ExecuteIntentsExt;
 use crate::{
     tests::defuse::{env::Env, tokens::nep141::DefuseFtReceiver, DefuseSigner},
-    utils::{
-        ft::{FtExt, FT_STORAGE_DEPOSIT},
-        mt::MtExt,
-        wnear::WNearExt,
-    },
+    utils::{ft::FtExt, mt::MtExt, wnear::WNearExt},
 };
 
 #[tokio::test]
@@ -62,6 +58,9 @@ async fn test_withdraw_intent() {
         0
     );
 
+    // intentionally large deposit
+    const STORAGE_DEPOSIT: NearToken = NearToken::from_near(1000);
+
     env.defuse
         .execute_intents([env.user1.sign_defuse_message(
             env.defuse.id(),
@@ -74,7 +73,7 @@ async fn test_withdraw_intent() {
                     amount: 1000.into(),
                     memo: None,
                     // user has no wnear yet
-                    storage_deposit: Some(FT_STORAGE_DEPOSIT),
+                    storage_deposit: Some(STORAGE_DEPOSIT),
                 }
                 .into()]
                 .into(),
@@ -83,9 +82,15 @@ async fn test_withdraw_intent() {
         .await
         .unwrap_err();
 
+    // send user some near
+    env.transfer_near(env.user1.id(), STORAGE_DEPOSIT)
+        .await
+        .unwrap()
+        .into_result()
+        .unwrap();
     // wrap NEAR
     env.user1
-        .near_deposit(env.wnear.id(), NearToken::from_near(1))
+        .near_deposit(env.wnear.id(), STORAGE_DEPOSIT)
         .await
         .unwrap();
     // deposit wNEAR
@@ -93,14 +98,22 @@ async fn test_withdraw_intent() {
         .defuse_ft_deposit(
             env.defuse.id(),
             env.wnear.id(),
-            NearToken::from_near(1).as_yoctonear(),
+            STORAGE_DEPOSIT.as_yoctonear(),
             None,
         )
         .await
         .unwrap();
 
-    env.defuse
-        .execute_intents([env.user1.sign_defuse_message(
+    let old_defuse_balance = env
+        .defuse
+        .as_account()
+        .view_account()
+        .await
+        .unwrap()
+        .balance;
+    env.defuse_execute_intents(
+        env.defuse.id(),
+        [env.user1.sign_defuse_message(
             env.defuse.id(),
             thread_rng().gen(),
             Deadline::infinity(),
@@ -111,14 +124,26 @@ async fn test_withdraw_intent() {
                     amount: 1000.into(),
                     memo: None,
                     // now user has wNEAR to pay for it
-                    storage_deposit: Some(FT_STORAGE_DEPOSIT),
+                    storage_deposit: Some(STORAGE_DEPOSIT),
                 }
                 .into()]
                 .into(),
             },
-        )])
+        )],
+    )
+    .await
+    .unwrap();
+    let new_defuse_balance = env
+        .defuse
+        .as_account()
+        .view_account()
         .await
-        .unwrap();
+        .unwrap()
+        .balance;
+    assert!(
+        new_defuse_balance >= old_defuse_balance,
+        "contract balance must not decrease"
+    );
 
     assert_eq!(
         env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
@@ -134,9 +159,7 @@ async fn test_withdraw_intent() {
         )
         .await
         .unwrap(),
-        NearToken::from_near(1)
-            .saturating_sub(FT_STORAGE_DEPOSIT)
-            .as_yoctonear(),
+        0,
     );
 
     assert_eq!(

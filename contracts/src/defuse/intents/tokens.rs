@@ -76,13 +76,3 @@ pub struct MtWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage_deposit: Option<NearToken>,
 }
-
-/// Make `storage_deposit` for `account_id` on `contract_id`.
-/// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
-#[near(serializers = [borsh, json])]
-#[derive(Debug, Clone)]
-pub struct StorageDeposit {
-    pub contract_id: AccountId,
-    pub account_id: AccountId,
-    pub amount: NearToken,
-}

@@ -31,6 +31,7 @@ impl IntentExecutor<MtBatchTransfer> for State {
             token_ids.len() == amounts.len(),
             "token_ids.len() != amounts.len()"
         );
+        // TODO: check receiver != self ?
 
         let mut event = MtTransferEvent {
             authorized_id: None,
