@@ -142,7 +142,7 @@ impl DefuseImpl {
     #[inline]
     const fn mt_batch_transfer_gas(token_count: usize) -> Gas {
         // TODO: more accurate numbers
-        const MT_TRANSFER_GAS_BASE: Gas = Gas::from_tgas(10);
+        const MT_TRANSFER_GAS_BASE: Gas = Gas::from_tgas(15);
         const MT_TRANSFER_GAS_PER_TOKEN_ID: Gas = Gas::from_ggas(500);
 
         MT_TRANSFER_GAS_BASE

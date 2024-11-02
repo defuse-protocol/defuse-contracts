@@ -25,7 +25,7 @@ use crate::{
     DefuseImplExt,
 };
 
-const NFT_TRANSFER_GAS: Gas = Gas::from_tgas(10);
+const NFT_TRANSFER_GAS: Gas = Gas::from_tgas(15);
 
 #[near]
 impl NonFungibleTokenWithdrawer for DefuseImpl {

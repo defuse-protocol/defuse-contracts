@@ -10,7 +10,7 @@ use defuse_contracts::{
     },
 };
 use near_plugins::{pause, Pausable};
-use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, PromiseOrValue};
+use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, Gas, PromiseOrValue};
 
 use crate::{accounts::Account, intents::IntentExecutor, state::State, DefuseImpl, DefuseImplExt};
 
@@ -195,6 +195,8 @@ impl DefuseImpl {
 }
 
 impl State {
+    const MT_ON_TRANSFER_DEFAULT_GAS: Gas = Gas::from_tgas(15);
+
     pub fn internal_mt_batch_transfer_call(
         &mut self,
         sender_id: &AccountId,
@@ -211,11 +213,8 @@ impl State {
 
         let previous_owner_ids = vec![sender_id.clone(); token_ids.len()];
 
-        let mut ext = ext_mt_receiver::ext(transfer.receiver_id.clone());
-        if let Some(gas) = gas_for_mt_on_transfer {
-            ext = ext.with_static_gas(gas);
-        }
-        Ok(ext
+        Ok(ext_mt_receiver::ext(transfer.receiver_id.clone())
+            .with_static_gas(gas_for_mt_on_transfer.unwrap_or(Self::MT_ON_TRANSFER_DEFAULT_GAS))
             .mt_on_transfer(
                 sender_id.clone(),
                 previous_owner_ids.clone(),

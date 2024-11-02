@@ -27,7 +27,7 @@ use crate::{
     DefuseImplExt,
 };
 
-const FT_TRANSFER_GAS: Gas = Gas::from_tgas(10);
+const FT_TRANSFER_GAS: Gas = Gas::from_tgas(15);
 
 #[near]
 impl FungibleTokenWithdrawer for DefuseImpl {
