@@ -16,6 +16,7 @@ use crate::utils::mt::MtExt;
 use super::{accounts::AccountManagerExt, env::Env};
 
 mod token_diff;
+mod ft_withdraw;
 
 pub trait ExecuteIntentsExt: AccountManagerExt {
     async fn execute_intents(

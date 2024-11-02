@@ -5,7 +5,7 @@ use defuse_contracts::{
     },
     utils::Deadline,
 };
-use near_sdk::{json_types::U128, AccountId, Gas, NearToken};
+use near_sdk::{json_types::U128, AccountId, NearToken};
 use rand::{thread_rng, Rng};
 use serde_json::json;
 
@@ -34,13 +34,11 @@ async fn test_deposit_withdraw() {
         1000
     );
 
-    assert_eq!(
-        env.user1
-            .defuse_ft_withdraw(env.defuse.id(), &env.ft1, env.user1.id(), 1000, None)
-            .await
-            .unwrap(),
-        1000,
-    );
+    assert!(env
+        .user1
+        .defuse_ft_withdraw(env.defuse.id(), &env.ft1, env.user1.id(), 1000)
+        .await
+        .unwrap());
 
     assert_eq!(
         env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
@@ -129,8 +127,7 @@ async fn test_deposit_withdraw_intent() {
                                     receiver_id: env.user2.id().clone(),
                                     amount: U128(1000),
                                     memo: None,
-                                    msg: None,
-                                    gas: Some(Gas::from_tgas(30)),
+                                    storage_deposit: None,
                                 }
                                 .into(),
                             ]
@@ -209,8 +206,7 @@ async fn test_deposit_withdraw_intent_refund() {
                                 receiver_id: env.user1.id().clone(),
                                 amount: U128(1001),
                                 memo: None,
-                                msg: None,
-                                gas: Some(Gas::from_tgas(30)),
+                                storage_deposit: None,
                             }
                             .into(),]
                             .into(),
@@ -293,8 +289,7 @@ pub trait DefuseFtWithdrawer {
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-        msg: Option<String>,
-    ) -> anyhow::Result<u128>;
+    ) -> anyhow::Result<bool>;
 }
 
 impl DefuseFtWithdrawer for near_workspaces::Account {
@@ -304,22 +299,19 @@ impl DefuseFtWithdrawer for near_workspaces::Account {
         token: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-        msg: Option<String>,
-    ) -> anyhow::Result<u128> {
+    ) -> anyhow::Result<bool> {
         self.call(defuse_id, "ft_withdraw")
             .deposit(NearToken::from_yoctonear(1))
             .args_json(json!({
                 "token": token,
                 "receiver_id": receiver_id,
                 "amount": U128(amount),
-                "msg": msg,
             }))
             .max_gas()
             .transact()
             .await?
             .into_result()?
-            .json::<U128>()
-            .map(|v| v.0)
+            .json()
             .map_err(Into::into)
     }
 }
@@ -331,10 +323,9 @@ impl DefuseFtWithdrawer for near_workspaces::Contract {
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-        msg: Option<String>,
-    ) -> anyhow::Result<u128> {
+    ) -> anyhow::Result<bool> {
         self.as_account()
-            .defuse_ft_withdraw(defuse_id, token_id, receiver_id, amount, msg)
+            .defuse_ft_withdraw(defuse_id, token_id, receiver_id, amount)
             .await
     }
 }

@@ -7,5 +7,6 @@ pub mod native;
 pub mod nft;
 mod sandbox;
 pub mod storage_management;
+pub mod wnear;
 
 pub use sandbox::*;

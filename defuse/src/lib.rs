@@ -65,6 +65,7 @@ pub struct DefuseImpl {
 impl DefuseImpl {
     #[init]
     pub fn new(
+        wnear_id: AccountId,
         fee: Pips,
         fee_collector: AccountId,
         super_admins: Vec<AccountId>,
@@ -74,7 +75,7 @@ impl DefuseImpl {
     ) -> Self {
         let mut contract = Self {
             accounts: Accounts::new(Prefix::Accounts),
-            state: State::new(Prefix::State, fee, fee_collector),
+            state: State::new(Prefix::State, wnear_id, fee, fee_collector),
             relayer_keys: LookupSet::new(Prefix::RelayerKeys),
         };
 

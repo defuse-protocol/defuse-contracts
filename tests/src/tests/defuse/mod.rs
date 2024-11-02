@@ -26,6 +26,7 @@ pub trait DefuseExt: AccountManagerExt {
     async fn deploy_defuse(
         &self,
         id: &str,
+        wnear_id: &AccountId,
         fee: Pips,
         fee_collector: &AccountId,
         super_admins: impl IntoIterator<Item = AccountId>,
@@ -39,6 +40,7 @@ impl DefuseExt for near_workspaces::Account {
     async fn deploy_defuse(
         &self,
         id: &str,
+        wnear_id: &AccountId,
         fee: Pips,
         fee_collector: &AccountId,
         super_admins: impl IntoIterator<Item = AccountId>,
@@ -50,6 +52,7 @@ impl DefuseExt for near_workspaces::Account {
         contract
             .call("new")
             .args_json(json!({
+                "wnear_id": wnear_id,
                 "fee": fee,
                 "fee_collector": fee_collector,
                 "super_admins": super_admins.into_iter().collect::<Vec<_>>(),
@@ -75,6 +78,7 @@ impl DefuseExt for Contract {
     async fn deploy_defuse(
         &self,
         id: &str,
+        wnear_id: &AccountId,
         fee: Pips,
         fee_collector: &AccountId,
         super_admins: impl IntoIterator<Item = AccountId>,
@@ -85,6 +89,7 @@ impl DefuseExt for Contract {
         self.as_account()
             .deploy_defuse(
                 id,
+                wnear_id,
                 fee,
                 fee_collector,
                 super_admins,

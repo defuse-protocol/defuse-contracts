@@ -1,6 +1,8 @@
+use core::iter;
+
 use defuse_contracts::{
     defuse::{
-        intents::tokens::FtWithdraw,
+        intents::tokens::{FtWithdraw, StorageDeposit},
         tokens::{
             nep141::{FungibleTokenWithdrawResolver, FungibleTokenWithdrawer},
             TokenId,
@@ -9,17 +11,21 @@ use defuse_contracts::{
     },
     utils::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
-        UnwrapOrPanic,
+        UnwrapOrPanic, UnwrapOrPanicError,
     },
 };
-use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_plugins::{pause, Pausable};
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, require, serde_json, AccountId, Gas, NearToken,
-    PromiseOrValue, PromiseResult,
+    assert_one_yocto, env,
+    json_types::U128,
+    near,
+    serde_json::{self, json},
+    AccountId, Gas, NearToken, Promise, PromiseOrValue, PromiseResult,
 };
 
 use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
+
+const FT_TRANSFER_GAS: Gas = Gas::from_tgas(10);
 
 #[near]
 impl FungibleTokenWithdrawer for DefuseImpl {
@@ -31,8 +37,7 @@ impl FungibleTokenWithdrawer for DefuseImpl {
         receiver_id: AccountId,
         amount: U128,
         memo: Option<String>,
-        msg: Option<String>,
-    ) -> PromiseOrValue<U128> {
+    ) -> PromiseOrValue<bool> {
         assert_one_yocto();
         self.internal_ft_withdraw(
             PREDECESSOR_ACCOUNT_ID.clone(),
@@ -41,8 +46,7 @@ impl FungibleTokenWithdrawer for DefuseImpl {
                 receiver_id,
                 amount,
                 memo,
-                msg,
-                gas: None,
+                storage_deposit: None,
             },
         )
         .unwrap_or_panic()
@@ -59,7 +63,7 @@ impl DefuseImpl {
         &mut self,
         sender_id: AccountId,
         withdraw: FtWithdraw,
-    ) -> Result<PromiseOrValue<U128>> {
+    ) -> Result<PromiseOrValue<bool>> {
         let sender = self
             .accounts
             .get_mut(&sender_id)
@@ -78,34 +82,47 @@ impl State {
             receiver_id,
             amount,
             memo,
-            msg,
-            gas,
+            storage_deposit,
         }: FtWithdraw,
-    ) -> Result<PromiseOrValue<U128>> {
-        require!(amount.0 > 0, "zero amount");
-
+    ) -> Result<PromiseOrValue<bool>> {
         self.internal_withdraw(
             &sender_id,
             sender,
-            [(TokenId::Nep141(token.clone()), amount.0)],
+            iter::once((TokenId::Nep141(token.clone()), amount.0)).chain(storage_deposit.map(
+                |amount| {
+                    (
+                        TokenId::Nep141(self.wnear_id.clone()),
+                        amount.as_yoctonear(),
+                    )
+                },
+            )),
             Some("withdraw"),
         )?;
 
-        let mut ext =
-            ext_ft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
-        if let Some(gas) = gas {
-            ext = ext.with_static_gas(gas);
-        }
-        let is_call = msg.is_some();
-        Ok(if let Some(msg) = msg {
-            ext.ft_transfer_call(receiver_id, amount, memo, msg)
+        Ok(if let Some(storage_deposit) = storage_deposit {
+            self.internal_storage_deposit(StorageDeposit {
+                contract_id: token.clone(),
+                account_id: receiver_id.clone(),
+                amount: storage_deposit,
+            })
         } else {
-            ext.ft_transfer(receiver_id, amount, memo)
+            Promise::new(token.clone())
         }
+        .function_call(
+            "ft_transfer".to_string(),
+            serde_json::to_vec(&json!({
+                "receiver_id": &receiver_id,
+                "amount": &amount,
+                "memo": &memo,
+            }))
+            .unwrap_or_panic_display(),
+            NearToken::from_yoctonear(1),
+            FT_TRANSFER_GAS,
+        )
         .then(
             DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
                 .with_static_gas(DefuseImpl::FT_RESOLVE_WITHDRAW_GAS)
-                .ft_resolve_withdraw(token, sender_id, amount, is_call),
+                .ft_resolve_withdraw(token, sender_id, amount),
         )
         .into())
     }
@@ -119,33 +136,18 @@ impl FungibleTokenWithdrawResolver for DefuseImpl {
         token: AccountId,
         sender_id: AccountId,
         amount: U128,
-        is_call: bool,
-    ) -> U128 {
-        let used = match env::promise_result(0) {
-            PromiseResult::Successful(value) => {
-                if is_call {
-                    // `ft_transfer_call` returns successfully transferred amount
-                    serde_json::from_slice::<U128>(&value).unwrap_or_default().0
-                } else if value.is_empty() {
-                    // `ft_transfer` returns empty result on success
-                    amount.0
-                } else {
-                    0
-                }
-            }
-            PromiseResult::Failed => 0,
-        }
-        .min(amount.0);
+    ) -> bool {
+        let ok =
+            matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty());
 
-        let refund = amount.0 - used;
-        if refund > 0 {
+        if !ok {
             self.internal_deposit(
                 sender_id,
-                [(TokenId::Nep141(token), refund)],
+                [(TokenId::Nep141(token), amount.0)],
                 Some("refund"),
             )
             .unwrap_or_panic();
         }
-        U128(used)
+        ok
     }
 }

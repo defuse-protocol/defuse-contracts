@@ -15,6 +15,8 @@ use self::runtime::RuntimeState;
 pub struct State {
     pub total_supplies: TokensBalances,
 
+    pub wnear_id: AccountId,
+
     pub fee: Pips,
     pub fee_collector: AccountId,
 
@@ -24,7 +26,7 @@ pub struct State {
 
 impl State {
     #[inline]
-    pub fn new<S>(prefix: S, fee: Pips, fee_collector: AccountId) -> Self
+    pub fn new<S>(prefix: S, wnear_id: AccountId, fee: Pips, fee_collector: AccountId) -> Self
     where
         S: IntoStorageKey,
     {
@@ -32,6 +34,7 @@ impl State {
             total_supplies: TokensBalances::new(
                 prefix.into_storage_key().nest(Prefix::TotalSupplies),
             ),
+            wnear_id,
             fee,
             fee_collector,
             runtime: Default::default(),

@@ -7,7 +7,7 @@ use serde_json::json;
 use super::account::AccountExt;
 use super::storage_management::StorageManagementExt;
 
-const STORAGE_DEPOSIT: NearToken = NearToken::from_yoctonear(2_350_000_000_000_000_000_000);
+pub const FT_STORAGE_DEPOSIT: NearToken = NearToken::from_yoctonear(2_350_000_000_000_000_000_000);
 const TOTAL_SUPPLY: u128 = 1_000_000_000;
 
 const FUNGIBLE_TOKEN_WASM: &[u8] = include_bytes!(concat!(
@@ -43,7 +43,7 @@ pub trait FtExt: StorageManagementExt {
         token_id: &AccountId,
         account_id: Option<&AccountId>,
     ) -> anyhow::Result<StorageBalance> {
-        self.storage_deposit(token_id, account_id, STORAGE_DEPOSIT)
+        self.storage_deposit(token_id, account_id, FT_STORAGE_DEPOSIT)
             .await
     }
     async fn ft_storage_deposit_many(

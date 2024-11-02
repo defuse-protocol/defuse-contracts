@@ -14,16 +14,15 @@ pub trait NonFungibleTokenWithdrawer:
         receiver_id: AccountId,
         token_id: TokenId,
         memo: Option<String>,
-        msg: Option<String>,
     ) -> PromiseOrValue<bool>;
 }
 
+#[ext_contract(ext_nft_withdraw_resolver)]
 pub trait NonFungibleTokenWithdrawResolver {
     fn nft_resolve_withdraw(
         &mut self,
         token: AccountId,
         sender_id: AccountId,
         token_id: TokenId,
-        is_call: bool,
     ) -> bool;
 }

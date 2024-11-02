@@ -28,13 +28,14 @@ default = ["account", "controller", "defuse", "intents", "mpc", "poa"]
 account = []
 controller = []
 crypto = []
-defuse = ["erc191", "nep245", "nep413"]
+defuse = ["erc191", "nep245", "nep413", "wnear"]
 erc191 = []
 intents = []
 mpc = []
 nep245 = []
 nep413 = ["crypto"]
 poa = []
+wnear = []
 
 # HACK: Semi-feature to enable `#[derive(JsonSchema)]` only when
 # `not(target_arch = "wasm32"))`. This is needed to make

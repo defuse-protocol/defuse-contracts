@@ -4,12 +4,12 @@ use anyhow::anyhow;
 use defuse_contract::Role;
 use defuse_contracts::{defuse::tokens::DepositMessage, utils::fees::Pips};
 use defuse_poa_factory_contract::Role as POAFactoryRole;
-use near_sdk::{AccountId, Duration};
+use near_sdk::{AccountId, Duration, NearToken};
 use near_workspaces::{Account, Contract};
 
 use crate::{
     tests::poa::factory::PoAFactoryExt,
-    utils::{ft::FtExt, Sandbox},
+    utils::{ft::FtExt, wnear::WNearExt, Sandbox},
 };
 
 use super::{accounts::AccountManagerExt, tokens::nep141::DefuseFtReceiver, DefuseExt};
@@ -20,6 +20,8 @@ pub struct Env {
     pub user1: Account,
     pub user2: Account,
     pub user3: Account,
+
+    pub wnear: Contract,
 
     pub defuse: Contract,
 
@@ -173,6 +175,7 @@ impl EnvBuilder {
             )
             .await?;
 
+        let wnear = sandbox.deploy_wrap_near("wnear").await?;
         let s = Env {
             user1: sandbox.create_account("user1").await,
             user2: sandbox.create_account("user2").await,
@@ -180,6 +183,7 @@ impl EnvBuilder {
             defuse: root
                 .deploy_defuse(
                     "defuse",
+                    wnear.id(),
                     self.fee,
                     self.fee_collector.as_ref().unwrap_or(root.id()),
                     self.super_admins
@@ -194,6 +198,7 @@ impl EnvBuilder {
                     self.staging_duration,
                 )
                 .await?,
+            wnear,
             ft1: root
                 .poa_factory_deploy_token(poa_factory.id(), "ft1", None)
                 .await?,
@@ -206,6 +211,20 @@ impl EnvBuilder {
             poa_factory,
             sandbox,
         };
+
+        s.ft_storage_deposit(
+            s.wnear.id(),
+            &[
+                s.user1.id(),
+                s.user2.id(),
+                s.user3.id(),
+                s.defuse.id(),
+                root.id(),
+            ],
+        )
+        .await?;
+        s.near_deposit(s.wnear.id(), NearToken::from_near(100))
+            .await?;
 
         s.ft_storage_deposit(
             &s.ft1,
