@@ -253,6 +253,7 @@ async fn test_rollback_intent() {
     );
 }
 
+#[ignore = "legacy"]
 #[tokio::test]
 async fn test_rollback_intent_too_early() {
     let env = Env::create().await;

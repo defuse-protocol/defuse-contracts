@@ -10,6 +10,7 @@ use crate::{accounts::Account, state::State, DefuseImpl};
 pub const STORAGE_DEPOSIT_GAS: Gas = Gas::from_tgas(10);
 
 impl State {
+    /// Returns a promise which resolves to `true` if near
     pub fn unwrap_wnear(
         &mut self,
         account_id: AccountId,

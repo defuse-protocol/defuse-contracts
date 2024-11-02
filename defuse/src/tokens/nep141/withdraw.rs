@@ -9,7 +9,7 @@ use defuse_contracts::{
     },
     utils::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
-        PanicError, UnwrapOrPanic, UnwrapOrPanicError,
+        UnwrapOrPanic, UnwrapOrPanicError,
     },
 };
 use near_contract_standards::storage_management::ext_storage_management;
@@ -101,11 +101,10 @@ impl DefuseImpl {
         withdraw: FtWithdraw,
     ) -> PromiseOrValue<bool> {
         if withdraw.storage_deposit.is_some() {
-            let PromiseResult::Successful(data) = env::promise_result(0) else {
-                "near_withdraw failed".panic_static_str();
-            };
-            let near_withdraw_ok: bool = serde_json::from_slice(&data).unwrap_or_panic_display();
-            require!(near_withdraw_ok, "near_withdraw failed");
+            require!(
+                matches!(env::promise_result(0), PromiseResult::Successful(data) if data == b"true"),
+                "failed to unwrap wNEAR",
+            );
         }
 
         let sender = self
