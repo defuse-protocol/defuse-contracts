@@ -37,18 +37,28 @@ impl NonFungibleTokenWithdrawer for DefuseImpl {
         receiver_id: AccountId,
         token_id: non_fungible_token::TokenId,
         memo: Option<String>,
+        storage_deposit: Option<NearToken>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.do_nft_withdraw(
-            PREDECESSOR_ACCOUNT_ID.clone(),
-            NftWithdraw {
-                token,
-                receiver_id,
-                token_id,
-                memo,
-                storage_deposit: None,
-            },
-        )
+        let sender_id = PREDECESSOR_ACCOUNT_ID.clone();
+        let sender = self
+            .accounts
+            .get_mut(&sender_id)
+            .ok_or(DefuseError::AccountNotFound)
+            .unwrap_or_panic();
+        self.state
+            .nft_withdraw(
+                sender_id,
+                sender,
+                NftWithdraw {
+                    token,
+                    receiver_id,
+                    token_id,
+                    memo,
+                    storage_deposit,
+                },
+            )
+            .unwrap_or_panic()
     }
 }
 

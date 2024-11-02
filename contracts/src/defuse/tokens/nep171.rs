@@ -1,11 +1,14 @@
 use near_contract_standards::non_fungible_token::{core::NonFungibleTokenReceiver, TokenId};
-use near_sdk::{ext_contract, AccountId, PromiseOrValue};
+use near_sdk::{ext_contract, AccountId, NearToken, PromiseOrValue};
 
 #[ext_contract(ext_nft_withdraw)]
 pub trait NonFungibleTokenWithdrawer:
     NonFungibleTokenReceiver + NonFungibleTokenWithdrawResolver
 {
     /// Returns number of tokens were successfully withdrawn
+    ///
+    /// Optionally can specify `storage_deposit` for `receiver_id` on `token`.
+    /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
     ///
     /// NOTE: MUST attach 1 yⓃ for security purposes.
     fn nft_withdraw(
@@ -14,6 +17,7 @@ pub trait NonFungibleTokenWithdrawer:
         receiver_id: AccountId,
         token_id: TokenId,
         memo: Option<String>,
+        storage_deposit: Option<NearToken>,
     ) -> PromiseOrValue<bool>;
 }
 

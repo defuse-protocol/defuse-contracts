@@ -1,10 +1,13 @@
-use near_sdk::{ext_contract, json_types::U128, AccountId, PromiseOrValue};
+use near_sdk::{ext_contract, json_types::U128, AccountId, NearToken, PromiseOrValue};
 
 use crate::nep245::{receiver::MultiTokenReceiver, TokenId};
 
 #[ext_contract(ext_mt_withdraw)]
 pub trait MultiTokenWithdrawer: MultiTokenReceiver + MultiTokenWithdrawResolver {
     /// Returns number of tokens were successfully withdrawn
+    ///
+    /// Optionally can specify `storage_deposit` for `receiver_id` on `token`.
+    /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
     ///
     /// NOTE: MUST attach 1 yⓃ for security purposes.
     fn mt_withdraw(
@@ -14,6 +17,7 @@ pub trait MultiTokenWithdrawer: MultiTokenReceiver + MultiTokenWithdrawResolver 
         token_ids: Vec<TokenId>,
         amounts: Vec<U128>,
         memo: Option<String>,
+        storage_deposit: Option<NearToken>,
     ) -> PromiseOrValue<bool>;
 }
 

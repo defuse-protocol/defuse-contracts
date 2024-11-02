@@ -39,18 +39,28 @@ impl FungibleTokenWithdrawer for DefuseImpl {
         receiver_id: AccountId,
         amount: U128,
         memo: Option<String>,
+        storage_deposit: Option<NearToken>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.do_ft_withdraw(
-            PREDECESSOR_ACCOUNT_ID.clone(),
-            FtWithdraw {
-                token,
-                receiver_id,
-                amount,
-                memo,
-                storage_deposit: None,
-            },
-        )
+        let sender_id = PREDECESSOR_ACCOUNT_ID.clone();
+        let sender = self
+            .accounts
+            .get_mut(&sender_id)
+            .ok_or(DefuseError::AccountNotFound)
+            .unwrap_or_panic();
+        self.state
+            .ft_withdraw(
+                sender_id,
+                sender,
+                FtWithdraw {
+                    token,
+                    receiver_id,
+                    amount,
+                    memo,
+                    storage_deposit,
+                },
+            )
+            .unwrap_or_panic()
     }
 }
 

@@ -39,19 +39,29 @@ impl MultiTokenWithdrawer for DefuseImpl {
         token_ids: Vec<nep245::TokenId>,
         amounts: Vec<U128>,
         memo: Option<String>,
+        storage_deposit: Option<NearToken>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.do_mt_withdraw(
-            PREDECESSOR_ACCOUNT_ID.clone(),
-            MtWithdraw {
-                token,
-                receiver_id,
-                token_ids,
-                amounts,
-                memo,
-                storage_deposit: None,
-            },
-        )
+        let sender_id = PREDECESSOR_ACCOUNT_ID.clone();
+        let sender = self
+            .accounts
+            .get_mut(&sender_id)
+            .ok_or(DefuseError::AccountNotFound)
+            .unwrap_or_panic();
+        self.state
+            .mt_withdraw(
+                sender_id,
+                sender,
+                MtWithdraw {
+                    token,
+                    receiver_id,
+                    token_ids,
+                    amounts,
+                    memo,
+                    storage_deposit,
+                },
+            )
+            .unwrap_or_panic()
     }
 }
 
@@ -208,6 +218,11 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
         token_ids: Vec<nep245::TokenId>,
         amounts: Vec<U128>,
     ) -> bool {
+        require!(
+            token_ids.len() == amounts.len() && !amounts.is_empty(),
+            "invalid args"
+        );
+
         let ok =
             matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty());
 
