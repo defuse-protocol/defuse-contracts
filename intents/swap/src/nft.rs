@@ -1,6 +1,6 @@
 use defuse_contracts::{
     intents::swap::{AssetWithAccount, NearAsset, NftItem, SwapIntentAction, SwapIntentError},
-    utils::UnwrapOrPanic,
+    utils::UnwrapOrPanicError,
 };
 use near_contract_standards::non_fungible_token::{
     core::{ext_nft_core, NonFungibleTokenReceiver},

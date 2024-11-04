@@ -4,7 +4,7 @@ use defuse_contracts::{
         FtAmount, GenericAccount, IntentId, LostAsset, NearAsset, SwapIntent, SwapIntentContract,
         SwapIntentError, SwapIntentStatus,
     },
-    utils::{Lock, UnwrapOrPanic},
+    utils::{Lock, UnwrapOrPanicError},
 };
 
 use near_sdk::{

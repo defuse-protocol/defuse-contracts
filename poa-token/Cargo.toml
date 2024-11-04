@@ -1,0 +1,20 @@
+[package]
+name = "defuse-poa-token-contract"
+version = "0.1.0"
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+defuse-contracts = { workspace = true, features = ["poa"] }
+
+near-contract-standards.workspace = true
+near-plugins.workspace = true
+near-sdk.workspace = true
+
+[features]
+abi = ["defuse-contracts/abi"]

@@ -1,14 +1,23 @@
+use defuse_poa_factory_contract::Role as POAFactoryRole;
+use impl_tools::autoimpl;
 use near_sdk::AccountId;
 use near_workspaces::{Account, Contract};
 
-use crate::utils::{ft::FtExt, Sandbox};
+use crate::{
+    tests::poa::factory::PoAFactoryExt,
+    utils::{ft::FtExt, Sandbox},
+};
 
 use super::ext::SwapFtIntentExt;
 
+#[autoimpl(Deref using self.sandbox)]
 pub struct Env {
     pub sandbox: Sandbox,
-    pub token_a: Contract,
-    pub token_b: Contract,
+
+    pub poa_factory: Contract,
+
+    pub token_a: AccountId,
+    pub token_b: AccountId,
     pub intent: Contract,
     pub user: Account,
     pub solver: Account,
@@ -54,7 +63,17 @@ impl Env {
     ) -> anyhow::Result<()> {
         self.sandbox
             .root_account()
-            .ft_mint(token, account_id, amount)
+            .poa_factory_ft_deposit(
+                self.poa_factory.id(),
+                token
+                    .as_str()
+                    .strip_suffix(&format!(".{}", self.poa_factory.id()))
+                    .expect("can't ming this token"),
+                account_id,
+                amount,
+                None,
+                None,
+            )
             .await
     }
 }
@@ -91,21 +110,33 @@ impl EnvBuilder {
 
     pub async fn build(self) -> Env {
         let sandbox = Sandbox::new().await.unwrap();
-        let token_a = sandbox
-            .root_account()
-            .deploy_ft_token("token_a")
+        let root = sandbox.root_account();
+
+        let poa_factory = root
+            .deploy_poa_factory(
+                "poa-factory",
+                [root.id().clone()],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+            )
             .await
             .unwrap();
-        let token_b = sandbox
-            .root_account()
-            .deploy_ft_token("token_b")
+
+        let token_a = root
+            .poa_factory_deploy_token(poa_factory.id(), "token_a", None)
             .await
             .unwrap();
-        let intent = sandbox
-            .root_account()
-            .deploy_swap_ft_intent_contract()
+        let token_b = root
+            .poa_factory_deploy_token(poa_factory.id(), "token_b", None)
             .await
             .unwrap();
+        let intent = root.deploy_swap_ft_intent_contract().await.unwrap();
 
         let user = sandbox.create_account("user").await;
         let solver = sandbox.create_account("solver").await;
@@ -120,14 +151,8 @@ impl EnvBuilder {
                 .await;
 
             if self.storage_deposit {
-                solver2
-                    .ft_storage_deposit(token_a.id(), None)
-                    .await
-                    .unwrap();
-                solver2
-                    .ft_storage_deposit(token_b.id(), None)
-                    .await
-                    .unwrap();
+                solver2.ft_storage_deposit(&token_a, None).await.unwrap();
+                solver2.ft_storage_deposit(&token_b, None).await.unwrap();
             }
 
             Some(solver2)
@@ -136,32 +161,43 @@ impl EnvBuilder {
         };
 
         if self.storage_deposit {
-            user.ft_storage_deposit(token_a.id(), None).await.unwrap();
-            user.ft_storage_deposit(token_b.id(), None).await.unwrap();
-            solver.ft_storage_deposit(token_a.id(), None).await.unwrap();
-            solver.ft_storage_deposit(token_b.id(), None).await.unwrap();
+            user.ft_storage_deposit(&token_a, None).await.unwrap();
+            user.ft_storage_deposit(&token_b, None).await.unwrap();
+            solver.ft_storage_deposit(&token_a, None).await.unwrap();
+            solver.ft_storage_deposit(&token_b, None).await.unwrap();
         }
 
         // Transfer tokens to the intent contract to have possibility to refund in case of error in
         // the ft_on_transfer callback.
-        intent.ft_storage_deposit(token_a.id(), None).await.unwrap();
-        intent.ft_storage_deposit(token_b.id(), None).await.unwrap();
+        intent.ft_storage_deposit(&token_a, None).await.unwrap();
+        intent.ft_storage_deposit(&token_b, None).await.unwrap();
 
         if self.fund_intent {
-            sandbox
-                .root_account()
-                .ft_mint(token_a.id(), intent.id(), 10_000)
-                .await
-                .unwrap();
-            sandbox
-                .root_account()
-                .ft_mint(token_b.id(), intent.id(), 10_000)
-                .await
-                .unwrap();
+            root.poa_factory_ft_deposit(
+                poa_factory.id(),
+                "token_a",
+                intent.id(),
+                10_000,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+            root.poa_factory_ft_deposit(
+                poa_factory.id(),
+                "token_b",
+                intent.id(),
+                10_000,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
         }
 
         Env {
             sandbox,
+            poa_factory,
             token_a,
             token_b,
             intent,

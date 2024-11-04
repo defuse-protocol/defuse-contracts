@@ -11,29 +11,43 @@ workspace = true
 
 [dependencies]
 bnum.workspace = true
+derive_more = { workspace = true, features = ["from"] }
 hex.workspace = true
 impl-tools.workspace = true
 near-account-id.workspace = true
 near-contract-standards.workspace = true
+near-plugins.workspace = true
 near-sdk.workspace = true
 serde_with = { workspace = true, features = ["base64"] }
 strum.workspace = true
 thiserror.workspace = true
 
 [features]
-default = ["account", "controller", "defuse", "intents", "mpc"]
+default = ["defuse", "poa", "upgrade", "wnear"]
 
-account = []
-controller = []
+
 crypto = []
-defuse = ["nep245", "nep413"]
-intents = []
-mpc = []
+defuse = ["crypto", "erc191", "nep245", "nep413"]
+erc191 = []
 nep245 = []
 nep413 = ["crypto"]
+poa = []
+upgrade = []
+wnear = []
 
-unit-testing = ["near-sdk/unit-testing"]
+# TODO: remove legacy:
+account = []
+controller = []
+intents = []
+mpc = []
+
 # HACK: Semi-feature to enable `#[derive(JsonSchema)]` only when
 # `not(target_arch = "wasm32"))`. This is needed to make
 # `cargo near abi` work as it doesn't allow to pass `--features abi`.
 abi = ["serde_with/schemars_0_8"]
+
+[dev-dependencies]
+hex-literal.workspace = true
+itertools.workspace = true
+near-sdk = { workspace = true, features = ["unit-testing"] }
+rstest.workspace = true

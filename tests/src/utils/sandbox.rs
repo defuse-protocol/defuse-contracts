@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{fs, ops::Deref, path::Path};
 
 use near_workspaces::{types::NearToken, Account, Network, Worker};
 
@@ -60,5 +60,13 @@ impl Sandbox {
         self.create_subaccount(name, NearToken::from_near(10))
             .await
             .unwrap()
+    }
+}
+
+impl Deref for Sandbox {
+    type Target = Account;
+
+    fn deref(&self) -> &Self::Target {
+        self.root_account()
     }
 }

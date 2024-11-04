@@ -1,7 +1,20 @@
-use near_sdk::AccountId;
+use std::ops::Deref;
+
+use anyhow::anyhow;
+use defuse_contract::{
+    config::{DefuseConfig, RolesConfig},
+    fees::FeesConfig,
+    Role,
+};
+use defuse_contracts::{defuse::tokens::DepositMessage, utils::fees::Pips};
+use defuse_poa_factory_contract::Role as POAFactoryRole;
+use near_sdk::{AccountId, NearToken};
 use near_workspaces::{Account, Contract};
 
-use crate::utils::{ft::FtExt, Sandbox};
+use crate::{
+    tests::poa::factory::PoAFactoryExt,
+    utils::{ft::FtExt, wnear::WNearExt, Sandbox},
+};
 
 use super::{accounts::AccountManagerExt, tokens::nep141::DefuseFtReceiver, DefuseExt};
 
@@ -12,44 +25,260 @@ pub struct Env {
     pub user2: Account,
     pub user3: Account,
 
+    pub wnear: Contract,
+
     pub defuse: Contract,
 
-    pub ft1: Contract,
-    pub ft2: Contract,
-    pub ft3: Contract,
+    pub poa_factory: Contract,
+
+    pub ft1: AccountId,
+    pub ft2: AccountId,
+    pub ft3: AccountId,
 }
 
 impl Env {
-    pub async fn new() -> anyhow::Result<Self> {
-        let sandbox = Sandbox::new().await?;
-        let root = sandbox.root_account();
+    pub fn builder() -> EnvBuilder {
+        EnvBuilder::default()
+    }
 
-        let s = Self {
+    pub async fn new() -> anyhow::Result<Self> {
+        Self::builder().build().await
+    }
+
+    pub async fn ft_storage_deposit(
+        &self,
+        token: &AccountId,
+        accounts: &[&AccountId],
+    ) -> anyhow::Result<()> {
+        self.sandbox
+            .root_account()
+            .ft_storage_deposit_many(token, accounts)
+            .await
+    }
+
+    pub async fn defuse_ft_mint(
+        &self,
+        token_id: &AccountId,
+        amount: u128,
+        to: &AccountId,
+    ) -> anyhow::Result<()> {
+        if self
+            .defuse_ft_deposit(
+                self.defuse.id(),
+                token_id,
+                amount,
+                DepositMessage::new(to.clone()),
+            )
+            .await?
+            != amount
+        {
+            return Err(anyhow!("refunded"));
+        }
+        Ok(())
+    }
+
+    pub fn poa_ft1_name(&self) -> &str {
+        self.ft1
+            .as_str()
+            .strip_suffix(&format!(".{}", self.poa_factory.id()))
+            .unwrap()
+    }
+
+    pub fn poa_ft2_name(&self) -> &str {
+        self.ft2
+            .as_str()
+            .strip_suffix(&format!(".{}", self.poa_factory.id()))
+            .unwrap()
+    }
+
+    pub fn poa_ft3_name(&self) -> &str {
+        self.ft3
+            .as_str()
+            .strip_suffix(&format!(".{}", self.poa_factory.id()))
+            .unwrap()
+    }
+}
+
+impl Deref for Env {
+    type Target = Account;
+
+    fn deref(&self) -> &Self::Target {
+        self.sandbox.root_account()
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct EnvBuilder {
+    fee: Pips,
+    fee_collector: Option<AccountId>,
+
+    // roles
+    roles: RolesConfig,
+    self_as_super_admin: bool,
+    deployer_as_super_admin: bool,
+    // staging_duration: Option<Duration>,
+}
+
+impl EnvBuilder {
+    pub fn fee(mut self, fee: Pips) -> Self {
+        self.fee = fee;
+        self
+    }
+
+    pub fn fee_collector(mut self, fee_collector: AccountId) -> Self {
+        self.fee_collector = Some(fee_collector);
+        self
+    }
+
+    pub fn super_admin(mut self, super_admin: AccountId) -> Self {
+        self.roles.super_admins.insert(super_admin);
+        self
+    }
+
+    pub fn self_as_super_admin(mut self) -> Self {
+        self.self_as_super_admin = true;
+        self
+    }
+
+    pub fn deployer_as_super_admin(mut self) -> Self {
+        self.deployer_as_super_admin = true;
+        self
+    }
+
+    pub fn admin(mut self, role: Role, admin: AccountId) -> Self {
+        self.roles.admins.entry(role).or_default().insert(admin);
+        self
+    }
+
+    pub fn grantee(mut self, role: Role, grantee: AccountId) -> Self {
+        self.roles.grantees.entry(role).or_default().insert(grantee);
+        self
+    }
+
+    // pub fn staging_duration(mut self, staging_duration: Duration) -> Self {
+    //     self.staging_duration = Some(staging_duration);
+    //     self
+    // }
+
+    pub async fn build(mut self) -> anyhow::Result<Env> {
+        let sandbox = Sandbox::new().await?;
+        let root = sandbox.root_account().clone();
+
+        let poa_factory = root
+            .deploy_poa_factory(
+                "poa-factory",
+                [root.id().clone()],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+                [
+                    (POAFactoryRole::TokenDeployer, [root.id().clone()]),
+                    (POAFactoryRole::TokenDepositer, [root.id().clone()]),
+                ],
+            )
+            .await?;
+
+        let wnear = sandbox.deploy_wrap_near("wnear").await?;
+
+        if self.self_as_super_admin {
+            self.roles
+                .super_admins
+                .insert(format!("defuse.{}", root.id()).parse().unwrap());
+        }
+        if self.deployer_as_super_admin {
+            self.roles.super_admins.insert(root.id().clone());
+        }
+
+        let s = Env {
             user1: sandbox.create_account("user1").await,
             user2: sandbox.create_account("user2").await,
             user3: sandbox.create_account("user3").await,
-            defuse: root.deploy_defuse("defuse").await?,
-            ft1: root.deploy_ft_token("ft1").await?,
-            ft2: root.deploy_ft_token("ft2").await?,
-            ft3: root.deploy_ft_token("ft3").await?,
+            defuse: root
+                .deploy_defuse(
+                    "defuse",
+                    DefuseConfig {
+                        wnear_id: wnear.id().clone(),
+                        fees: FeesConfig {
+                            fee: self.fee,
+                            fee_collector: self.fee_collector.unwrap_or(root.id().clone()),
+                        },
+                        roles: self.roles,
+                    },
+                )
+                .await?,
+            wnear,
+            ft1: root
+                .poa_factory_deploy_token(poa_factory.id(), "ft1", None)
+                .await?,
+            ft2: root
+                .poa_factory_deploy_token(poa_factory.id(), "ft2", None)
+                .await?,
+            ft3: root
+                .poa_factory_deploy_token(poa_factory.id(), "ft3", None)
+                .await?,
+            poa_factory,
             sandbox,
         };
 
         s.ft_storage_deposit(
-            s.ft1.id(),
-            &[s.user1.id(), s.user2.id(), s.user3.id(), s.defuse.id()],
+            s.wnear.id(),
+            &[
+                s.user1.id(),
+                s.user2.id(),
+                s.user3.id(),
+                s.defuse.id(),
+                root.id(),
+            ],
+        )
+        .await?;
+        s.near_deposit(s.wnear.id(), NearToken::from_near(100))
+            .await?;
+
+        s.ft_storage_deposit(
+            &s.ft1,
+            &[
+                s.user1.id(),
+                s.user2.id(),
+                s.user3.id(),
+                s.defuse.id(),
+                root.id(),
+            ],
         )
         .await?;
         s.ft_storage_deposit(
-            s.ft2.id(),
-            &[s.user1.id(), s.user2.id(), s.user3.id(), s.defuse.id()],
+            &s.ft2,
+            &[
+                s.user1.id(),
+                s.user2.id(),
+                s.user3.id(),
+                s.defuse.id(),
+                root.id(),
+            ],
         )
         .await?;
         s.ft_storage_deposit(
-            s.ft3.id(),
-            &[s.user1.id(), s.user2.id(), s.user3.id(), s.defuse.id()],
+            &s.ft3,
+            &[
+                s.user1.id(),
+                s.user2.id(),
+                s.user3.id(),
+                s.defuse.id(),
+                root.id(),
+            ],
         )
         .await?;
+        for token in ["ft1", "ft2", "ft3"] {
+            s.poa_factory_ft_deposit(
+                s.poa_factory.id(),
+                token,
+                root.id(),
+                1_000_000_000,
+                None,
+                None,
+            )
+            .await?;
+        }
 
         // NOTE: near_workspaces uses the same signer all subaccounts
         s.user1
@@ -73,40 +302,5 @@ impl Env {
             .await?;
 
         Ok(s)
-    }
-
-    pub async fn ft_storage_deposit(
-        &self,
-        token: &AccountId,
-        accounts: &[&AccountId],
-    ) -> anyhow::Result<()> {
-        self.sandbox
-            .root_account()
-            .ft_storage_deposit_many(token, accounts)
-            .await
-    }
-
-    pub async fn ft_mint(
-        &self,
-        token: &AccountId,
-        account_id: &AccountId,
-        amount: u128,
-    ) -> anyhow::Result<()> {
-        self.sandbox
-            .root_account()
-            .ft_mint(token, account_id, amount)
-            .await
-    }
-
-    pub async fn defuse_ft_mint(
-        &self,
-        token_id: &AccountId,
-        amount: u128,
-        to: &AccountId,
-    ) -> anyhow::Result<()> {
-        self.sandbox
-            .root_account()
-            .defuse_ft_deposit(self.defuse.id(), token_id, amount, to)
-            .await
     }
 }

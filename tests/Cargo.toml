@@ -7,7 +7,9 @@ edition.workspace = true
 workspace = true
 
 [dev-dependencies]
-defuse-contracts = { workspace = true, features = ["unit-testing"] }
+defuse-contracts.workspace = true
+defuse-contract.workspace = true
+defuse-poa-factory-contract.workspace = true
 
 anyhow.workspace = true
 bnum = { workspace = true, features = ["rand"] }
@@ -17,6 +19,6 @@ near-sdk = { workspace = true, features = ["unit-testing"] }
 near-workspaces.workspace = true
 near-contract-standards.workspace = true
 rand = "0.8"
-rstest = "0.21.0"
+rstest.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["macros"] }

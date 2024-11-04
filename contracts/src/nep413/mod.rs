@@ -1,19 +1,13 @@
 use core::fmt::Display;
 
-use impl_tools::autoimpl;
-use near_sdk::{
-    borsh::{self, BorshSerialize},
-    env::sha256_array,
-    near,
-};
-use serde_with::{serde_as, DisplayFromStr};
+use near_sdk::{borsh, env, near, CryptoHash};
+use serde_with::serde_as;
 
+pub use crate::utils::bitmap::U256;
 use crate::{
     crypto::Payload,
-    utils::{integer::U256, UnwrapOrPanic},
+    utils::{serde::base64::Base64, UnwrapOrPanicError},
 };
-
-pub type Nonce = U256;
 
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(
@@ -25,16 +19,16 @@ pub type Nonce = U256;
     serde_as(schemars = false)
 )]
 #[near(serializers = [borsh, json])]
-#[autoimpl(Deref using self.message)]
-pub struct Nep413Payload<T = String> {
-    #[borsh(
-        serialize_with = "crate::utils::borsh::as_base64",
-        deserialize_with = "crate::utils::borsh::from_base64"
-    )]
-    pub message: T,
+#[serde(rename_all = "camelCase")]
+pub struct Nep413Payload {
+    pub message: String,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub nonce: Nonce,
+    #[serde_as(as = "Base64")]
+    #[cfg_attr(
+        all(feature = "abi", not(target_arch = "wasm32")),
+        schemars(example = "self::examples::nonce")
+    )]
+    pub nonce: U256,
 
     pub recipient: String,
 
@@ -42,12 +36,9 @@ pub struct Nep413Payload<T = String> {
     pub callback_url: Option<String>,
 }
 
-impl<T> Nep413Payload<T>
-where
-    T: BorshSerialize,
-{
+impl Nep413Payload {
     #[inline]
-    pub fn new(message: T) -> Self {
+    pub fn new(message: String) -> Self {
         Self {
             message,
             nonce: Default::default(),
@@ -56,7 +47,7 @@ where
         }
     }
 
-    pub fn with_nonce(mut self, nonce: Nonce) -> Self {
+    pub fn with_nonce(mut self, nonce: U256) -> Self {
         self.nonce = nonce;
         self
     }
@@ -75,18 +66,49 @@ where
     }
 }
 
-impl<T> Payload for Nep413Payload<T>
-where
-    T: BorshSerialize,
-{
+impl Payload for Nep413Payload {
     /// Returns SHA-256 hash of serialized payload according to
     /// [NEP-413](https://github.com/near/NEPs/blob/master/neps/nep-0413.md#signature)
     #[inline]
-    fn hash(&self) -> [u8; 32] {
+    fn hash(&self) -> CryptoHash {
         const NEP_NUMBER: u32 = 413;
         /// [NEP-461](https://github.com/near/NEPs/pull/461) prefix_tag
         const PREFIX_TAG: u32 = (1u32 << 31) + NEP_NUMBER;
 
-        sha256_array(&borsh::to_vec(&(PREFIX_TAG, self)).unwrap_or_panic_display())
+        env::sha256_array(&borsh::to_vec(&(PREFIX_TAG, self)).unwrap_or_panic_display())
+    }
+}
+
+#[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
+mod examples {
+    use super::*;
+
+    use near_sdk::base64::{self, Engine};
+
+    pub fn nonce() -> String {
+        base64::engine::general_purpose::STANDARD.encode(U256::default())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use hex_literal::hex;
+    use near_sdk::serde_json::{self, json};
+
+    #[test]
+    fn test_hash() {
+        let p: Nep413Payload = serde_json::from_value(json!({
+          "message": "example",
+          "nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8=", // i.e. 1
+          "recipient": "example.near"
+        }))
+        .unwrap();
+
+        assert_eq!(
+            p.hash(),
+            hex!("458584c1ca632fbc6a65d2ffaaa65ead60928e7bad742ea3d02aa232f8bcf08b")
+        );
     }
 }

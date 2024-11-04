@@ -66,7 +66,7 @@ impl Action {
 }
 
 /// Intent with status
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 #[near(serializers=[borsh, json])]
 pub struct DetailedIntent {
     /// Intent
@@ -118,7 +118,7 @@ impl DetailedIntent {
 }
 
 /// Intent for swapping NEP-141 tokens
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 #[near(serializers=[borsh, json])]
 pub struct Intent {
     /// Initiator of the intent
@@ -145,7 +145,7 @@ impl Intent {
 }
 
 /// Intent expiration
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq, Eq)]
 #[near(serializers=[borsh, json])]
 pub enum Expiration {
     /// No expiration
@@ -158,7 +158,7 @@ pub enum Expiration {
 }
 
 /// The struct describes the token and amount of these tokens a user wants to exchange
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[near(serializers=[borsh, json])]
 pub struct TokenAmount {
     /// Account id of the token
@@ -168,7 +168,7 @@ pub struct TokenAmount {
 }
 
 /// Intent status
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[near(serializers=[borsh, json])]
 pub enum Status {
     /// Intent is created by the user and available for the execution

@@ -1,80 +1,166 @@
+use core::iter;
+
 use defuse_contracts::{
     defuse::{
+        intents::tokens::NftWithdraw,
         tokens::{
-            nep171::{NonFungibleTokenWithdrawResolver, NonFungibleTokenWithdrawer},
+            nep171::{
+                NonFungibleTokenForceWithdrawer, NonFungibleTokenWithdrawResolver,
+                NonFungibleTokenWithdrawer,
+            },
             TokenId,
         },
-        Result,
+        DefuseError, Result,
     },
     utils::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
-        UnwrapOrPanic,
+        UnwrapOrPanic, UnwrapOrPanicError,
     },
+    wnear::{ext_wnear, NEAR_WITHDRAW_GAS},
 };
-use near_contract_standards::non_fungible_token::{self, core::ext_nft_core};
+use near_contract_standards::{non_fungible_token, storage_management::ext_storage_management};
+use near_plugins::{access_control_any, pause, AccessControllable, Pausable};
 use near_sdk::{
-    assert_one_yocto, env, near, serde_json, AccountId, Gas, NearToken, PromiseOrValue,
-    PromiseResult,
+    assert_one_yocto, env,
+    json_types::U128,
+    near, require,
+    serde_json::{self, json},
+    AccountId, Gas, NearToken, Promise, PromiseOrValue, PromiseResult,
 };
 
-use crate::{DefuseImpl, DefuseImplExt};
+use crate::{
+    accounts::Account, state::State, tokens::STORAGE_DEPOSIT_GAS, DefuseImpl, DefuseImplExt, Role,
+};
+
+const NFT_TRANSFER_GAS: Gas = Gas::from_tgas(15);
 
 #[near]
 impl NonFungibleTokenWithdrawer for DefuseImpl {
+    #[pause]
     #[payable]
     fn nft_withdraw(
         &mut self,
         token: AccountId,
-        sender_id: AccountId,
+        receiver_id: AccountId,
         token_id: non_fungible_token::TokenId,
         memo: Option<String>,
-        msg: Option<String>,
     ) -> PromiseOrValue<bool> {
-        assert_one_yocto();
         self.internal_nft_withdraw(
             PREDECESSOR_ACCOUNT_ID.clone(),
-            sender_id,
             token,
+            receiver_id,
             token_id,
             memo,
-            msg,
         )
-        .unwrap_or_panic()
     }
 }
 
 impl DefuseImpl {
-    /// Value is taken from [`near_contract_standards`](https://github.com/near/near-sdk-rs/blob/f179a289528fbec5cd85077314e29deec198d0f3/near-contract-standards/src/non_fungible_token/core/core_impl.rs#L19)
-    const NFT_RESOLVE_WITHDRAW_GAS: Gas = Gas::from_tgas(5);
-
     fn internal_nft_withdraw(
         &mut self,
-        sender_id: AccountId,
-        receiver_id: AccountId,
+        owner_id: AccountId,
         token: AccountId,
+        receiver_id: AccountId,
         token_id: non_fungible_token::TokenId,
         memo: Option<String>,
-        msg: Option<String>,
+    ) -> PromiseOrValue<bool> {
+        assert_one_yocto();
+        let owner = self
+            .accounts
+            .get_mut(&owner_id)
+            .ok_or(DefuseError::AccountNotFound)
+            .unwrap_or_panic();
+        self.state
+            .nft_withdraw(
+                owner_id,
+                owner,
+                NftWithdraw {
+                    token,
+                    receiver_id,
+                    token_id,
+                    memo,
+                    storage_deposit: None,
+                },
+            )
+            .unwrap_or_panic()
+    }
+}
+
+impl State {
+    pub fn nft_withdraw(
+        &mut self,
+        sender_id: AccountId,
+        sender: &mut Account,
+        withdraw: NftWithdraw,
     ) -> Result<PromiseOrValue<bool>> {
         self.internal_withdraw(
             &sender_id,
-            [(TokenId::Nep171(token.clone(), token_id.clone()), 1)],
+            sender,
+            iter::once((
+                TokenId::Nep171(withdraw.token.clone(), withdraw.token_id.clone()),
+                1,
+            ))
+            .chain(withdraw.storage_deposit.map(|amount| {
+                (
+                    TokenId::Nep141(self.wnear_id.clone()),
+                    amount.as_yoctonear(),
+                )
+            })),
+            Some("withdraw"),
         )?;
 
-        let ext =
-            ext_nft_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
-        let is_call = msg.is_some();
-        Ok(if let Some(msg) = msg {
-            ext.nft_transfer_call(receiver_id, token_id.clone(), None, memo, msg)
+        Ok(if let Some(storage_deposit) = withdraw.storage_deposit {
+            ext_wnear::ext(self.wnear_id.clone())
+                .with_attached_deposit(NearToken::from_yoctonear(1))
+                .with_static_gas(NEAR_WITHDRAW_GAS)
+                .near_withdraw(U128(storage_deposit.as_yoctonear()))
+                .then(
+                    // schedule storage_deposit() only after near_withdraw() returns
+                    DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
+                        .with_static_gas(DefuseImpl::DO_NFT_WITHDRAW_GAS)
+                        .do_nft_withdraw(withdraw.clone()),
+                )
         } else {
-            ext.nft_transfer(receiver_id, token_id.clone(), None, memo)
+            DefuseImpl::do_nft_withdraw(withdraw.clone())
         }
         .then(
-            Self::ext(CURRENT_ACCOUNT_ID.clone())
-                .with_static_gas(Self::NFT_RESOLVE_WITHDRAW_GAS)
-                .nft_resolve_withdraw(token, sender_id, token_id, is_call),
+            DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
+                .with_static_gas(DefuseImpl::NFT_RESOLVE_WITHDRAW_GAS)
+                .nft_resolve_withdraw(withdraw.token, sender_id, withdraw.token_id),
         )
         .into())
+    }
+}
+
+#[near]
+impl DefuseImpl {
+    const NFT_RESOLVE_WITHDRAW_GAS: Gas = Gas::from_tgas(5);
+    const DO_NFT_WITHDRAW_GAS: Gas = Gas::from_tgas(1)
+        // do_nft_withdraw() method is called externally
+        // only with storage_deposit
+        .saturating_add(STORAGE_DEPOSIT_GAS)
+        .saturating_add(NFT_TRANSFER_GAS);
+
+    #[private]
+    pub fn do_nft_withdraw(withdraw: NftWithdraw) -> Promise {
+        if let Some(storage_deposit) = withdraw.storage_deposit {
+            require!(
+                matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty()),
+                "near_withdraw failed",
+            );
+
+            ext_storage_management::ext(withdraw.token)
+                .with_attached_deposit(storage_deposit)
+                .with_static_gas(STORAGE_DEPOSIT_GAS)
+                .storage_deposit(Some(withdraw.receiver_id.clone()), None)
+        } else {
+            Promise::new(withdraw.token)
+        }
+        .nft_transfer(
+            &withdraw.receiver_id,
+            &withdraw.token_id,
+            withdraw.memo.as_deref(),
+        )
     }
 }
 
@@ -86,31 +172,65 @@ impl NonFungibleTokenWithdrawResolver for DefuseImpl {
         token: AccountId,
         sender_id: AccountId,
         token_id: non_fungible_token::TokenId,
-        is_call: bool,
     ) -> bool {
-        let used = match env::promise_result(0) {
-            PromiseResult::Successful(value) => {
-                if is_call {
-                    // `nft_transfer_call` returns true if token was successfully transferred
-                    serde_json::from_slice(&value).unwrap_or_default()
-                } else {
-                    // `nft_transfer` returns empty result on success
-                    value.is_empty()
-                }
-            }
-            PromiseResult::Failed => false,
-        };
-        if !used {
-            let token = TokenId::Nep171(token, token_id);
-            self.total_supplies
-                .deposit(token.clone(), 1)
-                .unwrap_or_panic();
-            self.accounts
-                .get_or_create(sender_id)
-                .token_balances
-                .deposit(token, 1)
-                .unwrap_or_panic();
+        let ok =
+            matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty());
+
+        if !ok {
+            self.internal_deposit(
+                sender_id,
+                [(TokenId::Nep171(token, token_id), 1)],
+                Some("refund"),
+            )
+            .unwrap_or_panic();
         }
-        used
+
+        ok
+    }
+}
+
+#[near]
+impl NonFungibleTokenForceWithdrawer for DefuseImpl {
+    #[access_control_any(roles(Role::DAO, Role::UnrestrictedWithdrawer))]
+    #[payable]
+    fn nft_force_withdraw(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        token_id: non_fungible_token::TokenId,
+        memo: Option<String>,
+    ) -> PromiseOrValue<bool> {
+        self.internal_nft_withdraw(owner_id, token, receiver_id, token_id, memo)
+    }
+}
+
+pub trait NftExt {
+    fn nft_transfer(
+        self,
+        receiver_id: &AccountId,
+        token_id: &non_fungible_token::TokenId,
+        memo: Option<&str>,
+    ) -> Self;
+}
+
+impl NftExt for Promise {
+    fn nft_transfer(
+        self,
+        receiver_id: &AccountId,
+        token_id: &non_fungible_token::TokenId,
+        memo: Option<&str>,
+    ) -> Self {
+        self.function_call(
+            "nft_transfer".to_string(),
+            serde_json::to_vec(&json!({
+                "receiver_id": receiver_id,
+                "token_id": token_id,
+                "memo": memo,
+            }))
+            .unwrap_or_panic_display(),
+            NearToken::from_yoctonear(1),
+            NFT_TRANSFER_GAS,
+        )
     }
 }

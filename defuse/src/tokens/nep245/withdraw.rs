@@ -1,26 +1,38 @@
+use core::iter;
+
 use defuse_contracts::{
     defuse::{
+        intents::tokens::MtWithdraw,
         tokens::{
-            nep245::{MultiTokenWithdrawResolver, MultiTokenWithdrawer},
+            nep245::{MultiTokenForceWithdrawer, MultiTokenWithdrawResolver, MultiTokenWithdrawer},
             TokenId,
         },
-        Result,
+        DefuseError, Result,
     },
-    nep245::{self, ext_mt_core},
+    nep245,
     utils::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
-        UnwrapOrPanic,
+        UnwrapOrPanic, UnwrapOrPanicError,
     },
+    wnear::{ext_wnear, NEAR_WITHDRAW_GAS},
 };
+use near_contract_standards::storage_management::ext_storage_management;
+use near_plugins::{access_control_any, pause, AccessControllable, Pausable};
 use near_sdk::{
-    assert_one_yocto, env, json_types::U128, near, require, serde_json, AccountId, Gas, NearToken,
-    PromiseOrValue, PromiseResult,
+    assert_one_yocto, env,
+    json_types::U128,
+    near, require,
+    serde_json::{self, json},
+    AccountId, Gas, NearToken, Promise, PromiseOrValue, PromiseResult,
 };
 
-use crate::{DefuseImpl, DefuseImplExt};
+use crate::{
+    accounts::Account, state::State, tokens::STORAGE_DEPOSIT_GAS, DefuseImpl, DefuseImplExt, Role,
+};
 
 #[near]
 impl MultiTokenWithdrawer for DefuseImpl {
+    #[pause]
     #[payable]
     fn mt_withdraw(
         &mut self,
@@ -29,85 +41,166 @@ impl MultiTokenWithdrawer for DefuseImpl {
         token_ids: Vec<nep245::TokenId>,
         amounts: Vec<U128>,
         memo: Option<String>,
-        msg: Option<String>,
-    ) -> PromiseOrValue<Vec<U128>> {
-        assert_one_yocto();
+    ) -> PromiseOrValue<bool> {
         self.internal_mt_withdraw(
             PREDECESSOR_ACCOUNT_ID.clone(),
-            receiver_id,
             token,
+            receiver_id,
             token_ids,
             amounts,
             memo,
-            msg,
         )
-        .unwrap_or_panic()
     }
 }
 
 impl DefuseImpl {
-    // TODO: more accurate numbers
-    const MT_RESOLVE_WITHDRAW_GAS_BASE: Gas = Gas::from_tgas(5);
-    const MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID: Gas = Gas::from_tgas(1);
-
-    #[allow(clippy::too_many_arguments)]
     fn internal_mt_withdraw(
         &mut self,
-        sender_id: AccountId,
-        receiver_id: AccountId,
+        owner_id: AccountId,
         token: AccountId,
+        receiver_id: AccountId,
         token_ids: Vec<nep245::TokenId>,
         amounts: Vec<U128>,
         memo: Option<String>,
-        msg: Option<String>,
-    ) -> Result<PromiseOrValue<Vec<U128>>> {
+    ) -> PromiseOrValue<bool> {
+        assert_one_yocto();
+        let owner = self
+            .accounts
+            .get_mut(&owner_id)
+            .ok_or(DefuseError::AccountNotFound)
+            .unwrap_or_panic();
+        self.state
+            .mt_withdraw(
+                owner_id,
+                owner,
+                MtWithdraw {
+                    token,
+                    receiver_id,
+                    token_ids,
+                    amounts,
+                    memo,
+                    storage_deposit: None,
+                },
+            )
+            .unwrap_or_panic()
+    }
+}
+
+impl State {
+    pub fn mt_withdraw(
+        &mut self,
+        sender_id: AccountId,
+        sender: &mut Account,
+        withdraw: MtWithdraw,
+    ) -> Result<PromiseOrValue<bool>> {
         require!(
-            token_ids.len() == amounts.len(),
-            "token_ids should be the same length as amounts"
+            withdraw.token_ids.len() == withdraw.amounts.len() && !withdraw.amounts.is_empty(),
+            "invalid args"
         );
 
         self.internal_withdraw(
             &sender_id,
-            token_ids
-                .iter()
-                .cloned()
-                .map(|token_id| TokenId::Nep245(token.clone(), token_id))
-                .zip(amounts.iter().map(|a| a.0)),
+            sender,
+            iter::repeat(withdraw.token.clone())
+                .zip(withdraw.token_ids.iter().cloned())
+                .map(|(token, token_id)| TokenId::Nep245(token, token_id))
+                .zip(withdraw.amounts.iter().map(|a| a.0))
+                .chain(withdraw.storage_deposit.map(|amount| {
+                    (
+                        TokenId::Nep141(self.wnear_id.clone()),
+                        amount.as_yoctonear(),
+                    )
+                })),
+            Some("withdraw"),
         )?;
 
-        let ext =
-            ext_mt_core::ext(token.clone()).with_attached_deposit(NearToken::from_yoctonear(1));
-        let is_call = msg.is_some();
-        Ok(if let Some(msg) = msg {
-            ext.mt_batch_transfer_call(
-                receiver_id,
-                token_ids.clone(),
-                amounts.clone(),
-                None,
-                memo,
-                msg,
-            )
+        Ok(if let Some(storage_deposit) = withdraw.storage_deposit {
+            ext_wnear::ext(self.wnear_id.clone())
+                .with_attached_deposit(NearToken::from_yoctonear(1))
+                .with_static_gas(NEAR_WITHDRAW_GAS)
+                .near_withdraw(U128(storage_deposit.as_yoctonear()))
+                .then(
+                    // schedule storage_deposit() only after near_withdraw() returns
+                    DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
+                        .with_static_gas(DefuseImpl::do_mt_withdraw_gas(withdraw.token_ids.len()))
+                        .do_mt_withdraw(withdraw.clone()),
+                )
         } else {
-            ext.mt_batch_transfer(receiver_id, token_ids.clone(), amounts.clone(), None, memo)
+            DefuseImpl::do_mt_withdraw(withdraw.clone())
         }
         .then(
-            Self::ext(CURRENT_ACCOUNT_ID.clone())
-                .with_static_gas(Self::mt_resolve_withdraw_gas(&token_ids))
-                .mt_resolve_withdraw(token, sender_id, token_ids, amounts, is_call),
+            DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
+                .with_static_gas(DefuseImpl::mt_resolve_withdraw_gas(
+                    withdraw.token_ids.len(),
+                ))
+                .mt_resolve_withdraw(
+                    withdraw.token,
+                    sender_id,
+                    withdraw.token_ids,
+                    withdraw.amounts,
+                ),
         )
         .into())
     }
+}
 
-    fn mt_resolve_withdraw_gas(#[allow(clippy::ptr_arg)] token_ids: &Vec<String>) -> Gas {
-        // if this conversios overflow, then
-        // it should have exceeded gas before
-        Self::MT_RESOLVE_WITHDRAW_GAS_BASE
-            .checked_add(
-                Self::MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID
-                    .checked_mul(token_ids.len() as u64)
-                    .unwrap_or_else(|| unreachable!()),
-            )
-            .unwrap_or_else(|| unreachable!())
+#[near]
+impl DefuseImpl {
+    #[private]
+    pub fn do_mt_withdraw(withdraw: MtWithdraw) -> Promise {
+        if let Some(storage_deposit) = withdraw.storage_deposit {
+            require!(
+                matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty()),
+                "near_withdraw failed",
+            );
+
+            ext_storage_management::ext(withdraw.token)
+                .with_attached_deposit(storage_deposit)
+                .with_static_gas(STORAGE_DEPOSIT_GAS)
+                .storage_deposit(Some(withdraw.receiver_id.clone()), None)
+        } else {
+            Promise::new(withdraw.token)
+        }
+        .mt_batch_transfer(
+            &withdraw.receiver_id,
+            &withdraw.token_ids,
+            &withdraw.amounts,
+            withdraw.memo.as_deref(),
+        )
+    }
+
+    #[inline]
+    const fn do_mt_withdraw_gas(token_count: usize) -> Gas {
+        // TODO: more accurate numbers
+        const DO_MT_WITHDRAW_GAS_BASE: Gas = Gas::from_tgas(1);
+        const DO_MT_WITHDRAW_GAS_PER_TOKEN_ID: Gas = Gas::from_ggas(500);
+
+        DO_MT_WITHDRAW_GAS_BASE
+            .saturating_add(DO_MT_WITHDRAW_GAS_PER_TOKEN_ID.saturating_mul(token_count as u64))
+            // do_mt_withdraw() method is called externally
+            // only with storage_deposit
+            .saturating_add(STORAGE_DEPOSIT_GAS)
+            .saturating_add(Self::mt_batch_transfer_gas(token_count))
+    }
+
+    #[inline]
+    const fn mt_batch_transfer_gas(token_count: usize) -> Gas {
+        // TODO: more accurate numbers
+        const MT_TRANSFER_GAS_BASE: Gas = Gas::from_tgas(15);
+        const MT_TRANSFER_GAS_PER_TOKEN_ID: Gas = Gas::from_ggas(500);
+
+        MT_TRANSFER_GAS_BASE
+            .saturating_add(MT_TRANSFER_GAS_PER_TOKEN_ID.saturating_mul(token_count as u64))
+    }
+
+    #[inline]
+    const fn mt_resolve_withdraw_gas(token_count: usize) -> Gas {
+        // TODO: more accurate numbers
+        const MT_RESOLVE_WITHDRAW_GAS_BASE: Gas = Gas::from_tgas(5);
+        const MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID: Gas = Gas::from_ggas(500);
+
+        MT_RESOLVE_WITHDRAW_GAS_BASE
+            .saturating_add(MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID.saturating_mul(token_count as u64))
     }
 }
 
@@ -120,50 +213,76 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
         sender_id: AccountId,
         token_ids: Vec<nep245::TokenId>,
         amounts: Vec<U128>,
-        is_call: bool,
-    ) -> Vec<U128> {
+    ) -> bool {
         require!(
-            token_ids.len() == amounts.len(),
-            "token_ids should be the same length as amounts"
+            token_ids.len() == amounts.len() && !amounts.is_empty(),
+            "invalid args"
         );
 
-        let mut used = match env::promise_result(0) {
-            PromiseResult::Successful(value) => {
-                if is_call {
-                    // `mt_batch_transfer_call` returns successfully transferred amounts
-                    serde_json::from_slice::<Vec<U128>>(&value)
-                        .ok()
-                        .filter(|used| used.len() == amounts.len())
-                        .unwrap_or_else(|| vec![U128(0); amounts.len()])
-                } else {
-                    // `mt_batch_transfer` returns empty result on success
-                    amounts.clone()
-                }
-            }
-            PromiseResult::Failed => vec![U128(0); amounts.len()],
-        };
+        let ok =
+            matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty());
 
-        let account = self.accounts.get_or_create(sender_id);
-        for (token_id, (amount, used)) in token_ids
-            .into_iter()
-            .zip(amounts.into_iter().zip(&mut used))
-        {
-            // update min during iteration
-            used.0 = used.0.min(amount.0);
-
-            let refund = amount.0 - used.0;
-            if refund > 0 {
-                let token_id = TokenId::Nep245(token.clone(), token_id);
-                self.total_supplies
-                    .deposit(token_id.clone(), refund)
-                    .unwrap_or_panic();
-                account
-                    .token_balances
-                    .deposit(token_id, refund)
-                    .unwrap_or_panic();
-            }
+        if !ok {
+            self.internal_deposit(
+                sender_id,
+                iter::repeat(token)
+                    .zip(token_ids)
+                    .map(|(token, token_id)| TokenId::Nep245(token, token_id))
+                    .zip(amounts.into_iter().map(|a| a.0)),
+                Some("refund"),
+            )
+            .unwrap_or_panic();
         }
+        ok
+    }
+}
 
-        used
+#[near]
+impl MultiTokenForceWithdrawer for DefuseImpl {
+    #[access_control_any(roles(Role::DAO, Role::UnrestrictedWithdrawer))]
+    #[payable]
+    fn mt_force_withdraw(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        token_ids: Vec<nep245::TokenId>,
+        amounts: Vec<U128>,
+        memo: Option<String>,
+    ) -> PromiseOrValue<bool> {
+        self.internal_mt_withdraw(owner_id, token, receiver_id, token_ids, amounts, memo)
+    }
+}
+
+pub trait MtExt {
+    fn mt_batch_transfer(
+        self,
+        receiver_id: &AccountId,
+        token_ids: &[nep245::TokenId],
+        amounts: &[U128],
+        memo: Option<&str>,
+    ) -> Self;
+}
+
+impl MtExt for Promise {
+    fn mt_batch_transfer(
+        self,
+        receiver_id: &AccountId,
+        token_ids: &[nep245::TokenId],
+        amounts: &[U128],
+        memo: Option<&str>,
+    ) -> Self {
+        self.function_call(
+            "mt_batch_transfer".to_string(),
+            serde_json::to_vec(&json!({
+                "receiver_id": receiver_id,
+                "token_ids": token_ids,
+                "amounts": amounts,
+                "memo": memo,
+            }))
+            .unwrap_or_panic_display(),
+            NearToken::from_yoctonear(1),
+            DefuseImpl::mt_batch_transfer_gas(token_ids.len()),
+        )
     }
 }

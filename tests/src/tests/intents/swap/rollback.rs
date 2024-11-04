@@ -68,18 +68,16 @@ async fn test_rollback_native_intent() {
 #[tokio::test]
 async fn test_rollback_ft_intent() {
     let env = Env::new().await.unwrap();
-    env.ft_storage_deposit(env.ft1.id(), &[env.user1.id(), env.swap_intent.id()])
+    env.ft_storage_deposit(&env.ft1, &[env.user1.id(), env.swap_intent.id()])
         .await
         .unwrap();
-    env.ft_mint(env.ft1.id(), env.user1.id(), 1000)
-        .await
-        .unwrap();
+    env.ft_mint(&env.ft1, env.user1.id(), 1000).await.unwrap();
 
     assert!(env
         .user1
         .swap_intent_action(
             env.swap_intent.id(),
-            Asset::Near(NearAsset::Nep141(FtAmount::new(env.ft1.id().clone(), 1000))),
+            Asset::Near(NearAsset::Nep141(FtAmount::new(env.ft1.clone(), 1000))),
             SwapIntentAction::Create(CreateSwapIntentAction {
                 id: "1".to_string(),
                 asset_out: AssetWithAccount::Near {
@@ -96,9 +94,16 @@ async fn test_rollback_ft_intent() {
         .await
         .unwrap());
 
-    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 0);
     assert_eq!(
-        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.ft1, env.user1.id())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft1, env.swap_intent.id())
+            .await
+            .unwrap(),
         1000
     );
 
@@ -119,9 +124,16 @@ async fn test_rollback_ft_intent() {
         SwapIntentStatus::RolledBack,
     );
 
-    assert_eq!(env.ft1.ft_balance_of(env.user1.id()).await.unwrap(), 1000);
     assert_eq!(
-        env.ft1.ft_balance_of(env.swap_intent.id()).await.unwrap(),
+        env.ft_token_balance_of(&env.ft1, env.user1.id())
+            .await
+            .unwrap(),
+        1000
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft1, env.swap_intent.id())
+            .await
+            .unwrap(),
         0
     );
 }

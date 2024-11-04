@@ -2,57 +2,79 @@ mod account;
 mod nonces;
 mod state;
 
-use std::collections::HashSet;
-
 pub use self::{account::*, nonces::*, state::*};
+
+use std::collections::HashSet;
 
 use defuse_contracts::{
     crypto::PublicKey,
     defuse::accounts::AccountManager,
-    nep413::Nonce,
-    utils::{cache::PREDECESSOR_ACCOUNT_ID, prefix::NestPrefix, serde::wrappers::DisplayFromStr},
+    nep413::U256,
+    utils::{
+        cache::PREDECESSOR_ACCOUNT_ID, prefix::NestPrefix, serde::wrappers::Base64, UnwrapOrPanic,
+    },
 };
+
 use near_sdk::{
-    borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey, IntoStorageKey,
+    assert_one_yocto, borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey,
+    IntoStorageKey,
 };
 
 use crate::{DefuseImpl, DefuseImplExt};
 
 #[near]
 impl AccountManager for DefuseImpl {
+    fn has_public_key(&self, account_id: &AccountId, public_key: &PublicKey) -> bool {
+        self.accounts
+            .get(account_id)
+            .map(|account| account.has_public_key(account_id, public_key))
+            .unwrap_or_else(|| account_id == &public_key.to_implicit_account_id())
+    }
+
     fn public_keys_of(&self, account_id: &AccountId) -> HashSet<PublicKey> {
         self.accounts
             .get(account_id)
-            .into_iter()
-            .flat_map(Account::iter_active_public_keys)
-            .cloned()
-            .collect()
+            .map(|account| account.iter_public_keys(account_id).collect())
+            .unwrap_or_else(|| {
+                PublicKey::from_implicit_account_id(account_id)
+                    .into_iter()
+                    .collect()
+            })
     }
 
+    #[payable]
     fn add_public_key(&mut self, public_key: PublicKey) {
+        assert_one_yocto();
         self.accounts
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
-            .add_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
+            .add_public_key(&PREDECESSOR_ACCOUNT_ID, public_key)
+            .unwrap_or_panic()
     }
 
-    fn deactivate_public_key(&mut self, public_key: &PublicKey) {
+    #[payable]
+    fn remove_public_key(&mut self, public_key: &PublicKey) {
+        assert_one_yocto();
         self.accounts
             // create account if doesn't exist, so the user can opt out of implicit public key
             .get_or_create(PREDECESSOR_ACCOUNT_ID.clone())
-            .deactivate_public_key(&PREDECESSOR_ACCOUNT_ID, public_key);
+            .remove_public_key(&PREDECESSOR_ACCOUNT_ID, public_key)
+            .unwrap_or_panic()
     }
 
-    fn next_nonce_available(
-        &self,
-        account_id: &AccountId,
-        public_key: &PublicKey,
-        start: Option<DisplayFromStr<Nonce>>,
-    ) -> Option<DisplayFromStr<Nonce>> {
+    fn is_nonce_used(&self, account_id: &AccountId, nonce: Base64<U256>) -> bool {
         self.accounts
             .get(account_id)
-            .and_then(|account| account.public_key_nonces(account_id, public_key))
-            .and_then(|nonces| nonces.next_unused(start.map(DisplayFromStr::into_inner)))
-            .map(Into::into)
+            .map(move |account| account.is_nonce_used(nonce.into_inner()))
+            .unwrap_or_default()
+    }
+
+    #[payable]
+    fn invalidate_nonces(&mut self, nonces: Vec<Base64<U256>>) {
+        assert_one_yocto();
+        let account = self.accounts.get_or_create(PREDECESSOR_ACCOUNT_ID.clone());
+        for n in nonces.into_iter().map(Base64::into_inner) {
+            account.commit_nonce(n).unwrap_or_panic();
+        }
     }
 }
 
