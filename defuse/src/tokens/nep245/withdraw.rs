@@ -129,6 +129,11 @@ impl DefuseImpl {
     #[private]
     pub fn do_mt_withdraw(withdraw: MtWithdraw) -> Promise {
         if let Some(storage_deposit) = withdraw.storage_deposit {
+            require!(
+                matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty()),
+                "near_withdraw failed",
+            );
+
             ext_storage_management::ext(withdraw.token)
                 .with_attached_deposit(storage_deposit)
                 .with_static_gas(STORAGE_DEPOSIT_GAS)

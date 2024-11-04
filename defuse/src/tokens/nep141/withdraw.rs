@@ -20,7 +20,7 @@ use near_plugins::{pause, Pausable};
 use near_sdk::{
     assert_one_yocto, env,
     json_types::U128,
-    near,
+    near, require,
     serde_json::{self, json},
     AccountId, Gas, NearToken, Promise, PromiseOrValue, PromiseResult,
 };
@@ -121,6 +121,11 @@ impl DefuseImpl {
     #[private]
     pub fn do_ft_withdraw(withdraw: FtWithdraw) -> Promise {
         if let Some(storage_deposit) = withdraw.storage_deposit {
+            require!(
+                matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty()),
+                "near_withdraw failed",
+            );
+
             ext_storage_management::ext(withdraw.token)
                 .with_attached_deposit(storage_deposit)
                 .with_static_gas(STORAGE_DEPOSIT_GAS)
