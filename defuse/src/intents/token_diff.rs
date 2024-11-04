@@ -38,7 +38,8 @@ impl IntentExecutor<TokenDiff> for State {
 
             signer.token_balances.add_delta(token_id.clone(), delta)?;
 
-            let fee = self.fee.fee_ceil(delta.unsigned_abs());
+            let delta_abs = delta.unsigned_abs();
+            let fee = TokenDiff::token_fee(&token_id, delta_abs, self.fee).fee_ceil(delta_abs);
             fees_collected.add(token_id.clone(), fee)?;
 
             transfer_events.push_delta(&token_id, delta);

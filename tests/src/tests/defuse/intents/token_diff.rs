@@ -23,6 +23,10 @@ use super::ExecuteIntentsExt;
 #[tokio::test]
 async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips) {
     let env = Env::builder().fee(fee).build().await.unwrap();
+
+    let ft1_token_id = TokenId::Nep141(env.ft1.clone());
+    let ft2_token_id = TokenId::Nep141(env.ft2.clone());
+
     test_ft_diffs(
         &env,
         [
@@ -31,17 +35,20 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
                 init_balances: [(&env.ft1, 100)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
-                        (TokenId::Nep141(env.ft1.clone()), -100),
+                        (ft1_token_id.clone(), -100),
                         (
-                            TokenId::Nep141(env.ft2.clone()),
-                            TokenDiff::closure_delta(-200, fee).unwrap(),
+                            ft2_token_id.clone(),
+                            TokenDiff::closure_delta(&ft2_token_id, -200, fee).unwrap(),
                         ),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(&env.ft2, TokenDiff::closure_delta(-200, fee).unwrap())]
-                    .into_iter()
-                    .collect(),
+                result_balances: [(
+                    &env.ft2,
+                    TokenDiff::closure_delta(&ft2_token_id, -200, fee).unwrap(),
+                )]
+                .into_iter()
+                .collect(),
             },
             AccountFtDiff {
                 account: &env.user2,
@@ -49,16 +56,19 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
                         (
-                            TokenId::Nep141(env.ft1.clone()),
-                            TokenDiff::closure_delta(-100, fee).unwrap(),
+                            ft1_token_id.clone(),
+                            TokenDiff::closure_delta(&ft1_token_id, -100, fee).unwrap(),
                         ),
-                        (TokenId::Nep141(env.ft2.clone()), -200),
+                        (ft2_token_id.clone(), -200),
                     ])
                     .unwrap()]
                 .into(),
-                result_balances: [(&env.ft1, TokenDiff::closure_delta(-100, fee).unwrap())]
-                    .into_iter()
-                    .collect(),
+                result_balances: [(
+                    &env.ft1,
+                    TokenDiff::closure_delta(&ft1_token_id, -100, fee).unwrap(),
+                )]
+                .into_iter()
+                .collect(),
             },
         ]
         .into(),
@@ -70,6 +80,11 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
 #[tokio::test]
 async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips) {
     let env = Env::builder().fee(fee).build().await.unwrap();
+
+    let ft1_token_id = TokenId::Nep141(env.ft1.clone());
+    let ft2_token_id = TokenId::Nep141(env.ft2.clone());
+    let ft3_token_id = TokenId::Nep141(env.ft3.clone());
+
     test_ft_diffs(
         &env,
         [
@@ -78,8 +93,8 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
                 init_balances: [(&env.ft1, 100)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
-                        (TokenId::Nep141(env.ft1.clone()), -100),
-                        (TokenId::Nep141(env.ft2.clone()), 200),
+                        (ft1_token_id.clone(), -100),
+                        (ft2_token_id.clone(), 200),
                     ])
                     .unwrap()]
                 .into(),
@@ -92,37 +107,43 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
                     TokenAmounts::<i128>::default()
                         .with_try_extend::<i128>([
                             (
-                                TokenId::Nep141(env.ft1.clone()),
-                                TokenDiff::closure_delta(-100, fee).unwrap(),
+                                ft1_token_id.clone(),
+                                TokenDiff::closure_delta(&ft1_token_id, -100, fee).unwrap(),
                             ),
                             (
-                                TokenId::Nep141(env.ft2.clone()),
-                                TokenDiff::closure_delta(200, fee).unwrap(),
+                                ft2_token_id.clone(),
+                                TokenDiff::closure_delta(&ft2_token_id, 200, fee).unwrap(),
                             ),
                         ])
                         .unwrap(),
                     TokenAmounts::<i128>::default()
                         .with_try_extend::<i128>([
                             (
-                                TokenId::Nep141(env.ft2.clone()),
-                                TokenDiff::closure_delta(300, fee).unwrap(),
+                                ft2_token_id.clone(),
+                                TokenDiff::closure_delta(&ft2_token_id, 300, fee).unwrap(),
                             ),
                             (
-                                TokenId::Nep141(env.ft3.clone()),
-                                TokenDiff::closure_delta(-500, fee).unwrap(),
+                                ft3_token_id.clone(),
+                                TokenDiff::closure_delta(&ft3_token_id, -500, fee).unwrap(),
                             ),
                         ])
                         .unwrap(),
                 ]
                 .into(),
                 result_balances: [
-                    (&env.ft1, TokenDiff::closure_delta(-100, fee).unwrap()),
+                    (
+                        &env.ft1,
+                        TokenDiff::closure_delta(&ft1_token_id, -100, fee).unwrap(),
+                    ),
                     (
                         &env.ft2,
-                        1000 + TokenDiff::closure_delta(200, fee).unwrap()
-                            + TokenDiff::closure_delta(300, fee).unwrap(),
+                        1000 + TokenDiff::closure_delta(&ft2_token_id, 200, fee).unwrap()
+                            + TokenDiff::closure_delta(&ft2_token_id, 300, fee).unwrap(),
                     ),
-                    (&env.ft3, TokenDiff::closure_delta(-500, fee).unwrap()),
+                    (
+                        &env.ft3,
+                        TokenDiff::closure_delta(&ft3_token_id, -500, fee).unwrap(),
+                    ),
                 ]
                 .into_iter()
                 .collect(),
@@ -132,8 +153,8 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
                 init_balances: [(&env.ft3, 500)].into_iter().collect(),
                 diff: [TokenAmounts::<i128>::default()
                     .with_try_extend::<i128>([
-                        (TokenId::Nep141(env.ft2.clone()), 300),
-                        (TokenId::Nep141(env.ft3.clone()), -500),
+                        (ft2_token_id.clone(), 300),
+                        (ft3_token_id.clone(), -500),
                     ])
                     .unwrap()]
                 .into(),
