@@ -16,7 +16,7 @@ use crate::{DefuseImpl, DefuseImplExt, Role};
 #[near]
 impl FeesManager for DefuseImpl {
     #[pause(name = "intents")]
-    #[access_control_any(roles(Role::FeesManager))]
+    #[access_control_any(roles(Role::DAO, Role::FeesManager))]
     fn set_fee(&mut self, #[allow(unused_mut)] mut fee: Pips) {
         require!(self.fees.fee != fee, "same");
         mem::swap(&mut self.fees.fee, &mut fee);
@@ -32,7 +32,7 @@ impl FeesManager for DefuseImpl {
     }
 
     #[pause(name = "intents")]
-    #[access_control_any(roles(Role::FeesManager))]
+    #[access_control_any(roles(Role::DAO, Role::FeesManager))]
     fn set_fee_collector(&mut self, #[allow(unused_mut)] mut fee_collector: AccountId) {
         require!(self.fees.fee_collector != fee_collector, "same");
         mem::swap(&mut self.fees.fee_collector, &mut fee_collector);

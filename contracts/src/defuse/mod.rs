@@ -9,6 +9,7 @@ pub mod tokens;
 
 use crate::{
     nep245::{receiver::MultiTokenReceiver, MultiTokenCore},
+    upgrade::Upgrade,
     utils::access_keys::AccessKeys,
 };
 
@@ -20,7 +21,7 @@ use near_contract_standards::{
     fungible_token::receiver::FungibleTokenReceiver,
     non_fungible_token::core::NonFungibleTokenReceiver,
 };
-use near_plugins::{AccessControllable, Pausable, Upgradable};
+use near_plugins::{AccessControllable, Pausable};
 use near_sdk::ext_contract;
 use tokens::{nep171::NonFungibleTokenWithdrawer, nep245::MultiTokenWithdrawer};
 
@@ -42,7 +43,7 @@ pub trait Defuse:
     // Governance
     + AccessControllable
     + Pausable
-    + Upgradable
+    + Upgrade
     + AccessKeys
 {
 }

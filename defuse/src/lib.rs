@@ -1,10 +1,11 @@
+mod access_keys;
 mod accounts;
-mod admin;
 pub mod config;
 pub mod fees;
 mod intents;
 mod state;
 mod tokens;
+mod upgrade;
 
 use core::iter;
 
@@ -14,7 +15,7 @@ use defuse_contracts::{
     utils::UnwrapOrPanic,
 };
 use impl_tools::autoimpl;
-use near_plugins::{access_control, AccessControlRole, AccessControllable, Pausable, Upgradable};
+use near_plugins::{access_control, AccessControlRole, AccessControllable, Pausable};
 use near_sdk::{
     borsh::BorshDeserialize, near, require, store::LookupSet, BorshStorageKey, PanicOnDefault,
 };
@@ -24,26 +25,18 @@ use self::{accounts::Accounts, config::DefuseConfig, state::State};
 #[near(serializers = [json])]
 #[derive(AccessControlRole, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Role {
-    PauseManager,
+    DAO,
 
-    UpgradeCodeStager,
-    UpgradeCodeDeployer,
-    UpgradeDurationManager,
-
+    // TODO: UnrestrictedWithdraw
     FeesManager,
     RelayerKeysManager,
+
+    PauseManager,
 }
 
 #[access_control(role_type(Role))]
-#[derive(Pausable, Upgradable, PanicOnDefault)]
-#[pausable(manager_roles(Role::PauseManager))]
-#[upgradable(access_control_roles(
-    code_stagers(Role::UpgradeCodeStager),
-    code_deployers(Role::UpgradeCodeDeployer),
-    duration_initializers(Role::UpgradeDurationManager),
-    duration_update_stagers(Role::UpgradeDurationManager),
-    duration_update_appliers(Role::UpgradeDurationManager),
-))]
+#[derive(Pausable, PanicOnDefault)]
+#[pausable(manager_roles(Role::DAO, Role::PauseManager))]
 #[near(contract_state, contract_metadata(
     // TODO: remove when this PR is merged:
     // https://github.com/near/near-sdk-rs/pull/1249
@@ -65,18 +58,13 @@ pub struct DefuseImpl {
 impl DefuseImpl {
     #[init]
     pub fn new(config: DefuseConfig) -> Self {
+        // TODO: deployer == DAO?
         let mut contract = Self {
             accounts: Accounts::new(Prefix::Accounts),
             state: State::new(Prefix::State, config.wnear_id, config.fees),
             relayer_keys: LookupSet::new(Prefix::RelayerKeys),
         };
         contract.init_acl(config.roles);
-
-        // TODO
-        // if let Some(staging_duration) = staging_duration {
-        //     contract.up_set_staging_duration_unchecked(staging_duration);
-        // }
-
         contract
     }
 

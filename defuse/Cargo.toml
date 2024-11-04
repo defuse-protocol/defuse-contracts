@@ -10,7 +10,11 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
-defuse-contracts = { workspace = true, features = ["defuse", "wnear"] }
+defuse-contracts = { workspace = true, features = [
+    "defuse",
+    "upgrade",
+    "wnear",
+] }
 
 bnum.workspace = true
 impl-tools.workspace = true

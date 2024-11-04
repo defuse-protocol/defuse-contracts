@@ -16,6 +16,8 @@ pub mod nep245;
 pub mod nep413;
 #[cfg(feature = "poa")]
 pub mod poa;
+#[cfg(feature = "upgrade")]
+pub mod upgrade;
 #[cfg(feature = "wnear")]
 pub mod wnear;
 

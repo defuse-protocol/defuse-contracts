@@ -23,7 +23,7 @@ strum.workspace = true
 thiserror.workspace = true
 
 [features]
-default = ["defuse", "poa", "wnear"]
+default = ["defuse", "poa", "upgrade", "wnear"]
 
 
 crypto = []
@@ -32,6 +32,7 @@ erc191 = []
 nep245 = []
 nep413 = ["crypto"]
 poa = []
+upgrade = []
 wnear = []
 
 # TODO: remove legacy:
