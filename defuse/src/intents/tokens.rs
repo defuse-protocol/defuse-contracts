@@ -7,7 +7,7 @@ use defuse_contracts::{
     },
     nep245::{MtEventEmit, MtTransferEvent},
 };
-use near_sdk::{require, AccountId};
+use near_sdk::{require, AccountId, Gas};
 
 use crate::accounts::Account;
 
@@ -63,7 +63,9 @@ impl IntentExecutor<MtBatchTransferCall> for State {
         sender: &mut Account,
         intent: MtBatchTransferCall,
     ) -> Result<()> {
-        self.internal_mt_batch_transfer_call(sender_id, sender, intent)
+        const GAS_FOR_MT_ON_TRANSFER: Gas = Gas::from_tgas(15);
+
+        self.internal_mt_batch_transfer_call(sender_id, sender, intent, GAS_FOR_MT_ON_TRANSFER)
             // detach
             .map(|_promise| ())
     }

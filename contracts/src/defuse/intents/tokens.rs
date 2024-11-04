@@ -1,7 +1,7 @@
 use impl_tools::autoimpl;
 use near_contract_standards::non_fungible_token;
 use near_sdk::json_types::U128;
-use near_sdk::{near, AccountId, Gas, NearToken};
+use near_sdk::{near, AccountId, NearToken};
 
 use crate::{defuse::tokens::TokenId, nep245};
 
@@ -24,10 +24,6 @@ pub struct MtBatchTransferCall {
 
     /// `msg` to pass in `mt_on_transfer`
     pub msg: String,
-
-    /// Optional static gas to attach to `mt_on_transfer`
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub gas_for_mt_on_transfer: Option<Gas>,
 }
 
 #[near(serializers = [borsh, json])]

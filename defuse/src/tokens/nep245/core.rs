@@ -10,7 +10,7 @@ use defuse_contracts::{
     },
 };
 use near_plugins::{pause, Pausable};
-use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, PromiseOrValue};
+use near_sdk::{assert_one_yocto, json_types::U128, near, require, AccountId, Gas, PromiseOrValue};
 
 use crate::{accounts::Account, intents::IntentExecutor, state::State, DefuseImpl, DefuseImplExt};
 
@@ -110,8 +110,8 @@ impl MultiTokenCore for DefuseImpl {
                     memo,
                 },
                 msg,
-                gas_for_mt_on_transfer: None,
             },
+            None,
         )
         .unwrap_or_panic()
     }
@@ -177,13 +177,18 @@ impl DefuseImpl {
         &mut self,
         sender_id: &AccountId,
         transfer: MtBatchTransferCall,
+        gas_for_mt_on_transfer: impl Into<Option<Gas>>,
     ) -> Result<PromiseOrValue<Vec<U128>>> {
         let sender = self
             .accounts
             .get_mut(sender_id)
             .ok_or(DefuseError::AccountNotFound)?;
-        self.state
-            .internal_mt_batch_transfer_call(sender_id, sender, transfer)
+        self.state.internal_mt_batch_transfer_call(
+            sender_id,
+            sender,
+            transfer,
+            gas_for_mt_on_transfer,
+        )
     }
 
     fn internal_mt_balance_of(&self, account_id: &AccountId, token_id: &nep245::TokenId) -> u128 {
@@ -199,11 +204,8 @@ impl State {
         &mut self,
         sender_id: &AccountId,
         sender: &mut Account,
-        MtBatchTransferCall {
-            transfer,
-            msg,
-            gas_for_mt_on_transfer,
-        }: MtBatchTransferCall,
+        MtBatchTransferCall { transfer, msg }: MtBatchTransferCall,
+        gas_for_mt_on_transfer: impl Into<Option<Gas>>,
     ) -> Result<PromiseOrValue<Vec<U128>>> {
         self.execute_intent(sender_id, sender, transfer.clone())?;
 
@@ -212,7 +214,7 @@ impl State {
         let previous_owner_ids = vec![sender_id.clone(); token_ids.len()];
 
         let mut ext = ext_mt_receiver::ext(transfer.receiver_id.clone());
-        if let Some(gas) = gas_for_mt_on_transfer {
+        if let Some(gas) = gas_for_mt_on_transfer.into() {
             ext = ext.with_static_gas(gas);
         }
         Ok(ext
@@ -225,7 +227,7 @@ impl State {
             )
             .then(
                 DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
-                    .with_static_gas(DefuseImpl::mt_resolve_transfer_gas(&token_ids))
+                    .with_static_gas(DefuseImpl::mt_resolve_transfer_gas(token_ids.len()))
                     .mt_resolve_transfer(
                         previous_owner_ids,
                         transfer.receiver_id,
