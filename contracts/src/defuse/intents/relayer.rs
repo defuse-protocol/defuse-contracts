@@ -11,5 +11,6 @@ pub trait RelayerKeys: IntentsExecutor + AccessControllable {
 
     fn do_add_relayer_key(&mut self, public_key: PublicKey);
 
+    /// NOTE: requires 1yN for security purposes
     fn delete_relayer_key(&mut self, public_key: PublicKey) -> Promise;
 }

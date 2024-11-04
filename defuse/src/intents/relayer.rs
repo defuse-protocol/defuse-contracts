@@ -1,11 +1,14 @@
 use defuse_contracts::{
     defuse::intents::{relayer::RelayerKeys, IntentsExecutor},
+    method_name,
     utils::{cache::CURRENT_ACCOUNT_ID, UnwrapOrPanicError},
 };
 use near_plugins::{access_control_any, pause, AccessControllable, Pausable};
-use near_sdk::{env, near, require, Allowance, Promise, PublicKey};
+use near_sdk::{assert_one_yocto, env, near, require, Allowance, Promise, PublicKey};
 
 use crate::{DefuseImpl, DefuseImplExt, Role};
+
+const EXECUTE_INTENTS_FUNC: &str = method_name!(DefuseImpl::execute_intents);
 
 #[near]
 impl RelayerKeys for DefuseImpl {
@@ -35,17 +38,11 @@ impl RelayerKeys for DefuseImpl {
 
     #[pause(name = "intents")]
     #[access_control_any(roles(Role::DAO, Role::RelayerKeysManager))]
+    #[payable]
     fn delete_relayer_key(&mut self, public_key: PublicKey) -> Promise {
+        assert_one_yocto();
         require!(self.relayer_keys.remove(&public_key), "key not found");
 
         Promise::new(CURRENT_ACCOUNT_ID.clone()).delete_key(public_key)
     }
 }
-
-macro_rules! method_name {
-    ($ty:ident::$method:ident) => {{
-        const _: *const () = $ty::$method as *const ();
-        stringify!($method)
-    }};
-}
-const EXECUTE_INTENTS_FUNC: &str = method_name!(DefuseImpl::execute_intents);

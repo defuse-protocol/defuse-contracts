@@ -58,7 +58,6 @@ pub struct DefuseImpl {
 impl DefuseImpl {
     #[init]
     pub fn new(config: DefuseConfig) -> Self {
-        // TODO: deployer == DAO?
         let mut contract = Self {
             accounts: Accounts::new(Prefix::Accounts),
             state: State::new(Prefix::State, config.wnear_id, config.fees),

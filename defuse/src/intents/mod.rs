@@ -25,30 +25,6 @@ impl IntentsExecutor for DefuseImpl {
     fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>) {
         self.execute_signed_intents(intents).unwrap_or_panic()
     }
-
-    #[handle_result]
-    fn simulate_intents(
-        self,
-        #[allow(unused_variables)] intents: Vec<DefusePayload<DefuseIntents>>,
-    ) {
-        todo!()
-        // WARNING: this turns out to modify the state!!!
-
-        // for message in intents {
-        //     // make sure message is still valid
-        //     if message.deadline.has_expired() {
-        //         return Err(DefuseError::DeadlineExpired);
-        //     }
-
-        //     // get the account of the signer, create if doesn't exist
-        //     let signer = self.accounts.get_or_create(message.signer_id.clone());
-
-        //     // execute intent
-        //     self.state
-        //         .execute_intent(&message.signer_id, signer, message.message)?;
-        // }
-        // Ok(())
-    }
 }
 
 impl DefuseImpl {

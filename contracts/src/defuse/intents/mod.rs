@@ -11,10 +11,7 @@ use serde_with::serde_as;
 
 use crate::{crypto::SignedPayload, utils::serde::base58::Base58};
 
-use super::{
-    fees::FeesManager,
-    payload::{multi::MultiStandardPayload, DefusePayload},
-};
+use super::{fees::FeesManager, payload::multi::MultiStandardPayload};
 
 use self::{
     account::{AddPublicKey, InvalidateNonces, RemovePublicKey},
@@ -25,9 +22,6 @@ use self::{
 #[ext_contract(ext_intents_executor)]
 pub trait IntentsExecutor: FeesManager {
     fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>);
-
-    // WARNING: this turns out to modify the state!!!
-    fn simulate_intents(self, intents: Vec<DefusePayload<DefuseIntents>>);
 }
 
 #[near(serializers = [borsh, json])]
