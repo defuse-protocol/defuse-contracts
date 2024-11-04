@@ -100,6 +100,7 @@ impl State {
                 .with_static_gas(NEAR_WITHDRAW_GAS)
                 .near_withdraw(U128(storage_deposit.as_yoctonear()))
                 .then(
+                    // schedule storage_deposit() only after near_withdraw() returns
                     DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
                         .with_static_gas(DefuseImpl::do_mt_withdraw_gas(withdraw.token_ids.len()))
                         .do_mt_withdraw(withdraw.clone()),
