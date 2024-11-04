@@ -45,24 +45,17 @@ impl TokenDiff {
             .try_fold(
                 TokenAmounts::<i128>::default(),
                 |mut deltas, (token_id, delta)| {
-                    deltas
-                        .add(
-                            token_id,
-                            Self::delta_in_with_fee(delta, fee)
-                                .ok_or(DefuseError::BalanceOverflow)?,
-                        )
-                        .map(|_| deltas)
+                    let delta_in_with_fee = Self::token_delta_in_with_fee(&token_id, delta, fee)
+                        .ok_or(DefuseError::BalanceOverflow)?;
+                    deltas.add(token_id, delta_in_with_fee).map(|_| deltas)
                 },
             )?
             .into_iter()
             // calculate closure
             .try_fold(TokenAmounts::default(), |mut deltas, (token_id, delta)| {
-                deltas
-                    .add(
-                        token_id,
-                        Self::delta_out(delta, fee).ok_or(DefuseError::BalanceOverflow)?,
-                    )
-                    .map(|_| deltas)
+                let delta_out = Self::token_delta_out(&token_id, delta, fee)
+                    .ok_or(DefuseError::BalanceOverflow)?;
+                deltas.add(token_id, delta_out).map(|_| deltas)
             })
     }
 
@@ -72,19 +65,44 @@ impl TokenDiff {
     ///
     /// Formula: `⌊-(delta + ⌈|delta| * fee⌉) / (1 - fee * sign(delta))⌋`
     #[inline]
-    pub fn closure_delta(delta: i128, fee: Pips) -> Option<i128> {
-        Self::delta_out(Self::delta_in_with_fee(delta, fee)?, fee)
+    pub fn closure_delta(token_id: &TokenId, delta: i128, fee: Pips) -> Option<i128> {
+        Self::token_delta_out(
+            token_id,
+            Self::token_delta_in_with_fee(token_id, delta, fee)?,
+            fee,
+        )
+    }
+
+    #[inline]
+    pub const fn token_fee(token_id: &TokenId, amount: u128, fee: Pips) -> Pips {
+        match token_id {
+            TokenId::Nep141(_) => {}
+            TokenId::Nep245(_, _) if amount > 1 => {}
+            // do not take fees on NFTs and MTs with |delta| <= 1
+            _ => return Pips::ZERO,
+        }
+        fee
+    }
+
+    #[inline]
+    pub fn token_delta_in_with_fee(token_id: &TokenId, delta: i128, fee: Pips) -> Option<i128> {
+        Self::delta_in_with_fee(delta, Self::token_fee(token_id, delta.unsigned_abs(), fee))
     }
 
     /// Returns `delta + ⌈|delta| * fee⌉`
     #[inline]
-    pub fn delta_in_with_fee(delta: i128, fee: Pips) -> Option<i128> {
+    fn delta_in_with_fee(delta: i128, fee: Pips) -> Option<i128> {
         delta.checked_add_unsigned(fee.fee_ceil(delta.unsigned_abs()))
+    }
+
+    #[inline]
+    pub fn token_delta_out(token_id: &TokenId, delta: i128, fee: Pips) -> Option<i128> {
+        Self::delta_out(delta, Self::token_fee(token_id, delta.unsigned_abs(), fee))
     }
 
     /// Returns `⌊-delta / (1 - fee * sign(delta))⌋`
     #[inline]
-    pub fn delta_out(delta: i128, fee: Pips) -> Option<i128> {
+    fn delta_out(delta: i128, fee: Pips) -> Option<i128> {
         delta.checked_neg()?.checked_mul_div_euclid(
             Pips::MAX.as_pips() as i128,
             Pips::MAX.as_pips() as i128 - delta.signum() * fee.as_pips() as i128,
@@ -104,7 +122,16 @@ mod tests {
     #[rstest]
     #[test]
     fn closure_delta(
-        #[values(1_000_000, -1_000_000)] delta: i128,
+        #[values(
+            (TokenId::Nep141("ft.near".parse().unwrap()), 1_000_000), (TokenId::Nep141("ft.near".parse().unwrap()), -1_000_000),
+            (TokenId::Nep171("nft.near".parse().unwrap(), "1".to_string()), 1), 
+            (TokenId::Nep171("nft.near".parse().unwrap(), "1".to_string()), -1),
+            (TokenId::Nep245("mt.near".parse().unwrap(), "ft1".to_string()), 1_000_000),
+            (TokenId::Nep245("mt.near".parse().unwrap(), "ft1".to_string()), -1_000_000),
+            (TokenId::Nep245("mt.near".parse().unwrap(), "nft1".to_string()), 1), 
+            (TokenId::Nep245("mt.near".parse().unwrap(), "nft1".to_string()), -1),
+        )]
+        token_delta: (TokenId, i128),
         #[values(
             Pips::ZERO,
             Pips::ONE_PIP,
@@ -114,13 +141,16 @@ mod tests {
         )]
         fee: Pips,
     ) {
-        let closure = TokenDiff::closure_delta(delta, fee).unwrap();
+        let (token_id, delta) = token_delta;
+        let closure = TokenDiff::closure_delta(&token_id, delta, fee).unwrap();
 
+        let delta_abs = delta.unsigned_abs();
+        let closure_abs = closure.unsigned_abs();
         assert_eq!(
             delta
-                + fee.fee_ceil(delta.unsigned_abs()) as i128
+                + TokenDiff::token_fee(&token_id, delta_abs, fee).fee_ceil(delta_abs) as i128
                 + closure
-                + fee.fee_ceil(closure.unsigned_abs()) as i128,
+                + TokenDiff::token_fee(&token_id, closure_abs, fee).fee_ceil(closure_abs) as i128,
             0,
             "invariant violated: delta: {delta}, closure: {closure}, fee: {fee}",
         );
@@ -168,9 +198,9 @@ mod tests {
                 .unwrap(),
                 TokenAmounts::default()
                     .with_try_extend::<i128>([
-                        (t1.clone(), TokenDiff::closure_delta(d1, fee).unwrap()),
-                        (t2.clone(), TokenDiff::closure_delta(d2, fee).unwrap()),
-                        (t3.clone(), TokenDiff::closure_delta(d3, fee).unwrap()),
+                        (t1.clone(), TokenDiff::closure_delta(&t1, d1, fee).unwrap()),
+                        (t2.clone(), TokenDiff::closure_delta(&t2, d2, fee).unwrap()),
+                        (t3.clone(), TokenDiff::closure_delta(&t3, d3, fee).unwrap()),
                     ])
                     .unwrap(),
                 "d1: {d1}, d2: {d2}, d3: {d3}"

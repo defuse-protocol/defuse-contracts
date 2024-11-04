@@ -33,7 +33,7 @@ const POA_TOKEN_WASM: &[u8] = include_bytes!(std::env!(
 ));
 const POA_TOKEN_INIT_BALANCE: NearToken = NearToken::from_near(3);
 const POA_TOKEN_NEW_GAS: Gas = Gas::from_tgas(10);
-const POA_TOKEN_FT_MINT_GAS: Gas = Gas::from_tgas(10);
+const POA_TOKEN_FT_DEPOSIT_GAS: Gas = Gas::from_tgas(10);
 /// Copied from `near_contract_standards::fungible_token::core_impl::GAS_FOR_FT_TRANSFER_CALL`
 const POA_TOKEN_FT_TRANSFER_CALL_MIN_GAS: Gas = Gas::from_tgas(30);
 
@@ -160,12 +160,12 @@ impl POAFactory for POAFactoryImpl {
         if let Some(msg) = msg {
             require!(
                 utils::gas_left()
-                    > POA_TOKEN_FT_MINT_GAS.saturating_add(POA_TOKEN_FT_TRANSFER_CALL_MIN_GAS),
+                    > POA_TOKEN_FT_DEPOSIT_GAS.saturating_add(POA_TOKEN_FT_TRANSFER_CALL_MIN_GAS),
                 "insufficient gas"
             );
             ext_poa_fungible_token::ext(token_id.clone())
                 .with_attached_deposit(env::attached_deposit())
-                .with_static_gas(POA_TOKEN_FT_MINT_GAS)
+                .with_static_gas(POA_TOKEN_FT_DEPOSIT_GAS)
                 .ft_deposit(CURRENT_ACCOUNT_ID.clone(), amount, None)
                 .then(
                     ext_ft_core::ext(token_id)
@@ -175,7 +175,7 @@ impl POAFactory for POAFactoryImpl {
         } else {
             ext_poa_fungible_token::ext(token_id)
                 .with_attached_deposit(env::attached_deposit())
-                .with_static_gas(POA_TOKEN_FT_MINT_GAS)
+                .with_static_gas(POA_TOKEN_FT_DEPOSIT_GAS)
                 .ft_deposit(owner_id, amount, memo)
         }
     }

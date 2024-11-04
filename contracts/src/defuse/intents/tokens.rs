@@ -1,7 +1,7 @@
 use impl_tools::autoimpl;
 use near_contract_standards::non_fungible_token;
 use near_sdk::json_types::U128;
-use near_sdk::{near, AccountId, Gas};
+use near_sdk::{near, AccountId, NearToken};
 
 use crate::{defuse::tokens::TokenId, nep245};
 
@@ -24,10 +24,6 @@ pub struct MtBatchTransferCall {
 
     /// `msg` to pass in `mt_on_transfer`
     pub msg: String,
-
-    /// Optional static gas to attach to `mt_on_transfer`
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub gas_for_mt_on_transfer: Option<Gas>,
 }
 
 #[near(serializers = [borsh, json])]
@@ -39,13 +35,10 @@ pub struct FtWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
-    /// Message to pass to `ft_transfer_call`. Otherwise, `ft_transfer` will be used
+    /// Optionally make `storage_deposit` for `receiver_id` on `token`.
+    /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub msg: Option<String>,
-
-    /// Optional static gas to attach to `ft_transfer` or `ft_transfer_call`
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub gas: Option<Gas>,
+    pub storage_deposit: Option<NearToken>,
 }
 
 #[near(serializers = [borsh, json])]
@@ -57,13 +50,10 @@ pub struct NftWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
-    /// Message to pass to `nft_transfer_call`. Otherwise, `nft_transfer` will be used
+    /// Optionally make `storage_deposit` for `receiver_id` on `token`.
+    /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub msg: Option<String>,
-
-    /// Optional static gas to attach to `nft_transfer` or `nft_transfer_call`
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub gas: Option<Gas>,
+    pub storage_deposit: Option<NearToken>,
 }
 
 #[near(serializers = [borsh, json])]
@@ -76,11 +66,8 @@ pub struct MtWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
-    /// Message to pass to `mt_batch_transfer_call`. Otherwise, `mt_batch_transfer` will be used
+    /// Optionally make `storage_deposit` for `receiver_id` on `token`.
+    /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub msg: Option<String>,
-
-    /// Optional static gas to attach to `mt_batch_transfer` or `mt_batch_transfer_call`
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub gas: Option<Gas>,
+    pub storage_deposit: Option<NearToken>,
 }

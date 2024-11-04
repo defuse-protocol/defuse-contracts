@@ -13,18 +13,12 @@ impl DefuseImpl {
     const MT_RESOLVE_TRANSFER_GAS_BASE: Gas = Gas::from_tgas(5);
     const MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID: Gas = Gas::from_tgas(1);
 
-    pub(super) fn mt_resolve_transfer_gas(
-        #[allow(clippy::ptr_arg)] token_ids: &Vec<String>,
-    ) -> Gas {
+    pub(super) const fn mt_resolve_transfer_gas(token_count: usize) -> Gas {
         // if these conversions overflow, then
         // it should have exceeded gas before
-        Self::MT_RESOLVE_TRANSFER_GAS_BASE
-            .checked_add(
-                Self::MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID
-                    .checked_mul(token_ids.len() as u64)
-                    .unwrap_or_else(|| unreachable!()),
-            )
-            .unwrap_or_else(|| unreachable!())
+        Self::MT_RESOLVE_TRANSFER_GAS_BASE.saturating_add(
+            Self::MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID.saturating_mul(token_count as u64),
+        )
     }
 }
 

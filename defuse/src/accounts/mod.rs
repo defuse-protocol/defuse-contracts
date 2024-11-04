@@ -8,7 +8,7 @@ use std::collections::HashSet;
 
 use defuse_contracts::{
     crypto::PublicKey,
-    defuse::{accounts::AccountManager, Result},
+    defuse::accounts::AccountManager,
     nep413::U256,
     utils::{
         cache::PREDECESSOR_ACCOUNT_ID, prefix::NestPrefix, serde::wrappers::Base64, UnwrapOrPanic,
@@ -69,14 +69,12 @@ impl AccountManager for DefuseImpl {
     }
 
     #[payable]
-    #[handle_result]
-    fn invalidate_nonces(&mut self, nonces: Vec<Base64<U256>>) -> Result<()> {
+    fn invalidate_nonces(&mut self, nonces: Vec<Base64<U256>>) {
         assert_one_yocto();
         let account = self.accounts.get_or_create(PREDECESSOR_ACCOUNT_ID.clone());
         for n in nonces.into_iter().map(Base64::into_inner) {
-            account.commit_nonce(n)?;
+            account.commit_nonce(n).unwrap_or_panic();
         }
-        Ok(())
     }
 }
 

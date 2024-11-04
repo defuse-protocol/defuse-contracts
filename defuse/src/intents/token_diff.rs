@@ -30,7 +30,7 @@ impl IntentExecutor<TokenDiff> for State {
         let fees_collected = self
             .runtime
             .postponed_deposits
-            .entry(self.fee_collector.clone())
+            .entry(self.fees.fee_collector.clone())
             .or_default();
 
         for (token_id, delta) in intent.diff {
@@ -38,7 +38,8 @@ impl IntentExecutor<TokenDiff> for State {
 
             signer.token_balances.add_delta(token_id.clone(), delta)?;
 
-            let fee = self.fee.fee_ceil(delta.unsigned_abs());
+            let delta_abs = delta.unsigned_abs();
+            let fee = TokenDiff::token_fee(&token_id, delta_abs, self.fees.fee).fee_ceil(delta_abs);
             fees_collected.add(token_id.clone(), fee)?;
 
             transfer_events.push_delta(&token_id, delta);
@@ -50,7 +51,7 @@ impl IntentExecutor<TokenDiff> for State {
             )?;
         }
 
-        transfer_events.emit_for(signer_id, &self.fee_collector);
+        transfer_events.emit_for(signer_id, &self.fees.fee_collector);
 
         Ok(())
     }

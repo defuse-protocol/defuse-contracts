@@ -30,8 +30,8 @@ impl MultiTokenReceiver for DefuseImpl {
         msg: String,
     ) -> PromiseOrValue<Vec<U128>> {
         require!(
-            token_ids.len() == amounts.len(),
-            "token_ids should be the same length as amounts"
+            token_ids.len() == amounts.len() && !amounts.is_empty(),
+            "invalid args"
         );
         let _previous_owner_ids = previous_owner_ids;
         let msg = if !msg.is_empty() {
