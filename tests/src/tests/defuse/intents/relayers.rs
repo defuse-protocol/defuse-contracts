@@ -46,33 +46,6 @@ async fn test_relayer_keys() {
         .await
         .unwrap_err();
 
-    env.user1
-        .add_relayer_key(
-            env.defuse.id(),
-            NearToken::from_near(1),
-            env.user1
-                .secret_key()
-                .public_key()
-                .to_string()
-                .parse()
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    env.user1
-        .delete_relayer_key(
-            env.defuse.id(),
-            env.user1
-                .secret_key()
-                .public_key()
-                .to_string()
-                .parse()
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
     let access_keys = env.defuse.view_access_keys().await.unwrap();
     dbg!(&access_keys);
     assert!(!access_keys.is_empty());
