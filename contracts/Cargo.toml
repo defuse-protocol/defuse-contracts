@@ -23,11 +23,11 @@ strum.workspace = true
 thiserror.workspace = true
 
 [features]
-default = ["defuse", "poa"]
+default = ["defuse", "poa", "wnear"]
 
 
 crypto = []
-defuse = ["crypto", "erc191", "nep245", "nep413", "wnear"]
+defuse = ["crypto", "erc191", "nep245", "nep413"]
 erc191 = []
 nep245 = []
 nep413 = ["crypto"]
