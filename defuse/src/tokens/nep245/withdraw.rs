@@ -1,3 +1,5 @@
+use core::iter;
+
 use defuse_contracts::{
     defuse::{
         intents::tokens::MtWithdraw,
@@ -79,11 +81,9 @@ impl State {
         self.internal_withdraw(
             &sender_id,
             sender,
-            withdraw
-                .token_ids
-                .iter()
-                .cloned()
-                .map(|token_id| TokenId::Nep245(withdraw.token.clone(), token_id))
+            iter::repeat(withdraw.token.clone())
+                .zip(withdraw.token_ids.iter().cloned())
+                .map(|(token, token_id)| TokenId::Nep245(token, token_id))
                 .zip(withdraw.amounts.iter().map(|a| a.0))
                 .chain(withdraw.storage_deposit.map(|amount| {
                     (
@@ -205,11 +205,10 @@ impl MultiTokenWithdrawResolver for DefuseImpl {
         if !ok {
             self.internal_deposit(
                 sender_id,
-                token_ids
-                    .iter()
-                    .cloned()
-                    .map(|token_id| TokenId::Nep245(token.clone(), token_id))
-                    .zip(amounts.iter().map(|a| a.0)),
+                iter::repeat(token)
+                    .zip(token_ids)
+                    .map(|(token, token_id)| TokenId::Nep245(token, token_id))
+                    .zip(amounts.into_iter().map(|a| a.0)),
                 Some("refund"),
             )
             .unwrap_or_panic();

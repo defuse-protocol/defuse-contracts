@@ -1,25 +1,25 @@
 mod accounts;
 mod admin;
-mod fees;
+pub mod config;
+pub mod fees;
 mod intents;
 mod state;
 mod tokens;
 
 use core::iter;
-use std::collections::HashMap;
 
+use config::RolesConfig;
 use defuse_contracts::{
     defuse::{Defuse, Result},
-    utils::{fees::Pips, UnwrapOrPanic},
+    utils::UnwrapOrPanic,
 };
 use impl_tools::autoimpl;
 use near_plugins::{access_control, AccessControlRole, AccessControllable, Pausable, Upgradable};
 use near_sdk::{
-    borsh::BorshDeserialize, near, require, store::LookupSet, AccountId, BorshStorageKey,
-    PanicOnDefault,
+    borsh::BorshDeserialize, near, require, store::LookupSet, BorshStorageKey, PanicOnDefault,
 };
 
-use self::{accounts::Accounts, state::State};
+use self::{accounts::Accounts, config::DefuseConfig, state::State};
 
 #[near(serializers = [json])]
 #[derive(AccessControlRole, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -64,42 +64,41 @@ pub struct DefuseImpl {
 #[near]
 impl DefuseImpl {
     #[init]
-    pub fn new(
-        wnear_id: AccountId,
-        fee: Pips,
-        fee_collector: AccountId,
-        super_admins: Vec<AccountId>,
-        admins: HashMap<Role, Vec<AccountId>>,
-        grantees: HashMap<Role, Vec<AccountId>>,
-        staging_duration: Option<near_sdk::Duration>,
-    ) -> Self {
+    pub fn new(config: DefuseConfig) -> Self {
         let mut contract = Self {
             accounts: Accounts::new(Prefix::Accounts),
-            state: State::new(Prefix::State, wnear_id, fee, fee_collector),
+            state: State::new(Prefix::State, config.wnear_id, config.fees),
             relayer_keys: LookupSet::new(Prefix::RelayerKeys),
         };
+        contract.init_acl(config.roles);
 
-        let mut acl = contract.acl_get_or_init();
+        // TODO
+        // if let Some(staging_duration) = staging_duration {
+        //     contract.up_set_staging_duration_unchecked(staging_duration);
+        // }
+
+        contract
+    }
+
+    fn init_acl(&mut self, roles: RolesConfig) {
+        let mut acl = self.acl_get_or_init();
         require!(
-            super_admins
+            roles
+                .super_admins
                 .into_iter()
                 .all(|super_admin| acl.add_super_admin_unchecked(&super_admin))
-                && admins
+                && roles
+                    .admins
                     .into_iter()
                     .flat_map(|(role, admins)| iter::repeat(role).zip(admins))
                     .all(|(role, admin)| acl.add_admin_unchecked(role, &admin))
-                && grantees
+                && roles
+                    .grantees
                     .into_iter()
                     .flat_map(|(role, grantees)| iter::repeat(role).zip(grantees))
                     .all(|(role, grantee)| acl.grant_role_unchecked(role, &grantee)),
             "failed to set roles"
         );
-
-        if let Some(staging_duration) = staging_duration {
-            contract.up_set_staging_duration_unchecked(staging_duration);
-        }
-
-        contract
     }
 }
 

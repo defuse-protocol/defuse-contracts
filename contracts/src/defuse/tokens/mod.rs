@@ -43,7 +43,6 @@ use super::{payload::multi::MultiStandardPayload, DefuseError, Result};
     strum(serialize_all = "snake_case")
 )]
 #[near(serializers = [borsh])]
-// TODO: rename: resource
 pub enum TokenId {
     Nep141(
         /// Contract

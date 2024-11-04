@@ -1,10 +1,14 @@
-use std::{collections::HashMap, ops::Deref};
+use std::ops::Deref;
 
 use anyhow::anyhow;
-use defuse_contract::Role;
+use defuse_contract::{
+    config::{DefuseConfig, RolesConfig},
+    fees::FeesConfig,
+    Role,
+};
 use defuse_contracts::{defuse::tokens::DepositMessage, utils::fees::Pips};
 use defuse_poa_factory_contract::Role as POAFactoryRole;
-use near_sdk::{AccountId, Duration, NearToken};
+use near_sdk::{AccountId, NearToken};
 use near_workspaces::{Account, Contract};
 
 use crate::{
@@ -107,12 +111,12 @@ impl Deref for Env {
 pub struct EnvBuilder {
     fee: Pips,
     fee_collector: Option<AccountId>,
-    super_admins: Vec<AccountId>,
+
+    // roles
+    roles: RolesConfig,
     self_as_super_admin: bool,
     deployer_as_super_admin: bool,
-    admins: HashMap<Role, Vec<AccountId>>,
-    grantees: HashMap<Role, Vec<AccountId>>,
-    staging_duration: Option<Duration>,
+    // staging_duration: Option<Duration>,
 }
 
 impl EnvBuilder {
@@ -127,7 +131,7 @@ impl EnvBuilder {
     }
 
     pub fn super_admin(mut self, super_admin: AccountId) -> Self {
-        self.super_admins.push(super_admin);
+        self.roles.super_admins.insert(super_admin);
         self
     }
 
@@ -142,21 +146,21 @@ impl EnvBuilder {
     }
 
     pub fn admin(mut self, role: Role, admin: AccountId) -> Self {
-        self.admins.entry(role).or_default().push(admin);
+        self.roles.admins.entry(role).or_default().insert(admin);
         self
     }
 
     pub fn grantee(mut self, role: Role, grantee: AccountId) -> Self {
-        self.grantees.entry(role).or_default().push(grantee);
+        self.roles.grantees.entry(role).or_default().insert(grantee);
         self
     }
 
-    pub fn staging_duration(mut self, staging_duration: Duration) -> Self {
-        self.staging_duration = Some(staging_duration);
-        self
-    }
+    // pub fn staging_duration(mut self, staging_duration: Duration) -> Self {
+    //     self.staging_duration = Some(staging_duration);
+    //     self
+    // }
 
-    pub async fn build(self) -> anyhow::Result<Env> {
+    pub async fn build(mut self) -> anyhow::Result<Env> {
         let sandbox = Sandbox::new().await?;
         let root = sandbox.root_account().clone();
 
@@ -176,6 +180,16 @@ impl EnvBuilder {
             .await?;
 
         let wnear = sandbox.deploy_wrap_near("wnear").await?;
+
+        if self.self_as_super_admin {
+            self.roles
+                .super_admins
+                .insert(format!("defuse.{}", root.id()).parse().unwrap());
+        }
+        if self.deployer_as_super_admin {
+            self.roles.super_admins.insert(root.id().clone());
+        }
+
         let s = Env {
             user1: sandbox.create_account("user1").await,
             user2: sandbox.create_account("user2").await,
@@ -183,19 +197,14 @@ impl EnvBuilder {
             defuse: root
                 .deploy_defuse(
                     "defuse",
-                    wnear.id(),
-                    self.fee,
-                    self.fee_collector.as_ref().unwrap_or(root.id()),
-                    self.super_admins
-                        .into_iter()
-                        .chain(
-                            Some(format!("defuse.{}", root.id()).parse().unwrap())
-                                .filter(|_| self.self_as_super_admin),
-                        )
-                        .chain(Some(root.id().clone()).filter(|_| self.deployer_as_super_admin)),
-                    self.admins,
-                    self.grantees,
-                    self.staging_duration,
+                    DefuseConfig {
+                        wnear_id: wnear.id().clone(),
+                        fees: FeesConfig {
+                            fee: self.fee,
+                            fee_collector: self.fee_collector.unwrap_or(root.id().clone()),
+                        },
+                        roles: self.roles,
+                    },
                 )
                 .await?,
             wnear,
