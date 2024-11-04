@@ -9,7 +9,7 @@ const STATE_MIGRATE_DEFAULT_GAS: Gas = Gas::from_tgas(5);
 
 #[near]
 impl Upgrade for DefuseImpl {
-    #[access_control_any(roles(Role::DAO))]
+    #[access_control_any(roles(Role::DAO, Role::Upgrader))]
     #[payable]
     fn upgrade(
         &mut self,

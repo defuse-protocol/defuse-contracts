@@ -33,6 +33,7 @@ pub enum Role {
     UnrestrictedWithdrawer,
 
     PauseManager,
+    Upgrader,
 }
 
 #[access_control(role_type(Role))]
