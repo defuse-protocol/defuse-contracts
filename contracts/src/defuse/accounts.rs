@@ -4,8 +4,6 @@ use near_sdk::{ext_contract, near, AccountId};
 
 use crate::{crypto::PublicKey, nep413::U256, utils::serde::wrappers::Base64};
 
-use super::Result;
-
 #[ext_contract(ext_public_key_manager)]
 pub trait AccountManager {
     /// Check if account has given public key
@@ -31,8 +29,7 @@ pub trait AccountManager {
     fn is_nonce_used(&self, account_id: &AccountId, nonce: Base64<U256>) -> bool;
 
     /// NOTE: MUST attach 1 yⓃ for security purposes.
-    #[handle_result]
-    fn invalidate_nonces(&mut self, nonces: Vec<Base64<U256>>) -> Result<()>;
+    fn invalidate_nonces(&mut self, nonces: Vec<Base64<U256>>);
 }
 
 #[must_use = "make sure to `.emit()` this event"]
