@@ -1,4 +1,5 @@
 use near_contract_standards::non_fungible_token::{core::NonFungibleTokenReceiver, TokenId};
+use near_plugins::AccessControllable;
 use near_sdk::{ext_contract, AccountId, PromiseOrValue};
 
 #[ext_contract(ext_nft_withdraw)]
@@ -28,4 +29,16 @@ pub trait NonFungibleTokenWithdrawResolver {
         sender_id: AccountId,
         token_id: TokenId,
     ) -> bool;
+}
+
+#[ext_contract(ext_nft_force_withdraw)]
+pub trait NonFungibleTokenForceWithdrawer: NonFungibleTokenWithdrawer + AccessControllable {
+    fn nft_force_withdraw(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        token_id: TokenId,
+        memo: Option<String>,
+    ) -> PromiseOrValue<bool>;
 }

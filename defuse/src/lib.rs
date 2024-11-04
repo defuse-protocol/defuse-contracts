@@ -27,9 +27,10 @@ use self::{accounts::Accounts, config::DefuseConfig, state::State};
 pub enum Role {
     DAO,
 
-    // TODO: UnrestrictedWithdraw
     FeesManager,
     RelayerKeysManager,
+
+    UnrestrictedWithdrawer,
 
     PauseManager,
 }

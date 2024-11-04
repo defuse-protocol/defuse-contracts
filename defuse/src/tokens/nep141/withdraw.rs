@@ -4,7 +4,10 @@ use defuse_contracts::{
     defuse::{
         intents::tokens::FtWithdraw,
         tokens::{
-            nep141::{FungibleTokenWithdrawResolver, FungibleTokenWithdrawer},
+            nep141::{
+                FungibleTokenForceWithdrawer, FungibleTokenWithdrawResolver,
+                FungibleTokenWithdrawer,
+            },
             TokenId,
         },
         DefuseError, Result,
@@ -16,7 +19,7 @@ use defuse_contracts::{
     wnear::{ext_wnear, NEAR_WITHDRAW_GAS},
 };
 use near_contract_standards::storage_management::ext_storage_management;
-use near_plugins::{pause, Pausable};
+use near_plugins::{access_control_any, pause, AccessControllable, Pausable};
 use near_sdk::{
     assert_one_yocto, env,
     json_types::U128,
@@ -26,7 +29,7 @@ use near_sdk::{
 };
 
 use crate::{
-    accounts::Account, state::State, tokens::STORAGE_DEPOSIT_GAS, DefuseImpl, DefuseImplExt,
+    accounts::Account, state::State, tokens::STORAGE_DEPOSIT_GAS, DefuseImpl, DefuseImplExt, Role,
 };
 
 const FT_TRANSFER_GAS: Gas = Gas::from_tgas(15);
@@ -42,17 +45,35 @@ impl FungibleTokenWithdrawer for DefuseImpl {
         amount: U128,
         memo: Option<String>,
     ) -> PromiseOrValue<bool> {
+        self.internal_ft_withdraw(
+            PREDECESSOR_ACCOUNT_ID.clone(),
+            token,
+            receiver_id,
+            amount,
+            memo,
+        )
+    }
+}
+
+impl DefuseImpl {
+    fn internal_ft_withdraw(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        amount: U128,
+        memo: Option<String>,
+    ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        let sender_id = PREDECESSOR_ACCOUNT_ID.clone();
-        let sender = self
+        let owner = self
             .accounts
-            .get_mut(&sender_id)
+            .get_mut(&owner_id)
             .ok_or(DefuseError::AccountNotFound)
             .unwrap_or_panic();
         self.state
             .ft_withdraw(
-                sender_id,
-                sender,
+                owner_id,
+                owner,
                 FtWithdraw {
                     token,
                     receiver_id,
@@ -163,6 +184,22 @@ impl FungibleTokenWithdrawResolver for DefuseImpl {
         }
 
         ok
+    }
+}
+
+#[near]
+impl FungibleTokenForceWithdrawer for DefuseImpl {
+    #[access_control_any(roles(Role::DAO, Role::UnrestrictedWithdrawer))]
+    #[payable]
+    fn ft_force_withdraw(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        amount: U128,
+        memo: Option<String>,
+    ) -> PromiseOrValue<bool> {
+        self.internal_ft_withdraw(owner_id, token, receiver_id, amount, memo)
     }
 }
 

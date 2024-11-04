@@ -14,7 +14,6 @@ use crate::{
 };
 
 pub use self::error::*;
-use self::{accounts::AccountManager, tokens::nep141::FungibleTokenWithdrawer};
 
 use intents::{relayer::RelayerKeys, IntentsExecutor};
 use near_contract_standards::{
@@ -23,7 +22,15 @@ use near_contract_standards::{
 };
 use near_plugins::{AccessControllable, Pausable};
 use near_sdk::ext_contract;
-use tokens::{nep171::NonFungibleTokenWithdrawer, nep245::MultiTokenWithdrawer};
+
+use self::{
+    accounts::AccountManager,
+    tokens::{
+        nep141::{FungibleTokenForceWithdrawer, FungibleTokenWithdrawer},
+        nep171::{NonFungibleTokenForceWithdrawer, NonFungibleTokenWithdrawer},
+        nep245::{MultiTokenForceWithdrawer, MultiTokenWithdrawer},
+    },
+};
 
 #[ext_contract(ext_defuse)]
 pub trait Defuse:
@@ -42,6 +49,9 @@ pub trait Defuse:
     + MultiTokenWithdrawer
     // Governance
     + AccessControllable
+    + FungibleTokenForceWithdrawer
+    + NonFungibleTokenForceWithdrawer
+    + MultiTokenForceWithdrawer
     + Pausable
     + Upgrade
     + AccessKeys

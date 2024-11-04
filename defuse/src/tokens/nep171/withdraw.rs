@@ -4,7 +4,10 @@ use defuse_contracts::{
     defuse::{
         intents::tokens::NftWithdraw,
         tokens::{
-            nep171::{NonFungibleTokenWithdrawResolver, NonFungibleTokenWithdrawer},
+            nep171::{
+                NonFungibleTokenForceWithdrawer, NonFungibleTokenWithdrawResolver,
+                NonFungibleTokenWithdrawer,
+            },
             TokenId,
         },
         DefuseError, Result,
@@ -16,7 +19,7 @@ use defuse_contracts::{
     wnear::{ext_wnear, NEAR_WITHDRAW_GAS},
 };
 use near_contract_standards::{non_fungible_token, storage_management::ext_storage_management};
-use near_plugins::{pause, Pausable};
+use near_plugins::{access_control_any, pause, AccessControllable, Pausable};
 use near_sdk::{
     assert_one_yocto, env,
     json_types::U128,
@@ -26,7 +29,7 @@ use near_sdk::{
 };
 
 use crate::{
-    accounts::Account, state::State, tokens::STORAGE_DEPOSIT_GAS, DefuseImpl, DefuseImplExt,
+    accounts::Account, state::State, tokens::STORAGE_DEPOSIT_GAS, DefuseImpl, DefuseImplExt, Role,
 };
 
 const NFT_TRANSFER_GAS: Gas = Gas::from_tgas(15);
@@ -42,17 +45,35 @@ impl NonFungibleTokenWithdrawer for DefuseImpl {
         token_id: non_fungible_token::TokenId,
         memo: Option<String>,
     ) -> PromiseOrValue<bool> {
+        self.internal_nft_withdraw(
+            PREDECESSOR_ACCOUNT_ID.clone(),
+            token,
+            receiver_id,
+            token_id,
+            memo,
+        )
+    }
+}
+
+impl DefuseImpl {
+    fn internal_nft_withdraw(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        token_id: non_fungible_token::TokenId,
+        memo: Option<String>,
+    ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        let sender_id = PREDECESSOR_ACCOUNT_ID.clone();
-        let sender = self
+        let owner = self
             .accounts
-            .get_mut(&sender_id)
+            .get_mut(&owner_id)
             .ok_or(DefuseError::AccountNotFound)
             .unwrap_or_panic();
         self.state
             .nft_withdraw(
-                sender_id,
-                sender,
+                owner_id,
+                owner,
                 NftWithdraw {
                     token,
                     receiver_id,
@@ -165,6 +186,22 @@ impl NonFungibleTokenWithdrawResolver for DefuseImpl {
         }
 
         ok
+    }
+}
+
+#[near]
+impl NonFungibleTokenForceWithdrawer for DefuseImpl {
+    #[access_control_any(roles(Role::DAO, Role::UnrestrictedWithdrawer))]
+    #[payable]
+    fn nft_force_withdraw(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        token_id: non_fungible_token::TokenId,
+        memo: Option<String>,
+    ) -> PromiseOrValue<bool> {
+        self.internal_nft_withdraw(owner_id, token, receiver_id, token_id, memo)
     }
 }
 
