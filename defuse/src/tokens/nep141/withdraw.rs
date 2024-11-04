@@ -1,3 +1,5 @@
+use core::iter;
+
 use defuse_contracts::{
     defuse::{
         intents::tokens::FtWithdraw,
@@ -11,20 +13,20 @@ use defuse_contracts::{
         cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
         UnwrapOrPanic, UnwrapOrPanicError,
     },
+    wnear::{ext_wnear, NEAR_WITHDRAW_GAS},
 };
 use near_contract_standards::storage_management::ext_storage_management;
 use near_plugins::{pause, Pausable};
 use near_sdk::{
     assert_one_yocto, env,
     json_types::U128,
-    near, require,
+    near,
     serde_json::{self, json},
     AccountId, Gas, NearToken, Promise, PromiseOrValue, PromiseResult,
 };
 
 use crate::{
-    accounts::Account, state::State, tokens::storage_management::STORAGE_DEPOSIT_GAS, DefuseImpl,
-    DefuseImplExt,
+    accounts::Account, state::State, tokens::STORAGE_DEPOSIT_GAS, DefuseImpl, DefuseImplExt,
 };
 
 const FT_TRANSFER_GAS: Gas = Gas::from_tgas(15);
@@ -39,7 +41,6 @@ impl FungibleTokenWithdrawer for DefuseImpl {
         receiver_id: AccountId,
         amount: U128,
         memo: Option<String>,
-        storage_deposit: Option<NearToken>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
         let sender_id = PREDECESSOR_ACCOUNT_ID.clone();
@@ -57,7 +58,7 @@ impl FungibleTokenWithdrawer for DefuseImpl {
                     receiver_id,
                     amount,
                     memo,
-                    storage_deposit,
+                    storage_deposit: None,
                 },
             )
             .unwrap_or_panic()
@@ -69,100 +70,68 @@ impl State {
         &mut self,
         sender_id: AccountId,
         sender: &mut Account,
-        withdraw @ FtWithdraw {
-            storage_deposit, ..
-        }: FtWithdraw,
+        withdraw: FtWithdraw,
     ) -> Result<PromiseOrValue<bool>> {
-        if let Some(storage_deposit) = storage_deposit {
-            // check amount before unwrapping wNEAR
-            require!(withdraw.amount.0 > 0, "zero amount");
-            Ok(self
-                .unwrap_wnear(
-                    sender_id.clone(),
-                    sender,
-                    storage_deposit,
-                    Some("storage_deposit"),
-                )?
+        self.internal_withdraw(
+            &sender_id,
+            sender,
+            iter::once((TokenId::Nep141(withdraw.token.clone()), withdraw.amount.0)).chain(
+                withdraw.storage_deposit.map(|amount| {
+                    (
+                        TokenId::Nep141(self.wnear_id.clone()),
+                        amount.as_yoctonear(),
+                    )
+                }),
+            ),
+            Some("withdraw"),
+        )?;
+
+        Ok(if let Some(storage_deposit) = withdraw.storage_deposit {
+            ext_wnear::ext(self.wnear_id.clone())
+                .with_attached_deposit(NearToken::from_yoctonear(1))
+                .with_static_gas(NEAR_WITHDRAW_GAS)
+                .near_withdraw(U128(storage_deposit.as_yoctonear()))
                 .then(
                     DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
                         .with_static_gas(DefuseImpl::DO_FT_WITHDRAW_GAS)
-                        .do_ft_withdraw(sender_id, withdraw),
+                        .do_ft_withdraw(withdraw.clone()),
                 )
-                .into())
         } else {
-            self.do_ft_withdraw(sender_id, sender, withdraw)
+            DefuseImpl::do_ft_withdraw(withdraw.clone())
         }
+        .then(
+            DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
+                .with_static_gas(DefuseImpl::FT_RESOLVE_WITHDRAW_GAS)
+                .ft_resolve_withdraw(withdraw.token, sender_id, withdraw.amount),
+        )
+        .into())
     }
 }
 
 #[near]
 impl DefuseImpl {
-    pub(crate) const FT_RESOLVE_WITHDRAW_GAS: Gas = Gas::from_tgas(5);
-    const DO_FT_WITHDRAW_GAS: Gas = Gas::from_tgas(5)
-        // do_ft_withdraw() method is called only with storage_deposit
+    const FT_RESOLVE_WITHDRAW_GAS: Gas = Gas::from_tgas(5);
+    const DO_FT_WITHDRAW_GAS: Gas = Gas::from_tgas(1)
+        // do_ft_withdraw() method is called externally
+        // only with storage_deposit
         .saturating_add(STORAGE_DEPOSIT_GAS)
-        .saturating_add(FT_TRANSFER_GAS)
-        .saturating_add(Self::FT_RESOLVE_WITHDRAW_GAS);
+        .saturating_add(FT_TRANSFER_GAS);
 
     #[private]
-    pub fn do_ft_withdraw(
-        &mut self,
-        sender_id: AccountId,
-        withdraw: FtWithdraw,
-    ) -> PromiseOrValue<bool> {
-        if withdraw.storage_deposit.is_some() {
-            require!(
-                matches!(env::promise_result(0), PromiseResult::Successful(data) if data == b"true"),
-                "failed to unwrap wNEAR",
-            );
-        }
-
-        let sender = self
-            .accounts
-            .get_mut(&sender_id)
-            .ok_or(DefuseError::AccountNotFound)
-            .unwrap_or_panic();
-        self.state
-            .do_ft_withdraw(sender_id, sender, withdraw)
-            .unwrap_or_panic()
-    }
-}
-
-impl State {
-    fn do_ft_withdraw(
-        &mut self,
-        sender_id: AccountId,
-        sender: &mut Account,
-        FtWithdraw {
-            token,
-            receiver_id,
-            amount,
-            memo,
-            storage_deposit,
-        }: FtWithdraw,
-    ) -> Result<PromiseOrValue<bool>> {
-        self.internal_withdraw(
-            &sender_id,
-            sender,
-            [(TokenId::Nep141(token.clone()), amount.0)],
-            Some("withdraw"),
-        )?;
-
-        Ok(if let Some(storage_deposit) = storage_deposit {
-            ext_storage_management::ext(token.clone())
+    pub fn do_ft_withdraw(withdraw: FtWithdraw) -> Promise {
+        if let Some(storage_deposit) = withdraw.storage_deposit {
+            ext_storage_management::ext(withdraw.token)
                 .with_attached_deposit(storage_deposit)
                 .with_static_gas(STORAGE_DEPOSIT_GAS)
-                .storage_deposit(Some(receiver_id.clone()), None)
+                .storage_deposit(Some(withdraw.receiver_id.clone()), None)
         } else {
-            Promise::new(token.clone())
+            Promise::new(withdraw.token)
         }
-        .ft_transfer(&receiver_id, amount.0, memo.as_deref())
-        .then(
-            DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
-                .with_static_gas(DefuseImpl::FT_RESOLVE_WITHDRAW_GAS)
-                .ft_resolve_withdraw(token, sender_id, amount),
+        .ft_transfer(
+            &withdraw.receiver_id,
+            withdraw.amount.0,
+            withdraw.memo.as_deref(),
         )
-        .into())
     }
 }
 

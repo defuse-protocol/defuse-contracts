@@ -1,5 +1,5 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-use near_sdk::{ext_contract, json_types::U128, AccountId, NearToken, PromiseOrValue};
+use near_sdk::{ext_contract, json_types::U128, AccountId, PromiseOrValue};
 
 #[ext_contract(ext_ft_withdraw)]
 pub trait FungibleTokenWithdrawer: FungibleTokenReceiver + FungibleTokenWithdrawResolver {
@@ -15,7 +15,6 @@ pub trait FungibleTokenWithdrawer: FungibleTokenReceiver + FungibleTokenWithdraw
         receiver_id: AccountId,
         amount: U128,
         memo: Option<String>,
-        storage_deposit: Option<NearToken>,
     ) -> PromiseOrValue<bool>;
 }
 

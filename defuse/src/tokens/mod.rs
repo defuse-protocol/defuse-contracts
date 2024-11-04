@@ -1,7 +1,6 @@
 mod nep141;
 mod nep171;
 mod nep245;
-mod storage_management;
 
 use std::borrow::Cow;
 
@@ -10,9 +9,13 @@ use defuse_contracts::{
     nep245::{MtBurnEvent, MtEventEmit, MtMintEvent},
     utils::cleanup::DefaultMap,
 };
-use near_sdk::{json_types::U128, near, require, store::IterableMap, AccountId, IntoStorageKey};
+use near_sdk::{
+    json_types::U128, near, require, store::IterableMap, AccountId, Gas, IntoStorageKey,
+};
 
 use crate::{accounts::Account, state::State, DefuseImpl};
+
+pub const STORAGE_DEPOSIT_GAS: Gas = Gas::from_tgas(10);
 
 impl DefuseImpl {
     #[inline]
