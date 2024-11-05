@@ -3,12 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use defuse_contracts::{
     poa::{factory::POAFactory, token::ext_poa_fungible_token},
-    utils::{
-        self,
-        access_keys::AccessKeys,
-        cache::{CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID},
-        UnwrapOrPanicError,
-    },
+    utils::{self, access_keys::AccessKeys, cache::CURRENT_ACCOUNT_ID, UnwrapOrPanicError},
 };
 use near_contract_standards::fungible_token::{
     core::ext_ft_core, metadata::FungibleTokenMetadata, Balance,
@@ -40,6 +35,7 @@ const POA_TOKEN_FT_TRANSFER_CALL_MIN_GAS: Gas = Gas::from_tgas(30);
 #[derive(AccessControlRole, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[near(serializers = [json])]
 pub enum Role {
+    DAO,
     TokenDeployer,
     TokenDepositer,
     PauseManager,
@@ -48,7 +44,7 @@ pub enum Role {
 #[near(contract_state)]
 #[derive(Pausable, PanicOnDefault)]
 #[access_control(role_type(Role))]
-#[pausable(manager_roles(Role::PauseManager))]
+#[pausable(manager_roles(Role::DAO, Role::PauseManager))]
 pub struct POAFactoryImpl {
     tokens: IterableSet<String>,
     bridge_token_storage_deposit_required: NearToken,
@@ -92,7 +88,7 @@ impl POAFactoryImpl {
 #[near]
 impl POAFactory for POAFactoryImpl {
     #[pause]
-    #[access_control_any(roles(Role::TokenDeployer))]
+    #[access_control_any(roles(Role::DAO, Role::TokenDeployer))]
     #[payable]
     fn deploy_token(&mut self, token: String, metadata: Option<FungibleTokenMetadata>) -> Promise {
         if let Some(metadata) = metadata.as_ref() {
@@ -127,7 +123,7 @@ impl POAFactory for POAFactoryImpl {
     }
 
     #[pause]
-    #[access_control_any(roles(Role::TokenDeployer))]
+    #[access_control_any(roles(Role::DAO, Role::TokenDeployer))]
     #[payable]
     fn set_metadata(&mut self, token: String, metadata: FungibleTokenMetadata) -> Promise {
         assert_one_yocto();
@@ -139,7 +135,7 @@ impl POAFactory for POAFactoryImpl {
     }
 
     #[pause]
-    #[access_control_any(roles(Role::TokenDepositer))]
+    #[access_control_any(roles(Role::DAO, Role::TokenDepositer))]
     #[payable]
     fn ft_deposit(
         &mut self,
@@ -205,23 +201,17 @@ impl POAFactoryImpl {
 
 #[near]
 impl AccessKeys for POAFactoryImpl {
+    #[access_control_any(roles(Role::DAO))]
+    #[payable]
     fn add_full_access_key(&mut self, public_key: PublicKey) -> Promise {
-        require!(
-            self.acl_get_or_init()
-                .is_super_admin(&PREDECESSOR_ACCOUNT_ID),
-            "super admin required",
-        );
-
+        assert_one_yocto();
         Promise::new(CURRENT_ACCOUNT_ID.clone()).add_full_access_key(public_key)
     }
 
+    #[access_control_any(roles(Role::DAO))]
+    #[payable]
     fn delete_key(&mut self, public_key: PublicKey) -> Promise {
-        require!(
-            self.acl_get_or_init()
-                .is_super_admin(&PREDECESSOR_ACCOUNT_ID),
-            "super admin required",
-        );
-
+        assert_one_yocto();
         Promise::new(CURRENT_ACCOUNT_ID.clone()).delete_key(public_key)
     }
 }
