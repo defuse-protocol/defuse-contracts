@@ -25,7 +25,7 @@ impl BitMap256 {
         let Some(bitmap) = self.0.get(&word_pos) else {
             return false;
         };
-        let byte = bitmap[(bit_pos / 8) as usize];
+        let byte = bitmap[usize::from(bit_pos / 8)];
         let byte_mask = 1 << (bit_pos % 8);
         byte & byte_mask != 0
     }
@@ -34,7 +34,7 @@ impl BitMap256 {
     fn get_mut_byte_with_mask(&mut self, n: U256) -> (&mut u8, u8) {
         let [word_pos @ .., bit_pos] = n;
         let bitmap = self.0.entry(word_pos).or_default();
-        let byte = &mut bitmap[(bit_pos / 8) as usize];
+        let byte = &mut bitmap[usize::from(bit_pos / 8)];
         let byte_mask = 1 << (bit_pos % 8);
         (byte, byte_mask)
     }

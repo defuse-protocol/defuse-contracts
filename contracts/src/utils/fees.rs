@@ -56,7 +56,7 @@ impl Pips {
 
     #[inline]
     pub fn as_f64(self) -> f64 {
-        self.as_pips() as f64 / Self::MAX.as_pips() as f64
+        f64::from(self.as_pips()) / f64::from(Self::MAX.as_pips())
     }
 
     #[inline]
@@ -83,14 +83,14 @@ impl Pips {
     #[inline]
     pub fn fee(self, amount: u128) -> u128 {
         amount
-            .checked_mul_div(self.as_pips() as u128, Self::MAX.as_pips() as u128)
+            .checked_mul_div(self.as_pips().into(), Self::MAX.as_pips().into())
             .unwrap_or_else(|| unreachable!())
     }
 
     #[inline]
     pub fn fee_ceil(self, amount: u128) -> u128 {
         amount
-            .checked_mul_div_ceil(self.as_pips() as u128, Self::MAX.as_pips() as u128)
+            .checked_mul_div_ceil(self.as_pips().into(), Self::MAX.as_pips().into())
             .unwrap_or_else(|| unreachable!())
     }
 }
