@@ -40,6 +40,7 @@ const POA_TOKEN_FT_TRANSFER_CALL_MIN_GAS: Gas = Gas::from_tgas(30);
 #[derive(AccessControlRole, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[near(serializers = [json])]
 pub enum Role {
+    DAO,
     TokenDeployer,
     TokenDepositer,
     PauseManager,
@@ -48,7 +49,7 @@ pub enum Role {
 #[near(contract_state)]
 #[derive(Pausable, PanicOnDefault)]
 #[access_control(role_type(Role))]
-#[pausable(manager_roles(Role::PauseManager))]
+#[pausable(manager_roles(Role::DAO, Role::PauseManager))]
 pub struct POAFactoryImpl {
     tokens: IterableSet<String>,
     bridge_token_storage_deposit_required: NearToken,
@@ -92,7 +93,7 @@ impl POAFactoryImpl {
 #[near]
 impl POAFactory for POAFactoryImpl {
     #[pause]
-    #[access_control_any(roles(Role::TokenDeployer))]
+    #[access_control_any(roles(Role::DAO, Role::TokenDeployer))]
     #[payable]
     fn deploy_token(&mut self, token: String, metadata: Option<FungibleTokenMetadata>) -> Promise {
         if let Some(metadata) = metadata.as_ref() {
@@ -127,7 +128,7 @@ impl POAFactory for POAFactoryImpl {
     }
 
     #[pause]
-    #[access_control_any(roles(Role::TokenDeployer))]
+    #[access_control_any(roles(Role::DAO, Role::TokenDeployer))]
     #[payable]
     fn set_metadata(&mut self, token: String, metadata: FungibleTokenMetadata) -> Promise {
         assert_one_yocto();
@@ -139,7 +140,7 @@ impl POAFactory for POAFactoryImpl {
     }
 
     #[pause]
-    #[access_control_any(roles(Role::TokenDepositer))]
+    #[access_control_any(roles(Role::DAO, Role::TokenDepositer))]
     #[payable]
     fn ft_deposit(
         &mut self,

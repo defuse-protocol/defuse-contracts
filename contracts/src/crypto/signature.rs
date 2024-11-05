@@ -15,7 +15,7 @@ use super::{AsCurve, Curve, Ed25519, PublicKey, Secp256k1};
 #[near(serializers = [borsh, json])]
 #[cfg_attr(
     all(feature = "abi", not(target_arch = "wasm32")),
-    schemars(example = "Self::example_ed25519")
+    schemars(example = "Self::example_ed25519", example = "Self::example_secp256k1")
 )]
 #[serde(untagged)]
 pub enum Signature {
@@ -81,6 +81,14 @@ mod abi {
                     "ed25519:DNxoVu7L7sHr9pcHGWQoJtPsrwheB8akht1JxaGpc9hGrpehdycXBMLJg4ph1bQ9bXdfoxJCbbwxj3Bdrda52eF")
                     .unwrap(),
                 public_key: Ed25519::parse_base58("ed25519:5TagutioHgKLh7KZ1VEFBYfgRkPtqnKm9LoMnJMJugxm")
+                    .unwrap(),
+            }
+        }
+
+        pub(super) fn example_secp256k1() -> Self {
+            Self::Secp256k1 {
+                signature: Secp256k1::parse_base58(
+                    "secp256k1:7huDZxNnibusy6wFkbUBQ9Rqq2VmCKgTWYdJwcPj8VnciHjZKPa41rn5n6WZnMqSUCGRHWMAsMjKGtMVVmpETCeCs")
                     .unwrap(),
             }
         }
