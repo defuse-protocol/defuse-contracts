@@ -1,4 +1,4 @@
-pub use self::{deadline::*, error::*, gas::*, lock::*, storage::*};
+pub use self::{deadline::*, error::*, gas::*, lock::*};
 
 pub mod access_keys;
 pub mod bitmap;
@@ -13,7 +13,6 @@ pub mod integer;
 mod lock;
 pub mod prefix;
 pub mod serde;
-mod storage;
 
 #[macro_export]
 macro_rules! method_name {

@@ -104,8 +104,8 @@ impl TokenDiff {
     #[inline]
     fn delta_out(delta: i128, fee: Pips) -> Option<i128> {
         delta.checked_neg()?.checked_mul_div_euclid(
-            Pips::MAX.as_pips() as i128,
-            Pips::MAX.as_pips() as i128 - delta.signum() * fee.as_pips() as i128,
+            Pips::MAX.as_pips().into(),
+            i128::from(Pips::MAX.as_pips()) - delta.signum() * i128::from(fee.as_pips()),
         )
     }
 }
@@ -148,9 +148,15 @@ mod tests {
         let closure_abs = closure.unsigned_abs();
         assert_eq!(
             delta
-                + TokenDiff::token_fee(&token_id, delta_abs, fee).fee_ceil(delta_abs) as i128
+                + i128::try_from(
+                    TokenDiff::token_fee(&token_id, delta_abs, fee).fee_ceil(delta_abs)
+                )
+                .unwrap()
                 + closure
-                + TokenDiff::token_fee(&token_id, closure_abs, fee).fee_ceil(closure_abs) as i128,
+                + i128::try_from(
+                    TokenDiff::token_fee(&token_id, closure_abs, fee).fee_ceil(closure_abs)
+                )
+                .unwrap(),
             0,
             "invariant violated: delta: {delta}, closure: {closure}, fee: {fee}",
         );

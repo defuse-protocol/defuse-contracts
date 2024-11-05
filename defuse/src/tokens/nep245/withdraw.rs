@@ -122,7 +122,13 @@ impl State {
                 .then(
                     // schedule storage_deposit() only after near_withdraw() returns
                     DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
-                        .with_static_gas(DefuseImpl::do_mt_withdraw_gas(withdraw.token_ids.len()))
+                        .with_static_gas(DefuseImpl::do_mt_withdraw_gas(
+                            withdraw
+                                .token_ids
+                                .len()
+                                .try_into()
+                                .unwrap_or_else(|_| unreachable!()),
+                        ))
                         .do_mt_withdraw(withdraw.clone()),
                 )
         } else {
@@ -131,7 +137,11 @@ impl State {
         .then(
             DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
                 .with_static_gas(DefuseImpl::mt_resolve_withdraw_gas(
-                    withdraw.token_ids.len(),
+                    withdraw
+                        .token_ids
+                        .len()
+                        .try_into()
+                        .unwrap_or_else(|_| unreachable!()),
                 ))
                 .mt_resolve_withdraw(
                     withdraw.token,
@@ -170,7 +180,7 @@ impl DefuseImpl {
     }
 
     #[inline]
-    const fn do_mt_withdraw_gas(token_count: usize) -> Gas {
+    const fn do_mt_withdraw_gas(token_count: u64) -> Gas {
         // TODO: more accurate numbers
         const DO_MT_WITHDRAW_GAS_BASE: Gas = Gas::from_tgas(1);
         const DO_MT_WITHDRAW_GAS_PER_TOKEN_ID: Gas = Gas::from_ggas(500);
@@ -184,23 +194,23 @@ impl DefuseImpl {
     }
 
     #[inline]
-    const fn mt_batch_transfer_gas(token_count: usize) -> Gas {
+    const fn mt_batch_transfer_gas(token_count: u64) -> Gas {
         // TODO: more accurate numbers
         const MT_TRANSFER_GAS_BASE: Gas = Gas::from_tgas(15);
         const MT_TRANSFER_GAS_PER_TOKEN_ID: Gas = Gas::from_ggas(500);
 
         MT_TRANSFER_GAS_BASE
-            .saturating_add(MT_TRANSFER_GAS_PER_TOKEN_ID.saturating_mul(token_count as u64))
+            .saturating_add(MT_TRANSFER_GAS_PER_TOKEN_ID.saturating_mul(token_count))
     }
 
     #[inline]
-    const fn mt_resolve_withdraw_gas(token_count: usize) -> Gas {
+    const fn mt_resolve_withdraw_gas(token_count: u64) -> Gas {
         // TODO: more accurate numbers
         const MT_RESOLVE_WITHDRAW_GAS_BASE: Gas = Gas::from_tgas(5);
         const MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID: Gas = Gas::from_ggas(500);
 
         MT_RESOLVE_WITHDRAW_GAS_BASE
-            .saturating_add(MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID.saturating_mul(token_count as u64))
+            .saturating_add(MT_RESOLVE_WITHDRAW_GAS_PER_TOKEN_ID.saturating_mul(token_count))
     }
 }
 
@@ -282,7 +292,12 @@ impl MtExt for Promise {
             }))
             .unwrap_or_panic_display(),
             NearToken::from_yoctonear(1),
-            DefuseImpl::mt_batch_transfer_gas(token_ids.len()),
+            DefuseImpl::mt_batch_transfer_gas(
+                token_ids
+                    .len()
+                    .try_into()
+                    .unwrap_or_else(|_| unreachable!()),
+            ),
         )
     }
 }
