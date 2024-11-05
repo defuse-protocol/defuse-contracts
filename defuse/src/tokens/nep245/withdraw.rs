@@ -186,7 +186,7 @@ impl DefuseImpl {
         const DO_MT_WITHDRAW_GAS_PER_TOKEN_ID: Gas = Gas::from_ggas(500);
 
         DO_MT_WITHDRAW_GAS_BASE
-            .saturating_add(DO_MT_WITHDRAW_GAS_PER_TOKEN_ID.saturating_mul(token_count as u64))
+            .saturating_add(DO_MT_WITHDRAW_GAS_PER_TOKEN_ID.saturating_mul(token_count))
             // do_mt_withdraw() method is called externally
             // only with storage_deposit
             .saturating_add(STORAGE_DEPOSIT_GAS)
