@@ -16,4 +16,4 @@ spec:
   lifecycle: production
   system: defuse-protocol
   deployedAt:
-    - contract:near/mainnet/defuse-alpha.near
+    - contract:near/mainnet/intents.near
