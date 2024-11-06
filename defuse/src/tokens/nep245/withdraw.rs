@@ -182,7 +182,7 @@ impl DefuseImpl {
     #[inline]
     const fn do_mt_withdraw_gas(token_count: u64) -> Gas {
         // TODO: more accurate numbers
-        const DO_MT_WITHDRAW_GAS_BASE: Gas = Gas::from_tgas(1);
+        const DO_MT_WITHDRAW_GAS_BASE: Gas = Gas::from_tgas(3);
         const DO_MT_WITHDRAW_GAS_PER_TOKEN_ID: Gas = Gas::from_ggas(500);
 
         DO_MT_WITHDRAW_GAS_BASE
