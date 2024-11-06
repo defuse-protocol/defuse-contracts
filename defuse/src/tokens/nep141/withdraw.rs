@@ -133,7 +133,7 @@ impl State {
 #[near]
 impl DefuseImpl {
     const FT_RESOLVE_WITHDRAW_GAS: Gas = Gas::from_tgas(5);
-    const DO_FT_WITHDRAW_GAS: Gas = Gas::from_tgas(1)
+    const DO_FT_WITHDRAW_GAS: Gas = Gas::from_tgas(3)
         // do_ft_withdraw() method is called externally
         // only with storage_deposit
         .saturating_add(STORAGE_DEPOSIT_GAS)
