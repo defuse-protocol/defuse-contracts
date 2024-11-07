@@ -227,7 +227,12 @@ impl State {
             )
             .then(
                 DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
-                    .with_static_gas(DefuseImpl::mt_resolve_transfer_gas(token_ids.len()))
+                    .with_static_gas(DefuseImpl::mt_resolve_transfer_gas(
+                        token_ids
+                            .len()
+                            .try_into()
+                            .unwrap_or_else(|_| unreachable!()),
+                    ))
                     .mt_resolve_transfer(
                         previous_owner_ids,
                         transfer.receiver_id,
