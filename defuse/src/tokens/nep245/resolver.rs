@@ -13,12 +13,11 @@ impl DefuseImpl {
     const MT_RESOLVE_TRANSFER_GAS_BASE: Gas = Gas::from_tgas(5);
     const MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID: Gas = Gas::from_tgas(1);
 
-    pub(super) const fn mt_resolve_transfer_gas(token_count: usize) -> Gas {
+    pub(super) const fn mt_resolve_transfer_gas(token_count: u64) -> Gas {
         // if these conversions overflow, then
         // it should have exceeded gas before
-        Self::MT_RESOLVE_TRANSFER_GAS_BASE.saturating_add(
-            Self::MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID.saturating_mul(token_count as u64),
-        )
+        Self::MT_RESOLVE_TRANSFER_GAS_BASE
+            .saturating_add(Self::MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID.saturating_mul(token_count))
     }
 }
 
