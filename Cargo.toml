@@ -3,10 +3,11 @@ resolver = "2"
 members = [
     "account",
     "contracts",
-    "controller",
     "defuse",
     "intents/swap",
     "intents/swap-ft",
+    "poa-factory",
+    "poa-token",
     "tests",
 ]
 default-members = ["contracts"]
@@ -17,19 +18,25 @@ edition = "2021"
 [workspace.dependencies]
 defuse-account-contract.path = "account"
 defuse-contracts = { path = "contracts", default-features = false }
-defuse-controller-contract.path = "controller"
 defuse-contract.path = "defuse"
 defuse-swap-intent-contract.path = "intents/swap"
 defuse-swap-ft-intent-contract.path = "intents/swap-ft"
+defuse-poa-factory-contract.path = "poa-factory"
+defuse-poa-token-contract.path = "poa-token"
 
 anyhow = "1"
 bnum = { version = "0.12", features = ["borsh"] }
+derive_more = "1.0"
 hex = "0.4"
+hex-literal = "0.4"
 impl-tools = "0.10"
+itertools = "0.13"
 near-account-id = "1.0"
 near-contract-standards = "5.5"
+near-plugins = { git = "https://github.com/Near-One/near-plugins", rev = "e6e4b070" }
 near-sdk = { version = "5.5", features = ["unstable"] }
 near-workspaces = "0.14"
+rstest = "0.21.0"
 serde_json = "1"
 serde_with = "3.9"
 strum = { version = "0.26", features = ["derive"] }

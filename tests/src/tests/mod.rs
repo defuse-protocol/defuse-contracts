@@ -1,5 +1,6 @@
-pub mod account;
-pub mod controller;
-pub mod intents;
-
 pub mod defuse;
+pub mod poa;
+
+// TODO: remove legacy:
+// pub mod account;
+// pub mod intents;

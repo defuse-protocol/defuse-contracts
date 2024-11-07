@@ -10,11 +10,17 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
-defuse-contracts = { workspace = true, features = ["defuse"] }
+defuse-contracts = { workspace = true, features = [
+    "defuse",
+    "upgrade",
+    "wnear",
+] }
 
+bnum.workspace = true
 impl-tools.workspace = true
 near-account-id.workspace = true
 near-contract-standards.workspace = true
+near-plugins.workspace = true
 near-sdk.workspace = true
 
 [features]

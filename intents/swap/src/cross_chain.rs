@@ -2,7 +2,7 @@ use defuse_contracts::{
     intents::swap::{
         AssetWithAccount, CrossChainAsset, CrossChainReceiver, SwapIntentAction, SwapIntentError,
     },
-    utils::UnwrapOrPanic,
+    utils::UnwrapOrPanicError,
 };
 use near_sdk::{env, near, serde_json, Promise, PromiseOrValue};
 

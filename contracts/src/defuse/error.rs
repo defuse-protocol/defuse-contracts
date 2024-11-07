@@ -10,14 +10,11 @@ pub enum DefuseError {
     #[error("account not found")]
     AccountNotFound,
 
-    #[error("insufficient or excessive balance")]
+    #[error("insufficient balance or overflow")]
     BalanceOverflow,
 
     #[error("deadline has expired")]
     DeadlineExpired,
-
-    #[error("invalid sender/receiver")]
-    InvalidSenderReceiver,
 
     #[error("invalid signature")]
     InvalidSignature,
@@ -30,6 +27,12 @@ pub enum DefuseError {
 
     #[error("nonce was already used")]
     NonceUsed,
+
+    #[error("public key already exists")]
+    PublicKeyExists,
+
+    #[error("public key doesn't exist")]
+    PublicKeyNotExist,
 
     #[error("wrong recipient")]
     WrongRecipient,
