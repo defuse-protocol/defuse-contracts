@@ -31,6 +31,7 @@ impl State {
             .with_static_gas(NEAR_WITHDRAW_GAS)
             .near_withdraw(U128(withdraw.amount.as_yoctonear()))
             .then(
+                // do_native_withdraw only after unwrapping NEAR
                 DefuseImpl::ext(CURRENT_ACCOUNT_ID.clone())
                     .with_static_gas(DefuseImpl::DO_NATIVE_WITHDRAW_GAS)
                     .do_native_withdraw(withdraw),
