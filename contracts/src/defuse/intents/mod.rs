@@ -16,7 +16,9 @@ use super::{fees::FeesManager, payload::multi::MultiStandardPayload};
 use self::{
     account::{AddPublicKey, InvalidateNonces, RemovePublicKey},
     token_diff::TokenDiff,
-    tokens::{FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NftWithdraw},
+    tokens::{
+        FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NativeWithdraw, NftWithdraw,
+    },
 };
 
 #[ext_contract(ext_intents_executor)]
@@ -48,6 +50,7 @@ pub enum Intent {
     FtWithdraw(FtWithdraw),
     NftWithdraw(NftWithdraw),
     MtWithdraw(MtWithdraw),
+    NativeWithdraw(NativeWithdraw),
 
     TokenDiff(TokenDiff),
 }

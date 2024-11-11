@@ -1,7 +1,8 @@
 use defuse_contracts::{
     defuse::{
         intents::tokens::{
-            FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NftWithdraw,
+            FtWithdraw, MtBatchTransfer, MtBatchTransferCall, MtWithdraw, NativeWithdraw,
+            NftWithdraw,
         },
         Result,
     },
@@ -108,6 +109,19 @@ impl IntentExecutor<MtWithdraw> for State {
         intent: MtWithdraw,
     ) -> Result<()> {
         self.mt_withdraw(sender_id.clone(), sender, intent)
+            // detach
+            .map(|_promise| ())
+    }
+}
+
+impl IntentExecutor<NativeWithdraw> for State {
+    fn execute_intent(
+        &mut self,
+        account_id: &AccountId,
+        account: &mut Account,
+        intent: NativeWithdraw,
+    ) -> Result<()> {
+        self.native_withdraw(account_id, account, intent)
             // detach
             .map(|_promise| ())
     }

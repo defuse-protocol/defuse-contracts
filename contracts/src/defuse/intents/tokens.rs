@@ -37,6 +37,7 @@ pub struct FtWithdraw {
 
     /// Optionally make `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
+    /// NOTE: the `wNEAR` will not be refunded in case of fail.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage_deposit: Option<NearToken>,
 }
@@ -52,6 +53,7 @@ pub struct NftWithdraw {
 
     /// Optionally make `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
+    /// NOTE: the `wNEAR` will not be refunded in case of fail.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage_deposit: Option<NearToken>,
 }
@@ -68,6 +70,18 @@ pub struct MtWithdraw {
 
     /// Optionally make `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
+    /// NOTE: the `wNEAR` will not be refunded in case of fail.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage_deposit: Option<NearToken>,
+}
+
+/// Withdraw native NEAR to `receiver_id`.
+/// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
+/// NOTE: the `wNEAR` will not be refunded in case of fail (e.g. `receiver_id`
+/// account does not exist).
+#[near(serializers = [borsh, json])]
+#[derive(Debug, Clone)]
+pub struct NativeWithdraw {
+    pub receiver_id: AccountId,
+    pub amount: NearToken,
 }
