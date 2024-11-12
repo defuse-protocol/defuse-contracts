@@ -17,7 +17,8 @@ use defuse_contracts::{
 use impl_tools::autoimpl;
 use near_plugins::{access_control, AccessControlRole, AccessControllable, Pausable};
 use near_sdk::{
-    borsh::BorshDeserialize, near, require, store::LookupSet, BorshStorageKey, PanicOnDefault,
+    borsh::BorshDeserialize, near, require, store::LookupSet, AccountId, BorshStorageKey,
+    PanicOnDefault,
 };
 
 use self::{accounts::Accounts, config::DefuseConfig, state::State};
@@ -106,7 +107,11 @@ impl Drop for DefuseImpl {
 }
 
 #[near]
-impl Defuse for DefuseImpl {}
+impl Defuse for DefuseImpl {
+    fn wnear_id(&self) -> &AccountId {
+        &self.wnear_id
+    }
+}
 
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]

@@ -130,6 +130,7 @@ impl IntentExecutor<Intent> for State {
             Intent::FtWithdraw(intent) => self.execute_intent(account_id, account, intent),
             Intent::NftWithdraw(intent) => self.execute_intent(account_id, account, intent),
             Intent::MtWithdraw(intent) => self.execute_intent(account_id, account, intent),
+            Intent::NativeWithdraw(intent) => self.execute_intent(account_id, account, intent),
             Intent::TokenDiff(intent) => self.execute_intent(account_id, account, intent),
         }
     }

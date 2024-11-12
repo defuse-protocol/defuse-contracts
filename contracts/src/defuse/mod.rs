@@ -21,7 +21,7 @@ use near_contract_standards::{
     non_fungible_token::core::NonFungibleTokenReceiver,
 };
 use near_plugins::{AccessControllable, Pausable};
-use near_sdk::ext_contract;
+use near_sdk::{ext_contract, AccountId};
 
 use self::{
     accounts::AccountManager,
@@ -56,4 +56,5 @@ pub trait Defuse:
     + Upgrade
     + AccessKeys
 {
+    fn wnear_id(&self) -> &AccountId;
 }
