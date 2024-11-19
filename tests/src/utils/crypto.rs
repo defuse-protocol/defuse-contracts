@@ -1,38 +1,36 @@
-use defuse_contracts::crypto::{Payload, Signature, SignedPayload};
+use defuse_contracts::{
+    crypto::{Curve, Ed25519, Payload},
+    nep413::{Nep413Payload, SignedNep413Payload},
+};
 use near_workspaces::Account;
 
 pub trait Signer {
-    fn sign(&self, data: &[u8]) -> Signature;
+    fn public_key(&self) -> <Ed25519 as Curve>::PublicKey;
+    fn sign_ed25519(&self, data: &[u8]) -> <Ed25519 as Curve>::Signature;
 
-    fn sign_payload<T>(&self, payload: T) -> SignedPayload<T>
-    where
-        T: Payload,
-    {
-        SignedPayload {
-            signature: self.sign(&payload.hash()),
-            payload,
-        }
-    }
+    fn sign_nep413(&self, payload: Nep413Payload) -> SignedNep413Payload;
 }
 
 impl Signer for Account {
-    fn sign(&self, data: &[u8]) -> Signature {
+    fn public_key(&self) -> <Ed25519 as Curve>::PublicKey {
+        Ed25519::parse_base58(self.secret_key().public_key().to_string()).unwrap()
+    }
+
+    fn sign_ed25519(&self, data: &[u8]) -> <Ed25519 as Curve>::Signature {
         // near_sdk does not expose near_crypto API
         let secret_key: near_crypto::SecretKey = self.secret_key().to_string().parse().unwrap();
 
-        match (secret_key.sign(data), secret_key.public_key()) {
-            (near_crypto::Signature::ED25519(sig), near_crypto::PublicKey::ED25519(pk)) => {
-                Signature::Ed25519 {
-                    signature: sig.to_bytes(),
-                    public_key: pk.0,
-                }
-            }
-            (near_crypto::Signature::SECP256K1(sig), near_crypto::PublicKey::SECP256K1(_pk)) => {
-                Signature::Secp256k1 {
-                    signature: sig.into(),
-                }
-            }
-            _ => unreachable!(),
+        let near_crypto::Signature::ED25519(sig) = secret_key.sign(data) else {
+            panic!("only ed25519 signatures are supported");
+        };
+        sig.to_bytes()
+    }
+
+    fn sign_nep413(&self, payload: Nep413Payload) -> SignedNep413Payload {
+        SignedNep413Payload {
+            public_key: self.public_key(),
+            signature: self.sign_ed25519(&payload.hash()),
+            payload,
         }
     }
 }

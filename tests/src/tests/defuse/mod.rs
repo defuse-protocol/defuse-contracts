@@ -7,7 +7,6 @@ use std::sync::LazyLock;
 
 use defuse_contract::config::DefuseConfig;
 use defuse_contracts::{
-    crypto::SignedPayload,
     defuse::payload::{multi::MultiStandardPayload, nep413::Nep413DefuseMessage},
     nep413::{Nep413Payload, U256},
     utils::Deadline,
@@ -55,7 +54,7 @@ pub trait DefuseSigner: Signer {
         nonce: U256,
         deadline: Deadline,
         message: T,
-    ) -> SignedPayload<MultiStandardPayload>
+    ) -> MultiStandardPayload
     where
         T: Serialize;
 }
@@ -67,21 +66,23 @@ impl DefuseSigner for near_workspaces::Account {
         nonce: U256,
         deadline: Deadline,
         message: T,
-    ) -> SignedPayload<MultiStandardPayload>
+    ) -> MultiStandardPayload
     where
         T: Serialize,
     {
-        self.sign_payload(MultiStandardPayload::Nep413(
-            Nep413Payload::new(
-                serde_json::to_string(&Nep413DefuseMessage {
-                    signer_id: self.id().clone(),
-                    deadline,
-                    message,
-                })
-                .unwrap(),
-            )
-            .with_recipient(defuse_contract)
-            .with_nonce(nonce),
-        ))
+        MultiStandardPayload::Nep413(
+            self.sign_nep413(
+                Nep413Payload::new(
+                    serde_json::to_string(&Nep413DefuseMessage {
+                        signer_id: self.id().clone(),
+                        deadline,
+                        message,
+                    })
+                    .unwrap(),
+                )
+                .with_recipient(defuse_contract)
+                .with_nonce(nonce),
+            ),
+        )
     }
 }

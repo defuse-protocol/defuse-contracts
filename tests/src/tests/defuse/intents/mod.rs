@@ -1,5 +1,4 @@
 use defuse_contracts::{
-    crypto::SignedPayload,
     defuse::{
         intents::{tokens::MtBatchTransfer, DefuseIntents},
         payload::{multi::MultiStandardPayload, DefusePayload},
@@ -23,11 +22,11 @@ pub trait ExecuteIntentsExt: AccountManagerExt {
     async fn defuse_execute_intents(
         &self,
         defuse_id: &AccountId,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiStandardPayload>,
     ) -> anyhow::Result<()>;
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiStandardPayload>,
     ) -> anyhow::Result<()>;
 }
 
@@ -35,7 +34,7 @@ impl ExecuteIntentsExt for near_workspaces::Account {
     async fn defuse_execute_intents(
         &self,
         defuse_id: &AccountId,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiStandardPayload>,
     ) -> anyhow::Result<()> {
         let args = json!({
             "intents": intents.into_iter().collect::<Vec<_>>(),
@@ -61,7 +60,7 @@ impl ExecuteIntentsExt for near_workspaces::Account {
     }
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiStandardPayload>,
     ) -> anyhow::Result<()> {
         self.defuse_execute_intents(self.id(), intents).await
     }
@@ -71,7 +70,7 @@ impl ExecuteIntentsExt for near_workspaces::Contract {
     async fn defuse_execute_intents(
         &self,
         defuse_id: &AccountId,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiStandardPayload>,
     ) -> anyhow::Result<()> {
         self.as_account()
             .defuse_execute_intents(defuse_id, intents)
@@ -79,7 +78,7 @@ impl ExecuteIntentsExt for near_workspaces::Contract {
     }
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiStandardPayload>,
     ) -> anyhow::Result<()> {
         self.as_account().execute_intents(intents).await
     }

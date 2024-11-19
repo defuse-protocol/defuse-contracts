@@ -1,5 +1,6 @@
 pub mod multi;
 pub mod nep413;
+pub mod raw;
 
 use impl_tools::autoimpl;
 use near_sdk::{near, AccountId};

@@ -15,13 +15,10 @@ use serde_with::{serde_as, DeserializeFromStr, DisplayFromStr, SerializeDisplay}
 use strum::{EnumDiscriminants, EnumString};
 use thiserror::Error as ThisError;
 
-use crate::{
-    crypto::SignedPayload,
-    utils::{
-        cleanup::DefaultMap,
-        integer::{CheckedAdd, CheckedSub},
-        UnwrapOrPanicError,
-    },
+use crate::utils::{
+    cleanup::DefaultMap,
+    integer::{CheckedAdd, CheckedSub},
+    UnwrapOrPanicError,
 };
 
 use super::{payload::multi::MultiStandardPayload, DefuseError, Result};
@@ -290,7 +287,7 @@ pub struct DepositMessage {
     pub receiver_id: AccountId,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub execute_intents: Vec<SignedPayload<MultiStandardPayload>>,
+    pub execute_intents: Vec<MultiStandardPayload>,
 
     #[serde(default, skip_serializing_if = "::core::ops::Not::not")]
     pub refund_if_fails: bool,
@@ -309,7 +306,7 @@ impl DepositMessage {
     #[inline]
     pub fn with_execute_intents(
         mut self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiStandardPayload>,
     ) -> Self {
         self.execute_intents.extend(intents);
         self
