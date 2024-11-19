@@ -75,6 +75,11 @@ mod tests {
             bs58::encode(p.hash()).into_string(),
             "8LKE47o44ybZQR9ozLyDnvMDTh4Ao5ipy2mJWsYByG5Q"
         );
-        p.verify().unwrap();
+        assert_eq!(
+            p.verify().unwrap(),
+            "ed25519:8rVvtHWFr8hasdQGGD5WiQBTyr4iH2ruEPPVfj491RPN"
+                .parse()
+                .unwrap()
+        );
     }
 }
