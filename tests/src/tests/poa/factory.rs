@@ -3,7 +3,7 @@ use std::{
     sync::LazyLock,
 };
 
-use defuse_poa_factory_contract::Role;
+use defuse_poa_factory::Role;
 use near_contract_standards::fungible_token::metadata::FungibleTokenMetadata;
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use near_workspaces::Contract;

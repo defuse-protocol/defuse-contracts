@@ -1,22 +1,12 @@
-use defuse_contracts::crypto::{Payload, Signature, SignedPayload};
+use defuse::core::nep413::{Nep413Payload, SignedNep413Payload};
 use near_workspaces::Account;
 
 pub trait Signer {
-    fn sign(&self, data: &[u8]) -> Signature;
-
-    fn sign_payload<T>(&self, payload: T) -> SignedPayload<T>
-    where
-        T: Payload,
-    {
-        SignedPayload {
-            signature: self.sign(&payload.hash()),
-            payload,
-        }
-    }
+    fn sign_nep413(&self, payload: Nep413Payload) -> SignedNep413Payload;
 }
 
 impl Signer for Account {
-    fn sign(&self, data: &[u8]) -> Signature {
+    fn sign_nep413(&self, payload: Nep413Payload) -> SignedNep413Payload {
         // near_sdk does not expose near_crypto API
         let secret_key: near_crypto::SecretKey = self.secret_key().to_string().parse().unwrap();
 

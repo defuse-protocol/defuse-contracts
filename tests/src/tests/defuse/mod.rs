@@ -5,6 +5,7 @@ mod tokens;
 
 use std::sync::LazyLock;
 
+use defuse::core::payload::MultiPayload;
 use defuse_contract::config::DefuseConfig;
 use defuse_contracts::{
     crypto::SignedPayload,
@@ -67,7 +68,7 @@ impl DefuseSigner for near_workspaces::Account {
         nonce: U256,
         deadline: Deadline,
         message: T,
-    ) -> SignedPayload<MultiStandardPayload>
+    ) -> MultiPayload
     where
         T: Serialize,
     {

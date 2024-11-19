@@ -1,17 +1,22 @@
 use core::marker::PhantomData;
 
 use near_sdk::{
-    bs58,
+    bs58, env,
     serde::{de, Deserialize, Deserializer, Serialize, Serializer},
+    CryptoHash,
 };
 use serde_with::{DeserializeAs, SerializeAs};
 use thiserror::Error as ThisError;
 
-pub trait Curve {
-    const PREFIX: &'static str;
+use super::{PublicKey, Signature};
 
+pub trait Curve {
     type PublicKey;
     type Signature;
+}
+
+pub trait CurvePrefix: Curve {
+    const PREFIX: &str;
 
     #[inline]
     fn to_base58(bytes: impl AsRef<[u8]>) -> String {
@@ -41,20 +46,43 @@ pub trait Curve {
 pub struct Ed25519;
 
 impl Curve for Ed25519 {
-    const PREFIX: &'static str = "ed25519";
-
     type PublicKey = [u8; 32];
     type Signature = [u8; 64];
+}
+
+impl CurvePrefix for Ed25519 {
+    const PREFIX: &str = "ed25519";
 }
 
 pub struct Secp256k1;
 
 impl Curve for Secp256k1 {
-    const PREFIX: &'static str = "secp256k1";
-
     type PublicKey = [u8; 64];
     /// Concatenated `r`, `s` and `v`
     type Signature = [u8; 65];
+}
+
+impl CurvePrefix for Secp256k1 {
+    const PREFIX: &str = "secp256k1";
+}
+
+/// Note: Ethereum clients shift the recovery byte and this
+/// logic might depend on chain id, so clients must rollback
+/// these changes to v ∈ {0, 1}.
+/// References:
+/// * https://github.com/ethereumjs/ethereumjs-monorepo/blob/dc7169c16df6d36adeb6e234fcc66eb6cfc5ea3f/packages/util/src/signature.ts#L31-L62
+/// * https://github.com/ethereum/go-ethereum/issues/19751#issuecomment-504900739
+#[inline]
+pub fn ecrecover(
+    hash: &CryptoHash,
+    [signature @ .., v]: &<Secp256k1 as Curve>::Signature,
+) -> Option<<Secp256k1 as Curve>::PublicKey> {
+    env::ecrecover(
+        hash, signature, *v,
+        // Do not accept malleabile signatures:
+        // https://github.com/near/nearcore/blob/d73041cc1d1a70af4456fceefaceb1bf7f684fde/core/crypto/src/signature.rs#L448-L455
+        true,
+    )
 }
 
 #[derive(Debug, ThisError)]
@@ -65,9 +93,20 @@ pub enum ParseCurveError {
     Base58(#[from] bs58::decode::Error),
 }
 
-pub struct AsCurve<C: Curve>(PhantomData<C>);
+pub enum CurveType {
+    Ed25519,
+    Secp256k1,
+}
 
-impl<C: Curve, const N: usize> SerializeAs<[u8; N]> for AsCurve<C> {
+impl Curve for CurveType {
+    type PublicKey = PublicKey;
+
+    type Signature = Signature;
+}
+
+pub struct AsCurve<C: CurvePrefix>(PhantomData<C>);
+
+impl<C: CurvePrefix, const N: usize> SerializeAs<[u8; N]> for AsCurve<C> {
     fn serialize_as<S>(source: &[u8; N], serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -76,7 +115,7 @@ impl<C: Curve, const N: usize> SerializeAs<[u8; N]> for AsCurve<C> {
     }
 }
 
-impl<'de, C: Curve, const N: usize> DeserializeAs<'de, [u8; N]> for AsCurve<C> {
+impl<'de, C: CurvePrefix, const N: usize> DeserializeAs<'de, [u8; N]> for AsCurve<C> {
     fn deserialize_as<D>(deserializer: D) -> Result<[u8; N], D::Error>
     where
         D: Deserializer<'de>,

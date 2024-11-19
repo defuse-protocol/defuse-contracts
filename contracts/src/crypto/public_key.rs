@@ -7,7 +7,7 @@ use near_account_id::AccountType;
 use near_sdk::{env, near, AccountId, AccountIdRef, CurveType};
 use serde_with::serde_as;
 
-use super::{AsCurve, Curve, Ed25519, ParseCurveError, Secp256k1};
+use super::{AsCurve, Curve, CurvePrefix, Ed25519, ParseCurveError, Secp256k1};
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(
@@ -70,8 +70,8 @@ impl Debug for PublicKey {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&match self {
-            PublicKey::Ed25519(pk) => Ed25519::to_base58(pk),
-            PublicKey::Secp256k1(pk) => Secp256k1::to_base58(pk),
+            Self::Ed25519(pk) => Ed25519::to_base58(pk),
+            Self::Secp256k1(pk) => Secp256k1::to_base58(pk),
         })
     }
 }
@@ -83,17 +83,20 @@ impl Display for PublicKey {
     }
 }
 
+// TODO: SerializeDisplay,
 impl FromStr for PublicKey {
     type Err = ParseCurveError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Ed25519::parse_base58(s) {
-            Ok(pk) => Ok(Self::Ed25519(pk)),
-            Err(ParseCurveError::InvalidCurveType) => {
-                Secp256k1::parse_base58(s).map(Self::Secp256k1)
-            }
-            Err(err) => Err(err),
+        match Ed25519::parse_base58(s).map(Self::Ed25519) {
+            Err(ParseCurveError::InvalidCurveType) => {}
+            r => return r,
         }
+        match Secp256k1::parse_base58(s).map(Self::Secp256k1) {
+            Err(ParseCurveError::InvalidCurveType) => {}
+            r => return r,
+        }
+        return Err(ParseCurveError::InvalidCurveType);
     }
 }
 

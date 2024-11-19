@@ -1,32 +1,16 @@
-use impl_tools::autoimpl;
-use near_sdk::near;
+use std::ops::Deref;
 
-use super::{PublicKey, Signature};
+use near_sdk::CryptoHash;
+
+use super::Curve;
 
 pub trait Payload {
-    fn hash(&self) -> [u8; 32];
+    fn hash(&self) -> CryptoHash;
 }
 
-#[derive(Debug, Clone)]
-#[near(serializers = [borsh, json])]
-#[autoimpl(Deref using self.payload)]
-pub struct SignedPayload<T> {
-    #[serde(flatten)]
-    pub payload: T,
-    #[serde(flatten)]
-    pub signature: Signature,
-}
+pub trait SignedPayload: Deref<Target = Self::Payload> {
+    type Payload: Payload;
+    type Curve: Curve;
 
-impl<T> SignedPayload<T>
-where
-    T: Payload,
-{
-    /// Veirify the signature and return the public counterpart of the key
-    /// that was used to sign the payload or `None` if the signature is
-    /// invalid
-    #[must_use]
-    #[inline]
-    pub fn verify(&self) -> Option<PublicKey> {
-        self.signature.verify(&self.payload.hash())
-    }
+    fn verify(&self) -> Option<<Self::Curve as Curve>::PublicKey>;
 }

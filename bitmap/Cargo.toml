@@ -1,0 +1,12 @@
+[package]
+name = "defuse-bitmap"
+edition.workspace = true
+version = "0.1.0"
+
+[dependencies]
+defuse-map-utils.workspace = true
+
+near-sdk = { workspace = true }
+
+[dev-dependencies]
+bnum.workspace = true

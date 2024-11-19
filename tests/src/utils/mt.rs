@@ -1,4 +1,4 @@
-use defuse_contracts::nep245::TokenId;
+use defuse::nep245::TokenId;
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use serde_json::json;
 
