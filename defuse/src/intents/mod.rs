@@ -22,7 +22,7 @@ use crate::{accounts::Account, state::State, DefuseImpl, DefuseImplExt};
 impl IntentsExecutor for DefuseImpl {
     #[pause(name = "intents")]
     #[inline]
-    fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>) {
+    fn execute_intents(&mut self, intents: Vec<MultiStandardPayload>) {
         self.execute_signed_intents(intents).unwrap_or_panic()
     }
 }
@@ -31,7 +31,7 @@ impl DefuseImpl {
     #[inline]
     fn execute_signed_intents(
         &mut self,
-        signed: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        signed: impl IntoIterator<Item = MultiStandardPayload>,
     ) -> Result<()> {
         signed
             .into_iter()
@@ -42,16 +42,13 @@ impl DefuseImpl {
 
     fn execute_signed_intent(
         &mut self,
-        signed: SignedPayload<MultiStandardPayload>,
+        signed: MultiStandardPayload,
     ) -> Result<AccountEvent<'static, IntentExecutedEvent>> {
         // calculate intent hash
-        let hash = signed.payload.hash();
+        let hash = signed.hash();
 
         // verify signature of the hash
-        let public_key = signed
-            .signature
-            .verify(&hash)
-            .ok_or(DefuseError::InvalidSignature)?;
+        let public_key = signed.verify().ok_or(DefuseError::InvalidSignature)?;
 
         // extract NEP-413 payload
         let DefusePayload::<DefuseIntents> {
@@ -60,7 +57,7 @@ impl DefuseImpl {
             deadline,
             nonce,
             message: intents,
-        } = signed.payload.try_into()?;
+        } = signed.try_into()?;
 
         // check recipient
         if verifying_contract != *CURRENT_ACCOUNT_ID {

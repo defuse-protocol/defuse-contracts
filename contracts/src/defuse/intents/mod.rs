@@ -9,7 +9,7 @@ use derive_more::derive::From;
 use near_sdk::{ext_contract, near, AccountIdRef, CryptoHash};
 use serde_with::serde_as;
 
-use crate::{crypto::SignedPayload, utils::serde::base58::Base58};
+use crate::utils::serde::base58::Base58;
 
 use super::{fees::FeesManager, payload::multi::MultiStandardPayload};
 
@@ -23,7 +23,7 @@ use self::{
 
 #[ext_contract(ext_intents_executor)]
 pub trait IntentsExecutor: FeesManager {
-    fn execute_intents(&mut self, intents: Vec<SignedPayload<MultiStandardPayload>>);
+    fn execute_intents(&mut self, intents: Vec<MultiStandardPayload>);
 }
 
 #[near(serializers = [borsh, json])]

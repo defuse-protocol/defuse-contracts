@@ -1,11 +1,12 @@
 use core::fmt::Display;
 
+use impl_tools::autoimpl;
 use near_sdk::{borsh, env, near, CryptoHash};
 use serde_with::serde_as;
 
 pub use crate::utils::bitmap::U256;
 use crate::{
-    crypto::Payload,
+    crypto::{AsCurve, Curve, Ed25519, Payload, SignedPayload},
     utils::{serde::base64::Base64, UnwrapOrPanicError},
 };
 
@@ -76,6 +77,44 @@ impl Payload for Nep413Payload {
         const PREFIX_TAG: u32 = (1u32 << 31) + NEP_NUMBER;
 
         env::sha256_array(&borsh::to_vec(&(PREFIX_TAG, self)).unwrap_or_panic_display())
+    }
+}
+
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
+#[near(serializers = [borsh, json])]
+#[autoimpl(Deref using self.payload)]
+#[derive(Debug, Clone)]
+pub struct SignedNep413Payload {
+    pub payload: Nep413Payload,
+
+    #[serde_as(as = "AsCurve<Ed25519>")]
+    pub public_key: <Ed25519 as Curve>::PublicKey,
+    #[serde_as(as = "AsCurve<Ed25519>")]
+    pub signature: <Ed25519 as Curve>::Signature,
+}
+
+impl Payload for SignedNep413Payload {
+    #[inline]
+    fn hash(&self) -> CryptoHash {
+        self.payload.hash()
+    }
+}
+
+impl SignedPayload for SignedNep413Payload {
+    type PublicKey = <Ed25519 as Curve>::PublicKey;
+
+    #[inline]
+    fn verify(&self) -> Option<Self::PublicKey> {
+        env::ed25519_verify(&self.signature, &self.hash(), &self.public_key)
+            .then_some(&self.public_key)
+            .cloned()
     }
 }
 
