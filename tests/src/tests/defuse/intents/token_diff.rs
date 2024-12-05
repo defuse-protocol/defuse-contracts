@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
 
-use defuse_contracts::{
-    defuse::{
-        intents::{token_diff::TokenDiff, DefuseIntents},
-        tokens::{TokenAmounts, TokenId},
+use defuse::core::{
+    fees::Pips,
+    intents::{
+        token_diff::{TokenDeltas, TokenDiff},
+        DefuseIntents,
     },
-    utils::{fees::Pips, Deadline},
+    tokens::TokenId,
+    Deadline,
 };
 use near_sdk::AccountId;
 use near_workspaces::Account;
@@ -22,7 +24,7 @@ use super::ExecuteIntentsExt;
 #[rstest]
 #[tokio::test]
 async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips) {
-    let env = Env::builder().fee(fee).build().await.unwrap();
+    let env = Env::builder().fee(fee).build().await;
 
     let ft1_token_id = TokenId::Nep141(env.ft1.clone());
     let ft2_token_id = TokenId::Nep141(env.ft2.clone());
@@ -33,8 +35,8 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
             AccountFtDiff {
                 account: &env.user1,
                 init_balances: [(&env.ft1, 100)].into_iter().collect(),
-                diff: [TokenAmounts::<i128>::default()
-                    .with_try_extend::<i128>([
+                diff: [TokenDeltas::default()
+                    .with_add_deltas([
                         (ft1_token_id.clone(), -100),
                         (
                             ft2_token_id.clone(),
@@ -53,8 +55,8 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
             AccountFtDiff {
                 account: &env.user2,
                 init_balances: [(&env.ft2, 200)].into_iter().collect(),
-                diff: [TokenAmounts::<i128>::default()
-                    .with_try_extend::<i128>([
+                diff: [TokenDeltas::default()
+                    .with_add_deltas([
                         (
                             ft1_token_id.clone(),
                             TokenDiff::closure_delta(&ft1_token_id, -100, fee).unwrap(),
@@ -79,7 +81,7 @@ async fn test_swap_p2p(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] f
 #[rstest]
 #[tokio::test]
 async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips) {
-    let env = Env::builder().fee(fee).build().await.unwrap();
+    let env = Env::builder().fee(fee).build().await;
 
     let ft1_token_id = TokenId::Nep141(env.ft1.clone());
     let ft2_token_id = TokenId::Nep141(env.ft2.clone());
@@ -91,11 +93,8 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
             AccountFtDiff {
                 account: &env.user1,
                 init_balances: [(&env.ft1, 100)].into_iter().collect(),
-                diff: [TokenAmounts::<i128>::default()
-                    .with_try_extend::<i128>([
-                        (ft1_token_id.clone(), -100),
-                        (ft2_token_id.clone(), 200),
-                    ])
+                diff: [TokenDeltas::default()
+                    .with_add_deltas([(ft1_token_id.clone(), -100), (ft2_token_id.clone(), 200)])
                     .unwrap()]
                 .into(),
                 result_balances: [(&env.ft2, 200)].into_iter().collect(),
@@ -104,8 +103,8 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
                 account: &env.user2,
                 init_balances: [(&env.ft2, 1000)].into_iter().collect(),
                 diff: [
-                    TokenAmounts::<i128>::default()
-                        .with_try_extend::<i128>([
+                    TokenDeltas::default()
+                        .with_add_deltas([
                             (
                                 ft1_token_id.clone(),
                                 TokenDiff::closure_delta(&ft1_token_id, -100, fee).unwrap(),
@@ -116,8 +115,8 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
                             ),
                         ])
                         .unwrap(),
-                    TokenAmounts::<i128>::default()
-                        .with_try_extend::<i128>([
+                    TokenDeltas::default()
+                        .with_add_deltas([
                             (
                                 ft2_token_id.clone(),
                                 TokenDiff::closure_delta(&ft2_token_id, 300, fee).unwrap(),
@@ -151,11 +150,8 @@ async fn test_swap_many(#[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] 
             AccountFtDiff {
                 account: &env.user3,
                 init_balances: [(&env.ft3, 500)].into_iter().collect(),
-                diff: [TokenAmounts::<i128>::default()
-                    .with_try_extend::<i128>([
-                        (ft2_token_id.clone(), 300),
-                        (ft3_token_id.clone(), -500),
-                    ])
+                diff: [TokenDeltas::default()
+                    .with_add_deltas([(ft2_token_id.clone(), 300), (ft3_token_id.clone(), -500)])
                     .unwrap()]
                 .into(),
                 result_balances: [(&env.ft2, 300)].into_iter().collect(),
@@ -172,7 +168,7 @@ type FtBalances<'a> = BTreeMap<&'a AccountId, i128>;
 struct AccountFtDiff<'a> {
     account: &'a Account,
     init_balances: FtBalances<'a>,
-    diff: Vec<TokenAmounts<i128>>,
+    diff: Vec<TokenDeltas>,
     result_balances: FtBalances<'a>,
 }
 
@@ -197,7 +193,7 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
                 account.account.sign_defuse_message(
                     env.defuse.id(),
                     thread_rng().gen(),
-                    Deadline::infinity(),
+                    Deadline::MAX,
                     DefuseIntents {
                         intents: [TokenDiff { diff }.into()].into(),
                     },
@@ -230,7 +226,7 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
 
 #[tokio::test]
 async fn test_invariant_violated() {
-    let env = Env::new().await.unwrap();
+    let env = Env::new().await;
 
     let ft1 = TokenId::Nep141(env.ft1.clone());
     let ft2 = TokenId::Nep141(env.ft2.clone());
@@ -248,11 +244,11 @@ async fn test_invariant_violated() {
             env.user1.sign_defuse_message(
                 env.defuse.id(),
                 thread_rng().gen(),
-                Deadline::infinity(),
+                Deadline::MAX,
                 DefuseIntents {
                     intents: [TokenDiff {
-                        diff: TokenAmounts::default()
-                            .with_try_extend::<i128>([(ft1.clone(), -1000), (ft2.clone(), 2000)])
+                        diff: TokenDeltas::default()
+                            .with_add_deltas([(ft1.clone(), -1000), (ft2.clone(), 2000)])
                             .unwrap(),
                     }
                     .into()]
@@ -262,11 +258,11 @@ async fn test_invariant_violated() {
             env.user1.sign_defuse_message(
                 env.defuse.id(),
                 thread_rng().gen(),
-                Deadline::infinity(),
+                Deadline::MAX,
                 DefuseIntents {
                     intents: [TokenDiff {
-                        diff: TokenAmounts::default()
-                            .with_try_extend::<i128>([(ft1.clone(), 1000), (ft2.clone(), -1999)])
+                        diff: TokenDeltas::default()
+                            .with_add_deltas([(ft1.clone(), 1000), (ft2.clone(), -1999)])
                             .unwrap(),
                     }
                     .into()]

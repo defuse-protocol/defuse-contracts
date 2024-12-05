@@ -1,10 +1,11 @@
-use defuse_contract::Role;
-use defuse_contracts::{
-    defuse::{
+use defuse::{
+    contract::Role,
+    core::{
         intents::{tokens::FtWithdraw, DefuseIntents},
-        tokens::{DepositMessage, TokenId},
+        tokens::TokenId,
+        Deadline,
     },
-    utils::Deadline,
+    tokens::DepositMessage,
 };
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use rand::{thread_rng, Rng};
@@ -20,7 +21,7 @@ use crate::{
 
 #[tokio::test]
 async fn test_deposit_withdraw() {
-    let env = Env::new().await.unwrap();
+    let env = Env::new().await;
 
     env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
         .await
@@ -58,7 +59,7 @@ async fn test_deposit_withdraw() {
 
 #[tokio::test]
 async fn test_poa_deposit() {
-    let env = Env::new().await.unwrap();
+    let env = Env::new().await;
     let ft1 = TokenId::Nep141(env.ft1.clone());
 
     env.poa_factory_ft_deposit(
@@ -95,7 +96,7 @@ async fn test_poa_deposit() {
 
 #[tokio::test]
 async fn test_deposit_withdraw_intent() {
-    let env = Env::new().await.unwrap();
+    let env = Env::new().await;
 
     env.poa_factory_ft_deposit(
         env.poa_factory.id(),
@@ -119,7 +120,7 @@ async fn test_deposit_withdraw_intent() {
                     execute_intents: [env.user1.sign_defuse_message(
                         env.defuse.id(),
                         thread_rng().gen(),
-                        Deadline::infinity(),
+                        Deadline::MAX,
                         DefuseIntents {
                             intents: [
                                 // withdrawal is a detached promise
@@ -176,7 +177,7 @@ async fn test_deposit_withdraw_intent() {
 
 #[tokio::test]
 async fn test_deposit_withdraw_intent_refund() {
-    let env = Env::new().await.unwrap();
+    let env = Env::new().await;
 
     env.poa_factory_ft_deposit(
         env.poa_factory.id(),
@@ -200,7 +201,7 @@ async fn test_deposit_withdraw_intent_refund() {
                     execute_intents: [env.user1.sign_defuse_message(
                         env.defuse.id(),
                         thread_rng().gen(),
-                        Deadline::infinity(),
+                        Deadline::MAX,
                         DefuseIntents {
                             intents: [FtWithdraw {
                                 token: env.ft1.clone(),
@@ -239,11 +240,7 @@ async fn test_deposit_withdraw_intent_refund() {
 
 #[tokio::test]
 async fn test_ft_force_withdraw() {
-    let env = Env::builder()
-        .deployer_as_super_admin()
-        .build()
-        .await
-        .unwrap();
+    let env = Env::builder().deployer_as_super_admin().build().await;
     env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
         .await
         .unwrap();

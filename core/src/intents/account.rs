@@ -3,7 +3,10 @@ use defuse_serde_utils::base64::Base64;
 use near_sdk::{near, AccountIdRef};
 use serde_with::serde_as;
 
-use crate::{engine::State, DefuseError, Nonce, Result};
+use crate::{
+    engine::{Engine, Inspector, State},
+    DefuseError, Nonce, Result,
+};
 
 use super::ExecutableIntent;
 
@@ -16,11 +19,15 @@ pub struct AddPublicKey {
 
 impl ExecutableIntent for AddPublicKey {
     #[inline]
-    fn execute_intent<S>(self, signer_id: &AccountIdRef, state: &mut S) -> Result<()>
+    fn execute_intent<S, I>(self, signer_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
+        I: Inspector,
     {
-        if !state.add_public_key(signer_id.to_owned(), self.public_key) {
+        if !engine
+            .state
+            .add_public_key(signer_id.to_owned(), self.public_key)
+        {
             return Err(DefuseError::PublicKeyExists);
         }
         Ok(())
@@ -36,11 +43,19 @@ pub struct RemovePublicKey {
 
 impl ExecutableIntent for RemovePublicKey {
     #[inline]
-    fn execute_intent<S>(self, signer_id: &AccountIdRef, state: &mut S) -> crate::Result<()>
+    fn execute_intent<S, I>(
+        self,
+        signer_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+    ) -> crate::Result<()>
     where
         S: State,
+        I: Inspector,
     {
-        if !state.remove_public_key(signer_id.to_owned(), self.public_key) {
+        if !engine
+            .state
+            .remove_public_key(signer_id.to_owned(), self.public_key)
+        {
             return Err(DefuseError::PublicKeyNotExist);
         }
         Ok(())
@@ -65,12 +80,13 @@ pub struct InvalidateNonces {
 
 impl ExecutableIntent for InvalidateNonces {
     #[inline]
-    fn execute_intent<S>(self, signer_id: &AccountIdRef, state: &mut S) -> crate::Result<()>
+    fn execute_intent<S, I>(self, signer_id: &AccountIdRef, engine: &mut Engine<S, I>) -> crate::Result<()>
     where
         S: State,
+        I: Inspector
     {
         for nonce in self.nonces {
-            if !state.commit_nonce(signer_id.to_owned(), nonce) {
+            if !engine.state.commit_nonce(signer_id.to_owned(), nonce) {
                 return Err(DefuseError::NonceUsed);
             }
         }

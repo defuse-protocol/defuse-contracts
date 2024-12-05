@@ -1,85 +1,60 @@
 use core::iter;
-use std::borrow::Cow;
 
-use defuse_nep245::{MtBurnEvent, MtEvent};
 use near_contract_standards::non_fungible_token;
 use near_sdk::{json_types::U128, near, AccountId, AccountIdRef, NearToken};
 
-use crate::{engine::State, tokens::TokenId, DefuseError, Result};
+use crate::{
+    engine::{Engine, Inspector, State},
+    tokens::TokenId,
+    DefuseError, Result,
+};
 
 use super::ExecutableIntent;
-
-// impl<H> Engine<H>
-// where
-//     H: Handler,
-// {
-//     #[inline]
-//     pub fn wnear_token_id(&self) -> TokenId {
-//         TokenId::Nep141(self.handler.wnear_id().clone().into_owned())
-//     }
-
-//     // pub fn withdraw(
-//     //     &mut self,
-//     //     owner_id: &AccountIdRef,
-//     //     token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
-//     //     memo: Option<&str>,
-//     // ) -> Result<()> {
-//     //     let mut token_ids = Vec::new();
-//     //     let mut amounts = Vec::new();
-
-//     //     for (token_id, amount) in token_amounts {
-//     //         if amount == 0 {
-//     //             return Err(DefuseError::ZeroAmount);
-//     //         }
-
-//     //         token_ids.push(token_id.to_string());
-//     //         amounts.push(U128(amount));
-
-//     //         self.handler
-//     //             .withdraw(owner_id.to_owned(), token_id, amount)
-//     //             .ok_or(DefuseError::BalanceOverflow)?;
-//     //     }
-
-//     //     if token_ids.is_empty() {
-//     //         return Err(DefuseError::ZeroAmount);
-//     //     }
-
-//     //     self.handler.emit(MtEvent::MtBurn(
-//     //         [MtBurnEvent {
-//     //             owner_id: Cow::Borrowed(owner_id),
-//     //             authorized_id: None,
-//     //             token_ids: token_ids.into(),
-//     //             amounts: amounts.into(),
-//     //             memo: memo.map(Into::into),
-//     //         }]
-//     //         .as_slice()
-//     //         .into(),
-//     //     ));
-
-//     //     Ok(())
-//     // }
-// }
 
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
 pub struct MtBatchTransfer {
     pub receiver_id: AccountId,
-    pub token_ids: Vec<defuse_nep245::TokenId>,
+    pub token_ids: Vec<TokenId>,
     pub amounts: Vec<U128>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
+    // TODO: feature_flag
     /// `msg` to pass in `mt_on_transfer`
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub msg: Option<String>,
 }
 
 impl ExecutableIntent for MtBatchTransfer {
-    fn execute_intent<S>(self, sender_id: &AccountIdRef, state: &mut S) -> Result<()>
+    fn execute_intent<S, I>(self, sender_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
+        I: Inspector,
     {
-        state.mt_transfer(sender_id.to_owned(), self)
+        if sender_id == self.receiver_id
+            || self.token_ids.is_empty()
+            || self.token_ids.len() != self.amounts.len()
+        {
+            return Err(DefuseError::ZeroAmount);
+        }
+
+        let token_amounts = self
+            .token_ids
+            .iter()
+            .cloned()
+            .zip(self.amounts.iter().map(|a| a.0));
+
+        engine
+            .state
+            .internal_withdraw(sender_id, token_amounts.clone())?;
+        engine
+            .state
+            .internal_deposit(self.receiver_id.clone(), token_amounts.clone())?;
+
+        engine.state.on_mt_transfer(sender_id, self);
+        Ok(())
     }
 }
 
@@ -92,6 +67,7 @@ pub struct FtWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
+    // TODO: msg for whitelisted ft_transfer_call
     /// Optionally make `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -99,11 +75,26 @@ pub struct FtWithdraw {
 }
 
 impl ExecutableIntent for FtWithdraw {
-    fn execute_intent<S>(self, owner_id: &AccountIdRef, state: &mut S) -> Result<()>
+    fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
+        I: Inspector,
     {
-        state.ft_withdraw(owner_id.to_owned(), self)
+        let token_amounts = iter::once((TokenId::Nep141(self.token.clone()), self.amount.0)).chain(
+            self.storage_deposit.map(|amount| {
+                (
+                    TokenId::Nep141(engine.state.wnear_id().into_owned()),
+                    amount.as_yoctonear(),
+                )
+            }),
+        );
+
+        engine
+            .state
+            .withdraw(owner_id, token_amounts.clone(), Some("withdraw"))?;
+
+        engine.state.on_ft_withdraw(owner_id, self);
+        Ok(())
     }
 }
 
@@ -116,6 +107,7 @@ pub struct NftWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
+    // TODO: msg for whitelisted ft_transfer_call
     /// Optionally make `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -123,11 +115,28 @@ pub struct NftWithdraw {
 }
 
 impl ExecutableIntent for NftWithdraw {
-    fn execute_intent<S>(self, owner_id: &AccountIdRef, state: &mut S) -> Result<()>
+    fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
+        I: Inspector,
     {
-        state.nft_withdraw(owner_id.to_owned(), self)
+        let token_amounts = iter::once((
+            TokenId::Nep171(self.token.clone(), self.token_id.clone()),
+            1,
+        ))
+        .chain(self.storage_deposit.map(|amount| {
+            (
+                TokenId::Nep141(engine.state.wnear_id().into_owned()),
+                amount.as_yoctonear(),
+            )
+        }));
+
+        engine
+            .state
+            .withdraw(owner_id, token_amounts.clone(), Some("withdraw"))?;
+
+        engine.state.on_nft_withdraw(owner_id, self);
+        Ok(())
     }
 }
 
@@ -141,16 +150,37 @@ pub struct MtWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
+    // TODO: msg for whitelisted ft_transfer_call
     /// Optionally make `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage_deposit: Option<NearToken>,
 }
 impl ExecutableIntent for MtWithdraw {
-    fn execute_intent<S>(self, owner_id: &AccountIdRef, state: &mut S) -> Result<()>
+    fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
+        I: Inspector,
     {
-        state.mt_withdraw(owner_id.to_owned(), self)
+        if self.token_ids.len() != self.amounts.len() || self.token_ids.is_empty() {
+            return Err(DefuseError::ZeroAmount);
+        }
+
+        let token_amounts = iter::repeat(self.token.clone())
+            .zip(self.token_ids.iter().cloned())
+            .map(|(token, token_id)| TokenId::Nep245(token, token_id))
+            .zip(self.amounts.iter().map(|a| a.0))
+            .chain(self.storage_deposit.map(|amount| {
+                (
+                    TokenId::Nep141(engine.state.wnear_id().into_owned()),
+                    amount.as_yoctonear(),
+                )
+            }));
+
+        engine
+            .state
+            .withdraw(owner_id, token_amounts.clone(), Some("withdraw"))?;
+        engine.state.on_mt_withdraw(owner_id, self);
+        Ok(())
     }
 }

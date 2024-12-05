@@ -1,6 +1,4 @@
-use core::iter;
-
-use defuse_core::{intents::tokens::NftWithdraw, tokens::TokenId, Result};
+use defuse_core::{engine::State, intents::tokens::NftWithdraw, tokens::TokenId, Result};
 use defuse_near_utils::{
     UnwrapOrPanic, UnwrapOrPanicError, CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID,
 };
@@ -37,8 +35,34 @@ impl NonFungibleTokenWithdrawer for Contract {
         memo: Option<String>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.internal_nft_withdraw(
+        self.nft_withdraw_from(
             PREDECESSOR_ACCOUNT_ID.clone(),
+            token,
+            receiver_id,
+            token_id,
+            memo,
+        )
+        .unwrap_or_panic()
+    }
+}
+
+impl Contract {
+    fn nft_withdraw_from(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        token_id: non_fungible_token::TokenId,
+        memo: Option<String>,
+    ) -> Result<PromiseOrValue<bool>> {
+        self.withdraw(
+            &owner_id,
+            [(TokenId::Nep171(token.clone(), token_id.clone()), 1)],
+            Some("withdraw"),
+        )?;
+
+        Ok(self.internal_nft_withdraw(
+            owner_id,
             NftWithdraw {
                 token,
                 receiver_id,
@@ -46,33 +70,15 @@ impl NonFungibleTokenWithdrawer for Contract {
                 memo,
                 storage_deposit: None,
             },
-        )
-        .unwrap_or_panic()
+        ))
     }
-}
 
-impl Contract {
     pub(crate) fn internal_nft_withdraw(
         &mut self,
         owner_id: AccountId,
         withdraw: NftWithdraw,
-    ) -> Result<PromiseOrValue<bool>> {
-        self.internal_withdraw(
-            &owner_id,
-            iter::once((
-                TokenId::Nep171(withdraw.token.clone(), withdraw.token_id.clone()),
-                1,
-            ))
-            .chain(withdraw.storage_deposit.map(|amount| {
-                (
-                    TokenId::Nep141(self.wnear_id.clone()),
-                    amount.as_yoctonear(),
-                )
-            })),
-            Some("withdraw"),
-        )?;
-
-        Ok(if let Some(storage_deposit) = withdraw.storage_deposit {
+    ) -> PromiseOrValue<bool> {
+        if let Some(storage_deposit) = withdraw.storage_deposit {
             ext_wnear::ext(self.wnear_id.clone())
                 .with_attached_deposit(NearToken::from_yoctonear(1))
                 .with_static_gas(NEAR_WITHDRAW_GAS)
@@ -91,7 +97,7 @@ impl Contract {
                 .with_static_gas(Contract::NFT_RESOLVE_WITHDRAW_GAS)
                 .nft_resolve_withdraw(withdraw.token, owner_id, withdraw.token_id),
         )
-        .into())
+        .into()
     }
 }
 
@@ -140,7 +146,7 @@ impl NonFungibleTokenWithdrawResolver for Contract {
             matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty());
 
         if !ok {
-            self.internal_deposit(
+            self.deposit(
                 sender_id,
                 [(TokenId::Nep171(token, token_id), 1)],
                 Some("refund"),
@@ -165,17 +171,8 @@ impl NonFungibleTokenForceWithdrawer for Contract {
         memo: Option<String>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.internal_nft_withdraw(
-            owner_id,
-            NftWithdraw {
-                token,
-                receiver_id,
-                token_id,
-                memo,
-                storage_deposit: None,
-            },
-        )
-        .unwrap_or_panic()
+        self.nft_withdraw_from(owner_id, token, receiver_id, token_id, memo)
+            .unwrap_or_panic()
     }
 }
 

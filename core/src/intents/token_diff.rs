@@ -3,9 +3,10 @@ use std::collections::BTreeMap;
 use defuse_num_utils::CheckedMulDiv;
 use impl_tools::autoimpl;
 use near_sdk::{near, AccountIdRef};
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
-    engine::State,
+    engine::{Engine, Inspector, State},
     fees::Pips,
     tokens::{TokenAmounts, TokenId},
     DefuseError, Result,
@@ -15,44 +16,52 @@ use super::ExecutableIntent;
 
 pub type TokenDeltas = TokenAmounts<BTreeMap<TokenId, i128>>;
 
+#[serde_as]
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[autoimpl(Deref using self.diff)]
 #[autoimpl(DerefMut using self.diff)]
 pub struct TokenDiff {
+    #[serde_as(as = "TokenAmounts<BTreeMap<_, DisplayFromStr>>")]
     pub diff: TokenDeltas,
 }
 
 impl ExecutableIntent for TokenDiff {
-    fn execute_intent<S>(self, signer_id: &AccountIdRef, state: &mut S) -> Result<()>
+    fn execute_intent<S, I>(self, signer_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
+        I: Inspector,
     {
+        engine.inspector.on_token_diff(signer_id, &self);
         if self.diff.is_empty() {
             return Err(DefuseError::ZeroAmount);
         }
 
-        let fees = state.fee();
-        let fee_collector = state.fee_collector().into_owned();
+        let fees = engine.state.fee();
+        let fee_collector = engine.state.fee_collector().into_owned();
 
         for (token_id, delta) in self.diff {
             if delta == 0 {
                 return Err(DefuseError::ZeroAmount);
             }
 
-            state
-                .internal_add_delta(signer_id.to_owned(), token_id.clone(), delta)
-                .ok_or(DefuseError::BalanceOverflow)?;
+            // add delta to signer's account
+            engine.internal_add_delta(signer_id.to_owned(), token_id.clone(), delta)?;
 
             let amount = delta.unsigned_abs();
-            let fee: i128 = Self::token_fee(&token_id, amount, fees)
-                .fee_ceil(amount)
-                .try_into()
-                .unwrap_or_else(|_| unreachable!());
+            let fee = Self::token_fee(&token_id, amount, fees).fee_ceil(amount);
 
-            state
-                .internal_add_delta(fee_collector.clone(), token_id.clone(), fee)
-                .ok_or(DefuseError::BalanceOverflow)?;
+            // TODO: no need to check, or is it?
+            if fee > 0 {
+                // deposit fee to collector
+                engine.internal_add_delta(
+                    fee_collector.to_owned(),
+                    token_id.clone(),
+                    fee.try_into()
+                        // fee is always less than amount
+                        .unwrap_or_else(|_| unreachable!()),
+                )?;
+            }
         }
 
         Ok(())

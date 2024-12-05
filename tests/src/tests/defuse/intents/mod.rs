@@ -1,11 +1,8 @@
-use defuse_contracts::{
-    crypto::SignedPayload,
-    defuse::{
-        intents::{tokens::MtBatchTransfer, DefuseIntents},
-        payload::{multi::MultiStandardPayload, DefusePayload},
-        tokens::TokenId,
-    },
-    utils::Deadline,
+use defuse::core::{
+    intents::{tokens::MtBatchTransfer, DefuseIntents},
+    payload::{multi::MultiPayload, DefusePayload},
+    tokens::TokenId,
+    Deadline,
 };
 use near_sdk::{json_types::U128, AccountId};
 use rand::{thread_rng, Rng};
@@ -23,11 +20,11 @@ pub trait ExecuteIntentsExt: AccountManagerExt {
     async fn defuse_execute_intents(
         &self,
         defuse_id: &AccountId,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiPayload>,
     ) -> anyhow::Result<()>;
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiPayload>,
     ) -> anyhow::Result<()>;
 }
 
@@ -35,7 +32,7 @@ impl ExecuteIntentsExt for near_workspaces::Account {
     async fn defuse_execute_intents(
         &self,
         defuse_id: &AccountId,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiPayload>,
     ) -> anyhow::Result<()> {
         let args = json!({
             "intents": intents.into_iter().collect::<Vec<_>>(),
@@ -61,7 +58,7 @@ impl ExecuteIntentsExt for near_workspaces::Account {
     }
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiPayload>,
     ) -> anyhow::Result<()> {
         self.defuse_execute_intents(self.id(), intents).await
     }
@@ -71,7 +68,7 @@ impl ExecuteIntentsExt for near_workspaces::Contract {
     async fn defuse_execute_intents(
         &self,
         defuse_id: &AccountId,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiPayload>,
     ) -> anyhow::Result<()> {
         self.as_account()
             .defuse_execute_intents(defuse_id, intents)
@@ -79,7 +76,7 @@ impl ExecuteIntentsExt for near_workspaces::Contract {
     }
     async fn execute_intents(
         &self,
-        intents: impl IntoIterator<Item = SignedPayload<MultiStandardPayload>>,
+        intents: impl IntoIterator<Item = MultiPayload>,
     ) -> anyhow::Result<()> {
         self.as_account().execute_intents(intents).await
     }
@@ -87,7 +84,7 @@ impl ExecuteIntentsExt for near_workspaces::Contract {
 
 #[tokio::test]
 async fn test_simulate_is_view_method() {
-    let env = Env::new().await.unwrap();
+    let env = Env::new().await;
 
     let ft1 = TokenId::Nep141(env.ft1.clone());
 
@@ -104,7 +101,7 @@ async fn test_simulate_is_view_method() {
             "intents": [DefusePayload {
                 signer_id: env.user1.id().clone(),
                 verifying_contract: env.defuse.id().clone(),
-                deadline: Deadline::infinity(),
+                deadline: Deadline::MAX,
                 nonce: thread_rng().gen(),
                 message: DefuseIntents {
                     intents: [MtBatchTransfer {
@@ -112,6 +109,7 @@ async fn test_simulate_is_view_method() {
                         token_ids: [ft1.clone()].into(),
                         amounts: [U128(1000)].into(),
                         memo: None,
+                        msg: None,
                     }
                     .into()]
                     .into(),

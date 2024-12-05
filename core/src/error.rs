@@ -37,8 +37,8 @@ pub enum DefuseError {
     #[error("token_id: {0}")]
     ParseTokenId(#[from] ParseTokenIdError),
 
-    #[error("wrong recipient")]
-    WrongRecipient,
+    #[error("wrong verifying_contract")]
+    WrongVerifyingContract,
 
     #[error("zero amount(s)")]
     ZeroAmount,

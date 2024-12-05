@@ -1,9 +1,7 @@
-use defuse_contracts::{
-    defuse::{
-        intents::{tokens::FtWithdraw, DefuseIntents},
-        tokens::TokenId,
-    },
-    utils::Deadline,
+use defuse::core::{
+    intents::{tokens::FtWithdraw, DefuseIntents},
+    tokens::TokenId,
+    Deadline,
 };
 use near_sdk::{AccountId, NearToken};
 use rand::{thread_rng, Rng};
@@ -16,7 +14,7 @@ use crate::{
 
 #[tokio::test]
 async fn test_withdraw_intent() {
-    let env = Env::new().await.unwrap();
+    let env = Env::new().await;
 
     env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
         .await
@@ -28,7 +26,7 @@ async fn test_withdraw_intent() {
         .execute_intents([env.user1.sign_defuse_message(
             env.defuse.id(),
             thread_rng().gen(),
-            Deadline::infinity(),
+            Deadline::MAX,
             DefuseIntents {
                 intents: [FtWithdraw {
                     token: env.ft1.clone(),
@@ -65,7 +63,7 @@ async fn test_withdraw_intent() {
         .execute_intents([env.user1.sign_defuse_message(
             env.defuse.id(),
             thread_rng().gen(),
-            Deadline::infinity(),
+            Deadline::MAX,
             DefuseIntents {
                 intents: [FtWithdraw {
                     token: env.ft1.clone(),
@@ -116,7 +114,7 @@ async fn test_withdraw_intent() {
         [env.user1.sign_defuse_message(
             env.defuse.id(),
             thread_rng().gen(),
-            Deadline::infinity(),
+            Deadline::MAX,
             DefuseIntents {
                 intents: [FtWithdraw {
                     token: env.ft1.clone(),

@@ -1,6 +1,6 @@
 use core::iter;
 
-use defuse_core::{intents::tokens::MtWithdraw, tokens::TokenId, Result};
+use defuse_core::{engine::State, intents::tokens::MtWithdraw, tokens::TokenId, Result};
 use defuse_near_utils::{
     UnwrapOrPanic, UnwrapOrPanicError, CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID,
 };
@@ -33,8 +33,44 @@ impl MultiTokenWithdrawer for Contract {
         memo: Option<String>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.internal_mt_withdraw(
+        self.mt_withdraw_from(
             PREDECESSOR_ACCOUNT_ID.clone(),
+            token,
+            receiver_id,
+            token_ids,
+            amounts,
+            memo,
+        )
+        .unwrap_or_panic()
+    }
+}
+
+impl Contract {
+    fn mt_withdraw_from(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        token_ids: Vec<defuse_nep245::TokenId>,
+        amounts: Vec<U128>,
+        memo: Option<String>,
+    ) -> Result<PromiseOrValue<bool>> {
+        require!(
+            token_ids.len() == amounts.len() && !amounts.is_empty(),
+            "invalid args"
+        );
+
+        self.withdraw(
+            &owner_id,
+            iter::repeat(token.clone())
+                .zip(token_ids.iter().cloned())
+                .map(|(token, token_id)| TokenId::Nep245(token, token_id))
+                .zip(amounts.iter().map(|a| a.0)),
+            Some("withdraw"),
+        )?;
+
+        Ok(self.internal_mt_withdraw(
+            owner_id,
             MtWithdraw {
                 token,
                 receiver_id,
@@ -43,38 +79,15 @@ impl MultiTokenWithdrawer for Contract {
                 memo,
                 storage_deposit: None,
             },
-        )
-        .unwrap_or_panic()
+        ))
     }
-}
 
-impl Contract {
     pub(crate) fn internal_mt_withdraw(
         &mut self,
         owner_id: AccountId,
         withdraw: MtWithdraw,
-    ) -> Result<PromiseOrValue<bool>> {
-        require!(
-            withdraw.token_ids.len() == withdraw.amounts.len() && !withdraw.amounts.is_empty(),
-            "invalid args"
-        );
-
-        self.internal_withdraw(
-            &owner_id,
-            iter::repeat(withdraw.token.clone())
-                .zip(withdraw.token_ids.iter().cloned())
-                .map(|(token, token_id)| TokenId::Nep245(token, token_id))
-                .zip(withdraw.amounts.iter().map(|a| a.0))
-                .chain(withdraw.storage_deposit.map(|amount| {
-                    (
-                        TokenId::Nep141(self.wnear_id.clone()),
-                        amount.as_yoctonear(),
-                    )
-                })),
-            Some("withdraw"),
-        )?;
-
-        Ok(if let Some(storage_deposit) = withdraw.storage_deposit {
+    ) -> PromiseOrValue<bool> {
+        if let Some(storage_deposit) = withdraw.storage_deposit {
             ext_wnear::ext(self.wnear_id.clone())
                 .with_attached_deposit(NearToken::from_yoctonear(1))
                 .with_static_gas(NEAR_WITHDRAW_GAS)
@@ -110,7 +123,7 @@ impl Contract {
                     withdraw.amounts,
                 ),
         )
-        .into())
+        .into()
     }
 }
 
@@ -193,7 +206,7 @@ impl MultiTokenWithdrawResolver for Contract {
             matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty());
 
         if !ok {
-            self.internal_deposit(
+            self.deposit(
                 sender_id,
                 iter::repeat(token)
                     .zip(token_ids)
@@ -221,18 +234,8 @@ impl MultiTokenForceWithdrawer for Contract {
         memo: Option<String>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.internal_mt_withdraw(
-            owner_id,
-            MtWithdraw {
-                token,
-                receiver_id,
-                token_ids,
-                amounts,
-                memo,
-                storage_deposit: None,
-            },
-        )
-        .unwrap_or_panic()
+        self.mt_withdraw_from(owner_id, token, receiver_id, token_ids, amounts, memo)
+            .unwrap_or_panic()
     }
 }
 

@@ -3,13 +3,15 @@
 use std::ops::Deref;
 
 use anyhow::anyhow;
-use defuse_contract::{
-    config::{DefuseConfig, RolesConfig},
-    fees::FeesConfig,
-    Role,
+use defuse::{
+    contract::{
+        config::{DefuseConfig, RolesConfig},
+        Role,
+    },
+    core::fees::{FeesConfig, Pips},
+    tokens::DepositMessage,
 };
-use defuse_contracts::{defuse::tokens::DepositMessage, utils::fees::Pips};
-use defuse_poa_factory_contract::Role as POAFactoryRole;
+use defuse_poa_factory::contract::Role as POAFactoryRole;
 use near_sdk::{AccountId, NearToken};
 use near_workspaces::{Account, Contract};
 
@@ -43,7 +45,7 @@ impl Env {
         EnvBuilder::default()
     }
 
-    pub async fn new() -> anyhow::Result<Self> {
+    pub async fn new() -> Self {
         Self::builder().build().await
     }
 
@@ -118,7 +120,6 @@ pub struct EnvBuilder {
     roles: RolesConfig,
     self_as_super_admin: bool,
     deployer_as_super_admin: bool,
-    // staging_duration: Option<Duration>,
 }
 
 impl EnvBuilder {
@@ -162,8 +163,8 @@ impl EnvBuilder {
     //     self
     // }
 
-    pub async fn build(mut self) -> anyhow::Result<Env> {
-        let sandbox = Sandbox::new().await?;
+    pub async fn build(mut self) -> Env {
+        let sandbox = Sandbox::new().await.unwrap();
         let root = sandbox.root_account().clone();
 
         let poa_factory = root
@@ -179,9 +180,10 @@ impl EnvBuilder {
                     (POAFactoryRole::TokenDepositer, [root.id().clone()]),
                 ],
             )
-            .await?;
+            .await
+            .unwrap();
 
-        let wnear = sandbox.deploy_wrap_near("wnear").await?;
+        let wnear = sandbox.deploy_wrap_near("wnear").await.unwrap();
 
         if self.self_as_super_admin {
             self.roles
@@ -208,17 +210,21 @@ impl EnvBuilder {
                         roles: self.roles,
                     },
                 )
-                .await?,
+                .await
+                .unwrap(),
             wnear,
             ft1: root
                 .poa_factory_deploy_token(poa_factory.id(), "ft1", None)
-                .await?,
+                .await
+                .unwrap(),
             ft2: root
                 .poa_factory_deploy_token(poa_factory.id(), "ft2", None)
-                .await?,
+                .await
+                .unwrap(),
             ft3: root
                 .poa_factory_deploy_token(poa_factory.id(), "ft3", None)
-                .await?,
+                .await
+                .unwrap(),
             poa_factory,
             sandbox,
         };
@@ -233,9 +239,11 @@ impl EnvBuilder {
                 root.id(),
             ],
         )
-        .await?;
+        .await
+        .unwrap();
         s.near_deposit(s.wnear.id(), NearToken::from_near(100))
-            .await?;
+            .await
+            .unwrap();
 
         s.ft_storage_deposit(
             &s.ft1,
@@ -247,7 +255,8 @@ impl EnvBuilder {
                 root.id(),
             ],
         )
-        .await?;
+        .await
+        .unwrap();
         s.ft_storage_deposit(
             &s.ft2,
             &[
@@ -258,7 +267,8 @@ impl EnvBuilder {
                 root.id(),
             ],
         )
-        .await?;
+        .await
+        .unwrap();
         s.ft_storage_deposit(
             &s.ft3,
             &[
@@ -269,7 +279,8 @@ impl EnvBuilder {
                 root.id(),
             ],
         )
-        .await?;
+        .await
+        .unwrap();
         for token in ["ft1", "ft2", "ft3"] {
             s.poa_factory_ft_deposit(
                 s.poa_factory.id(),
@@ -279,7 +290,8 @@ impl EnvBuilder {
                 None,
                 None,
             )
-            .await?;
+            .await
+            .unwrap();
         }
 
         // NOTE: near_workspaces uses the same signer all subaccounts
@@ -287,22 +299,40 @@ impl EnvBuilder {
             .add_public_key(
                 s.defuse.id(),
                 // HACK: near_worspaces does not expose near_crypto API
-                s.user1.secret_key().public_key().to_string().parse()?,
+                s.user1
+                    .secret_key()
+                    .public_key()
+                    .to_string()
+                    .parse()
+                    .unwrap(),
             )
-            .await?;
+            .await
+            .unwrap();
         s.user2
             .add_public_key(
                 s.defuse.id(),
-                s.user2.secret_key().public_key().to_string().parse()?,
+                s.user2
+                    .secret_key()
+                    .public_key()
+                    .to_string()
+                    .parse()
+                    .unwrap(),
             )
-            .await?;
+            .await
+            .unwrap();
         s.user3
             .add_public_key(
                 s.defuse.id(),
-                s.user3.secret_key().public_key().to_string().parse()?,
+                s.user3
+                    .secret_key()
+                    .public_key()
+                    .to_string()
+                    .parse()
+                    .unwrap(),
             )
-            .await?;
+            .await
+            .unwrap();
 
-        Ok(s)
+        s
     }
 }

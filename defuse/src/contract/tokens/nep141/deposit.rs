@@ -1,4 +1,4 @@
-use defuse_core::tokens::TokenId;
+use defuse_core::{engine::State, tokens::TokenId};
 use defuse_near_utils::{
     UnwrapOrPanic, UnwrapOrPanicError, CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID,
 };
@@ -33,7 +33,7 @@ impl FungibleTokenReceiver for Contract {
             DepositMessage::new(sender_id)
         };
 
-        self.internal_deposit(
+        self.deposit(
             msg.receiver_id,
             [(TokenId::Nep141(PREDECESSOR_ACCOUNT_ID.clone()), amount.0)],
             Some("deposit"),

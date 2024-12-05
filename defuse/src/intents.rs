@@ -2,7 +2,7 @@ use defuse_core::{
     accounts::AccountEvent,
     fees::Pips,
     intents::{token_diff::TokenDeltas, IntentExecutedEvent},
-    payload::MultiPayload,
+    payload::multi::MultiPayload,
     Deadline,
 };
 
@@ -15,7 +15,6 @@ use crate::fees::FeesManager;
 pub trait Intents: FeesManager {
     fn execute_intents(&mut self, intents: Vec<MultiPayload>);
 
-    // TODO: return diff
     fn simulate_intents(&self, intents: Vec<MultiPayload>) -> SimulationOutput;
 }
 

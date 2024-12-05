@@ -1,9 +1,11 @@
 use core::iter;
+use std::borrow::Cow;
 
-use defuse_core::{intents::tokens::FtWithdraw, tokens::TokenId, Result};
+use defuse_core::{engine::State, intents::tokens::FtWithdraw, tokens::TokenId, Result};
 use defuse_near_utils::{
     UnwrapOrPanic, UnwrapOrPanicError, CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID,
 };
+use defuse_nep245::{MtBurnEvent, MtEvent};
 use defuse_wnear::{ext_wnear, NEAR_WITHDRAW_GAS};
 use near_contract_standards::storage_management::ext_storage_management;
 use near_plugins::{access_control_any, pause, AccessControllable, Pausable};
@@ -34,10 +36,38 @@ impl FungibleTokenWithdrawer for Contract {
         receiver_id: AccountId,
         amount: U128,
         memo: Option<String>,
+        // TODO: return U128 in case of `ft_transfer_call`?
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.internal_ft_withdraw(
+        self.ft_withdraw_from(
             PREDECESSOR_ACCOUNT_ID.clone(),
+            token,
+            receiver_id,
+            amount,
+            memo,
+        )
+        .unwrap_or_panic()
+    }
+}
+
+impl Contract {
+    fn ft_withdraw_from(
+        &mut self,
+        owner_id: AccountId,
+        token: AccountId,
+        receiver_id: AccountId,
+        amount: U128,
+        memo: Option<String>,
+    ) -> Result<PromiseOrValue<bool>> {
+        self.withdraw(
+            &owner_id,
+            [(TokenId::Nep141(token.clone()), amount.0)],
+            Some("withdraw"),
+        )?;
+        // TODO: on_burn()?
+
+        Ok(self.internal_ft_withdraw(
+            owner_id,
             FtWithdraw {
                 token,
                 receiver_id,
@@ -45,32 +75,18 @@ impl FungibleTokenWithdrawer for Contract {
                 memo,
                 storage_deposit: None,
             },
-        )
-        .unwrap_or_panic()
+        ))
     }
-}
 
-impl Contract {
     #[must_use]
     pub(crate) fn internal_ft_withdraw(
         &mut self,
         owner_id: AccountId,
         withdraw: FtWithdraw,
-    ) -> Result<PromiseOrValue<bool>> {
-        self.internal_withdraw(
-            &owner_id,
-            iter::once((TokenId::Nep141(withdraw.token.clone()), withdraw.amount.0)).chain(
-                withdraw.storage_deposit.map(|amount| {
-                    (
-                        TokenId::Nep141(self.wnear_id.clone()),
-                        amount.as_yoctonear(),
-                    )
-                }),
-            ),
-            Some("withdraw"),
-        )?;
+    ) -> PromiseOrValue<bool> {
+        // TODO: emit burn?
 
-        Ok(if let Some(storage_deposit) = withdraw.storage_deposit {
+        if let Some(storage_deposit) = withdraw.storage_deposit {
             ext_wnear::ext(self.wnear_id.clone())
                 .with_attached_deposit(NearToken::from_yoctonear(1))
                 .with_static_gas(NEAR_WITHDRAW_GAS)
@@ -89,7 +105,7 @@ impl Contract {
                 .with_static_gas(Contract::FT_RESOLVE_WITHDRAW_GAS)
                 .ft_resolve_withdraw(withdraw.token, owner_id, withdraw.amount),
         )
-        .into())
+        .into()
     }
 }
 
@@ -138,7 +154,7 @@ impl FungibleTokenWithdrawResolver for Contract {
             matches!(env::promise_result(0), PromiseResult::Successful(data) if data.is_empty());
 
         if !ok {
-            self.internal_deposit(
+            self.deposit(
                 sender_id,
                 [(TokenId::Nep141(token), amount.0)],
                 Some("refund"),
@@ -163,17 +179,8 @@ impl FungibleTokenForceWithdrawer for Contract {
         memo: Option<String>,
     ) -> PromiseOrValue<bool> {
         assert_one_yocto();
-        self.internal_ft_withdraw(
-            owner_id,
-            FtWithdraw {
-                token,
-                receiver_id,
-                amount,
-                memo,
-                storage_deposit: None,
-            },
-        )
-        .unwrap_or_panic()
+        self.ft_withdraw_from(owner_id, token, receiver_id, amount, memo)
+            .unwrap_or_panic()
     }
 }
 

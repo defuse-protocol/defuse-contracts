@@ -12,6 +12,7 @@ use super::{DefusePayload, ExtractDefusePayload};
 pub enum MultiPayload {
     Nep413(SignedNep413Payload),
     Erc191(SignedErc191Payload),
+    // TODO: Solana
 }
 
 impl Payload for MultiPayload {

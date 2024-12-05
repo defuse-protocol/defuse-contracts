@@ -16,6 +16,7 @@ use crate::{
 
 #[autoimpl(for<T: trait + ?Sized> &T, &mut T, Box<T>)]
 pub trait StateView {
+    // TODO: remove?
     fn verifying_contract(&self) -> Cow<'_, AccountIdRef>;
     fn wnear_id(&self) -> Cow<'_, AccountIdRef>;
 
@@ -48,19 +49,50 @@ pub trait State: StateView {
     #[must_use]
     fn commit_nonce(&mut self, account_id: AccountId, nonce: Nonce) -> bool;
 
-    #[must_use]
-    fn internal_add_delta(
+    fn internal_deposit(
         &mut self,
         owner_id: AccountId,
-        token_id: TokenId,
-        delta: i128,
-    ) -> Option<u128>;
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+    ) -> Result<()>;
+    // TODO: docs
+    fn deposit(
+        &mut self,
+        owner_id: AccountId,
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        memo: Option<&str>,
+    ) -> Result<()>;
+    fn internal_withdraw(
+        &mut self,
+        owner_id: &AccountIdRef,
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+    ) -> Result<()>;
+    // TODO: docs
+    fn withdraw(
+        &mut self,
+        owner_id: &AccountIdRef,
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        memo: Option<&str>,
+    ) -> Result<()>;
 
-    fn mt_transfer(&mut self, sender_id: AccountId, transfer: MtBatchTransfer) -> Result<()>;
+    fn on_mt_transfer(&mut self, sender_id: &AccountIdRef, transfer: MtBatchTransfer);
 
-    fn ft_withdraw(&mut self, owner_id: AccountId, withdraw: FtWithdraw) -> Result<()>;
+    fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw);
+    fn on_nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw);
+    fn on_mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw);
 
-    fn nft_withdraw(&mut self, owner_id: AccountId, withdraw: NftWithdraw) -> Result<()>;
-
-    fn mt_withdraw(&mut self, owner_id: AccountId, withdraw: MtWithdraw) -> Result<()>;
+    // #[must_use]
+    // fn internal_add_delta(
+    //     &mut self,
+    //     owner_id: AccountId,
+    //     token_id: TokenId,
+    //     delta: i128,
+    // ) -> Option<u128>;
 }
+
+// 0    10    0
+// A -> B
+//   10
+//      B -> C
+//        10
+// A    B    C
+//      10

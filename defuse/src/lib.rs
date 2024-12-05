@@ -1,5 +1,5 @@
 #[cfg(feature = "contract")]
-mod contract;
+pub mod contract;
 
 pub mod accounts;
 pub mod fees;

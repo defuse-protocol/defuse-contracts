@@ -11,8 +11,15 @@ use defuse_map_utils::{
 use defuse_num_utils::{CheckedAdd, CheckedSub};
 use impl_tools::autoimpl;
 use near_account_id::ParseAccountError;
-use near_sdk::{near, AccountId, AccountIdRef};
-use serde_with::{serde_as, DeserializeFromStr, DisplayFromStr, SerializeDisplay};
+use near_sdk::{
+    near,
+    serde::{Deserializer, Serializer},
+    AccountId, AccountIdRef,
+};
+use serde_with::{
+    ser::SerializeAsWrap, serde_as, DeserializeAs, DeserializeFromStr, DisplayFromStr, SerializeAs,
+    SerializeDisplay,
+};
 use strum::{EnumDiscriminants, EnumString};
 use thiserror::Error as ThisError;
 
@@ -306,6 +313,32 @@ where
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+}
+
+impl<T, As> SerializeAs<TokenAmounts<T>> for TokenAmounts<As>
+where
+    As: SerializeAs<T>,
+{
+    #[inline]
+    fn serialize_as<S>(source: &TokenAmounts<T>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        As::serialize_as(&source.0, serializer)
+    }
+}
+
+impl<'de, T, As> DeserializeAs<'de, TokenAmounts<T>> for TokenAmounts<As>
+where
+    As: DeserializeAs<'de, T>,
+{
+    #[inline]
+    fn deserialize_as<D>(deserializer: D) -> Result<TokenAmounts<T>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        As::deserialize_as(deserializer).map(TokenAmounts)
     }
 }
 

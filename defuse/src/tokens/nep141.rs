@@ -16,6 +16,7 @@ pub trait FungibleTokenWithdrawer: FungibleTokenReceiver + FungibleTokenWithdraw
         receiver_id: AccountId,
         amount: U128,
         memo: Option<String>,
+        // TODO: msg for whitelisted tokens?
     ) -> PromiseOrValue<bool>;
 }
 

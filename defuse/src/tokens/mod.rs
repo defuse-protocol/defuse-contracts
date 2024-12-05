@@ -7,7 +7,7 @@ use core::{
     str::FromStr,
 };
 
-use defuse_core::payload::MultiPayload;
+use defuse_core::payload::multi::MultiPayload;
 use defuse_near_utils::UnwrapOrPanicError;
 use near_account_id::ParseAccountError;
 use near_sdk::{near, serde_json, AccountId};

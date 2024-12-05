@@ -1,6 +1,6 @@
 mod accounts;
 mod admin;
-mod config;
+pub mod config;
 mod fees;
 mod intents;
 mod runtime;
@@ -109,6 +109,7 @@ impl Drop for Contract {
         mem::take(&mut self.transfer_runtime)
             .finalize()
             .unwrap_or_panic()
+            .emit();
     }
 }
 

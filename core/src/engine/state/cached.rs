@@ -9,10 +9,7 @@ use near_sdk::{AccountId, AccountIdRef};
 
 use crate::{
     fees::Pips,
-    intents::{
-        token_diff::TokenDeltas,
-        tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NftWithdraw},
-    },
+    intents::tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NftWithdraw},
     tokens::{TokenAmounts, TokenId},
     DefuseError, Nonce, Nonces, Result,
 };
@@ -23,8 +20,6 @@ use super::{State, StateView};
 pub struct CachedState<W: StateView> {
     view: W,
     accounts: CachedAccounts,
-    // TODO: finalize
-    total_supply_deltas: TokenDeltas,
 }
 
 impl<W> CachedState<W>
@@ -36,46 +31,7 @@ where
         Self {
             view,
             accounts: Default::default(),
-            total_supply_deltas: Default::default(),
         }
-    }
-
-    fn internal_deposit(
-        &mut self,
-        owner_id: AccountId,
-        token_id: TokenId,
-        amount: u128,
-    ) -> Option<u128> {
-        let account = self.accounts.get_or_create(owner_id.clone());
-        if account.token_amounts.get(&token_id).is_none() {
-            account
-                .token_amounts
-                .deposit(token_id.clone(), self.view.balance_of(&owner_id, &token_id))?;
-        }
-        account.token_amounts.deposit(token_id, amount)
-    }
-
-    fn internal_withdraw(
-        &mut self,
-        owner_id: AccountId,
-        token_id: TokenId,
-        amount: u128,
-    ) -> Option<u128> {
-        let account = self.accounts.get_or_create(owner_id.clone());
-        if account.token_amounts.get(&token_id).is_none() {
-            account
-                .token_amounts
-                .deposit(token_id.clone(), self.view.balance_of(&owner_id, &token_id))?;
-        }
-        account.token_amounts.withdraw(token_id, amount)
-    }
-
-    #[inline]
-    pub fn finalize(self) -> Result<(), TokenDeltas> {
-        self.total_supply_deltas
-            .is_empty()
-            .then_some(())
-            .ok_or(self.total_supply_deltas)
     }
 }
 
@@ -179,89 +135,86 @@ where
         self.accounts.get_or_create(account_id).commit_nonce(nonce)
     }
 
-    fn internal_add_delta(
+    fn internal_deposit(
         &mut self,
         owner_id: AccountId,
-        token_id: TokenId,
-        delta: i128,
-    ) -> Option<u128> {
-        self.total_supply_deltas
-            .add_delta(token_id.clone(), delta)?;
-
-        let amount = delta.unsigned_abs();
-        if delta.is_negative() {
-            self.internal_withdraw(owner_id, token_id, amount)
-        } else {
-            self.internal_deposit(owner_id, token_id, amount)
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+    ) -> Result<()> {
+        let account = self.accounts.get_or_create(owner_id.clone());
+        for (token_id, amount) in token_amounts {
+            if account.token_amounts.get(&token_id).is_none() {
+                account
+                    .token_amounts
+                    .deposit(token_id.clone(), self.view.balance_of(&owner_id, &token_id))
+                    .ok_or(DefuseError::BalanceOverflow)?;
+            }
+            account
+                .token_amounts
+                .deposit(token_id, amount)
+                .ok_or(DefuseError::BalanceOverflow)?;
         }
+        Ok(())
     }
 
-    fn mt_transfer(&mut self, sender_id: AccountId, transfer: MtBatchTransfer) -> Result<()> {
-        if transfer.receiver_id == sender_id
-            || transfer.amounts.is_empty()
-            || transfer.token_ids.len() != transfer.amounts.len()
-        {
-            return Err(DefuseError::ZeroAmount);
-        }
-
-        for (token_id, amount) in transfer
-            .token_ids
-            .iter()
-            .zip(transfer.amounts.iter().map(|a| a.0))
-        {
+    fn internal_withdraw(
+        &mut self,
+        owner_id: &AccountIdRef,
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+    ) -> Result<()> {
+        let account = self
+            .accounts
+            .get_mut(owner_id)
+            .ok_or(DefuseError::AccountNotFound)?;
+        for (token_id, amount) in token_amounts {
             if amount == 0 {
                 return Err(DefuseError::ZeroAmount);
             }
-            let token_id: TokenId = token_id.parse()?;
 
-            self.internal_withdraw(sender_id.to_owned(), token_id.clone(), amount)
+            if account.token_amounts.get(&token_id).is_none() {
+                account
+                    .token_amounts
+                    .deposit(token_id.clone(), self.view.balance_of(&owner_id, &token_id))
+                    .ok_or(DefuseError::BalanceOverflow)?;
+            }
+            account
+                .token_amounts
+                .withdraw(token_id, amount)
                 .ok_or(DefuseError::BalanceOverflow)?;
-            self.internal_deposit(transfer.receiver_id.clone(), token_id, amount)
-                .ok_or(DefuseError::BalanceOverflow)?;
         }
-
         Ok(())
     }
 
-    fn ft_withdraw(&mut self, owner_id: AccountId, withdraw: FtWithdraw) -> Result<()> {
-        if withdraw.amount.0 == 0 {
-            return Err(DefuseError::ZeroAmount);
-        }
-
-        if let Some(storage_deposit) = withdraw.storage_deposit {
-            self.internal_withdraw(
-                owner_id.clone(),
-                TokenId::Nep141(self.wnear_id().into_owned()),
-                storage_deposit.as_yoctonear(),
-            )
-            .ok_or(DefuseError::BalanceOverflow)?;
-        }
-        self.internal_withdraw(owner_id, TokenId::Nep141(withdraw.token), withdraw.amount.0)
-            .ok_or(DefuseError::BalanceOverflow)?;
-
-        Ok(())
+    fn deposit(
+        &mut self,
+        owner_id: AccountId,
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        _memo: Option<&str>,
+    ) -> Result<()> {
+        self.internal_deposit(owner_id, token_amounts)
     }
 
-    fn nft_withdraw(&mut self, owner_id: AccountId, withdraw: NftWithdraw) -> Result<()> {
-        if let Some(storage_deposit) = withdraw.storage_deposit {
-            self.internal_withdraw(
-                owner_id.clone(),
-                TokenId::Nep141(self.wnear_id().into_owned()),
-                storage_deposit.as_yoctonear(),
-            )
-            .ok_or(DefuseError::BalanceOverflow)?;
-        }
-        self.internal_withdraw(
-            owner_id,
-            TokenId::Nep171(withdraw.token, withdraw.token_id),
-            1,
-        )
-        .ok_or(DefuseError::BalanceOverflow)?;
-
-        Ok(())
+    fn withdraw(
+        &mut self,
+        owner_id: &AccountIdRef,
+        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        _memo: Option<&str>,
+    ) -> Result<()> {
+        self.internal_withdraw(owner_id, token_amounts)
     }
 
-    fn mt_withdraw(&mut self, owner_id: AccountId, withdraw: MtWithdraw) -> Result<()> {
+    fn on_mt_transfer(&mut self, sender_id: &AccountIdRef, transfer: MtBatchTransfer) {
+        todo!()
+    }
+
+    fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw) {
+        todo!()
+    }
+
+    fn on_nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw) {
+        todo!()
+    }
+
+    fn on_mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw) {
         todo!()
     }
 }

@@ -1,5 +1,5 @@
 #[cfg(feature = "contract")]
-mod contract;
+pub mod contract;
 
 use std::collections::HashMap;
 
