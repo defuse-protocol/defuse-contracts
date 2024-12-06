@@ -9,7 +9,7 @@ use near_sdk::{AccountId, AccountIdRef};
 
 use crate::{
     fees::Pips,
-    intents::tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NftWithdraw},
+    intents::tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NativeWithdraw, NftWithdraw},
     tokens::TokenId,
     Nonce, Result,
 };
@@ -79,6 +79,7 @@ pub trait State: StateView {
     fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw);
     fn on_nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw);
     fn on_mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw);
+    fn on_native_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NativeWithdraw);
 
     // #[must_use]
     // fn internal_add_delta(

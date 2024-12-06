@@ -1,8 +1,6 @@
-use std::borrow::Cow;
-
 use defuse_core::fees::Pips;
 use near_plugins::AccessControllable;
-use near_sdk::{ext_contract, near, AccountId, AccountIdRef};
+use near_sdk::{ext_contract, AccountId};
 
 #[ext_contract(ext_fees_manager)]
 pub trait FeesManager: AccessControllable {

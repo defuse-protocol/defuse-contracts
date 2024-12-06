@@ -1,8 +1,4 @@
-use std::borrow::Cow;
-
-use defuse_crypto::{
-    serde::AsCurve, CryptoHash, Curve, Keccak256, Payload, PublicKey, Secp256k1, SignedPayload,
-};
+use defuse_crypto::{serde::AsCurve, CryptoHash, Curve, Payload, Secp256k1, SignedPayload};
 use impl_tools::autoimpl;
 use near_sdk::{env, near};
 use serde_with::serde_as;

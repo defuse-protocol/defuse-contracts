@@ -3,22 +3,19 @@ mod admin;
 pub mod config;
 mod fees;
 mod intents;
-mod runtime;
 mod state;
 mod tokens;
 mod upgrade;
 
 use core::iter;
-use std::mem;
 
 use defuse_core::Result;
-use defuse_near_utils::UnwrapOrPanic;
+
 use impl_tools::autoimpl;
 use near_plugins::{access_control, AccessControlRole, AccessControllable, Pausable};
 use near_sdk::{
     borsh::BorshDeserialize, near, require, store::LookupSet, BorshStorageKey, PanicOnDefault,
 };
-use runtime::TransferLogger;
 
 use crate::Defuse;
 
@@ -60,9 +57,6 @@ pub struct Contract {
     state: ContractState,
 
     relayer_keys: LookupSet<near_sdk::PublicKey>,
-
-    #[borsh(skip)]
-    transfer_runtime: TransferLogger,
 }
 
 #[near]
@@ -73,7 +67,6 @@ impl Contract {
             accounts: Accounts::new(Prefix::Accounts),
             state: ContractState::new(Prefix::State, config.wnear_id, config.fees),
             relayer_keys: LookupSet::new(Prefix::RelayerKeys),
-            transfer_runtime: TransferLogger::default(),
         };
         contract.init_acl(config.roles);
         contract
@@ -104,14 +97,15 @@ impl Contract {
 #[near]
 impl Defuse for Contract {}
 
-impl Drop for Contract {
-    fn drop(&mut self) {
-        mem::take(&mut self.transfer_runtime)
-            .finalize()
-            .unwrap_or_panic()
-            .emit();
-    }
-}
+// TODO:?
+// impl Drop for Contract {
+//     fn drop(&mut self) {
+//         mem::take(&mut self.transfer_runtime)
+//             .finalize()
+//             .unwrap_or_panic()
+//             .emit();
+//     }
+// }
 
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]

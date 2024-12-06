@@ -73,6 +73,7 @@ impl Contract {
         ))
     }
 
+    #[must_use]
     pub(crate) fn internal_nft_withdraw(
         &mut self,
         owner_id: AccountId,

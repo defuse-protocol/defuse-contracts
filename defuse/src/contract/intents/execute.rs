@@ -38,6 +38,8 @@ impl Inspector for ExecuteInspector {
 // TODO: or .emit() method?
 impl Drop for ExecuteInspector {
     fn drop(&mut self) {
-        DefuseEvent::IntentsExecuted(self.intents_executed.as_slice().into()).emit();
+        if !self.intents_executed.is_empty() {
+            DefuseEvent::IntentsExecuted(self.intents_executed.as_slice().into()).emit();
+        }
     }
 }

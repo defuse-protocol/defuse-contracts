@@ -107,13 +107,17 @@ where
         token_id: TokenId,
         delta: i128,
     ) -> Result<()> {
-        let amount = delta.unsigned_abs();
+        let token_amounts = [(token_id.clone(), delta.unsigned_abs())];
         if delta.is_negative() {
-            self.state
-                .internal_withdraw(&owner_id, [(token_id.clone(), amount)])?;
+            self.state.internal_withdraw(&owner_id, token_amounts)?;
         } else {
+            // TODO: postpone the deposit?
+            // because other users' intents should not depend on the
+            // order of intents in execute_intents()?
+            // on the other hand: user will not be able to pay FE fee
+            // in token_out
             self.state
-                .internal_deposit(owner_id.clone(), [(token_id.clone(), amount)])?;
+                .internal_deposit(owner_id.clone(), token_amounts)?;
         }
         self.postponed_transfers
             .add_delta(owner_id, token_id, delta)

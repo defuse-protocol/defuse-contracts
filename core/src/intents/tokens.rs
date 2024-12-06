@@ -184,3 +184,34 @@ impl ExecutableIntent for MtWithdraw {
         Ok(())
     }
 }
+
+/// Withdraw native NEAR to `receiver_id`.
+/// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
+/// NOTE: the `wNEAR` will not be refunded in case of fail (e.g. `receiver_id`
+/// account does not exist).
+#[near(serializers = [borsh, json])]
+#[derive(Debug, Clone)]
+pub struct NativeWithdraw {
+    pub receiver_id: AccountId,
+    pub amount: NearToken,
+}
+
+impl ExecutableIntent for NativeWithdraw {
+    fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
+    where
+        S: State,
+        I: Inspector,
+    {
+        engine.state.withdraw(
+            owner_id,
+            [(
+                TokenId::Nep141(engine.state.wnear_id().into_owned()),
+                self.amount.as_yoctonear(),
+            )],
+            Some("withdraw"),
+        )?;
+
+        engine.state.on_native_withdraw(owner_id, self);
+        Ok(())
+    }
+}

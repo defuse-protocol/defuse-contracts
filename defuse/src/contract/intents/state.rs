@@ -1,22 +1,17 @@
 use std::borrow::Cow;
 
 use defuse_core::{
-    accounts::AccountEvent,
     crypto::PublicKey,
-    engine::{Inspector, State, StateView},
-    events::DefuseEvent,
+    engine::{State, StateView},
     fees::Pips,
-    intents::{
-        token_diff::TokenDiff,
-        tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NftWithdraw},
-        IntentExecutedEvent,
-    },
+    intents::tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NativeWithdraw, NftWithdraw},
     tokens::TokenId,
-    Deadline, DefuseError, Nonce, Result,
+    DefuseError, Nonce, Result,
 };
 use defuse_near_utils::CURRENT_ACCOUNT_ID;
 use defuse_nep245::{MtBurnEvent, MtEvent, MtMintEvent};
-use near_sdk::{json_types::U128, AccountId, AccountIdRef, CryptoHash};
+use defuse_wnear::{ext_wnear, NEAR_WITHDRAW_GAS};
+use near_sdk::{json_types::U128, AccountId, AccountIdRef, NearToken};
 
 use crate::contract::Contract;
 
@@ -228,86 +223,30 @@ impl State for Contract {
 
     fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw) {
         // detach promise
-        self.internal_ft_withdraw(owner_id.to_owned(), withdraw);
+        let _ = self.internal_ft_withdraw(owner_id.to_owned(), withdraw);
     }
 
     fn on_nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw) {
         // detach promise
-        self.internal_nft_withdraw(owner_id.to_owned(), withdraw);
+        let _ = self.internal_nft_withdraw(owner_id.to_owned(), withdraw);
     }
 
     fn on_mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw) {
         // detach promise
-        self.internal_mt_withdraw(owner_id.to_owned(), withdraw);
+        let _ = self.internal_mt_withdraw(owner_id.to_owned(), withdraw);
     }
 
-    // #[must_use]
-    // #[inline]
-    // fn internal_add_delta(
-    //     &mut self,
-    //     owner_id: AccountId,
-    //     token_id: TokenId,
-    //     delta: i128,
-    // ) -> Option<u128> {
-    //     self.transfer_runtime
-    //         .add_delta(owner_id.clone(), token_id.clone(), delta)?;
-    //     self.accounts
-    //         .get_or_create(owner_id)
-    //         .token_balances
-    //         .add_delta(token_id, delta)
-    // }
-
-    // fn mt_transfer(
-    //     &mut self,
-    //     sender_id: AccountId,
-    //     MtBatchTransfer {
-    //         receiver_id,
-    //         token_ids,
-    //         amounts,
-    //         memo,
-    //         msg,
-    //     }: MtBatchTransfer,
-    // ) -> Result<()> {
-    //     if let Some(msg) = msg {
-    //         const GAS_FOR_MT_ON_TRANSFER: Gas = Gas::from_tgas(15);
-
-    //         self.internal_mt_batch_transfer_call(
-    //             sender_id,
-    //             receiver_id,
-    //             token_ids,
-    //             amounts,
-    //             memo.as_deref(),
-    //             msg,
-    //             GAS_FOR_MT_ON_TRANSFER,
-    //         )
-    //         // detach promise
-    //         .map(|_promise| ())
-    //     } else {
-    //         self.internal_mt_batch_transfer(
-    //             &sender_id,
-    //             receiver_id,
-    //             token_ids,
-    //             amounts,
-    //             memo.as_deref(),
-    //         )
-    //     }
-    // }
-
-    // fn ft_withdraw(&mut self, owner_id: AccountId, withdraw: FtWithdraw) -> Result<()> {
-    //     self.internal_ft_withdraw(owner_id, withdraw)
-    //         // detach promise
-    //         .map(|_promise| ())
-    // }
-
-    // fn nft_withdraw(&mut self, owner_id: AccountId, withdraw: NftWithdraw) -> Result<()> {
-    //     self.internal_nft_withdraw(owner_id, withdraw)
-    //         // detach promise
-    //         .map(|_promise| ())
-    // }
-
-    // fn mt_withdraw(&mut self, owner_id: AccountId, withdraw: MtWithdraw) -> Result<()> {
-    //     self.internal_mt_withdraw(owner_id, withdraw)
-    //         // detach promise
-    //         .map(|_promise| ())
-    // }
+    fn on_native_withdraw(&mut self, _owner_id: &AccountIdRef, withdraw: NativeWithdraw) {
+        // detach promise
+        let _ = ext_wnear::ext(self.wnear_id.clone())
+            .with_attached_deposit(NearToken::from_yoctonear(1))
+            .with_static_gas(NEAR_WITHDRAW_GAS)
+            .near_withdraw(U128(withdraw.amount.as_yoctonear()))
+            .then(
+                // do_native_withdraw only after unwrapping NEAR
+                Contract::ext(CURRENT_ACCOUNT_ID.clone())
+                    .with_static_gas(Contract::DO_NATIVE_WITHDRAW_GAS)
+                    .do_native_withdraw(withdraw),
+            );
+    }
 }

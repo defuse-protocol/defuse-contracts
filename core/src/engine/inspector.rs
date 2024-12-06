@@ -1,14 +1,7 @@
 use impl_tools::autoimpl;
 use near_sdk::{AccountIdRef, CryptoHash};
 
-use crate::{
-    intents::{
-        token_diff::TokenDiff,
-        tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NftWithdraw},
-    },
-    tokens::TokenId,
-    Deadline,
-};
+use crate::{intents::token_diff::TokenDiff, Deadline};
 
 #[autoimpl(for <T: trait + ?Sized> &mut T, Box<T>)]
 pub trait Inspector {

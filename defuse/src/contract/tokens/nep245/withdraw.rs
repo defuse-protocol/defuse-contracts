@@ -82,6 +82,7 @@ impl Contract {
         ))
     }
 
+    #[must_use]
     pub(crate) fn internal_mt_withdraw(
         &mut self,
         owner_id: AccountId,

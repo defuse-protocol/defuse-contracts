@@ -41,10 +41,10 @@ impl TransferMatcher {
         delta: i128,
     ) -> Option<i128> {
         let (sub, add) = if delta.is_negative() {
-            (&mut self.withdrawals, &mut self.deposits)
+            (&mut self.deposits, &mut self.withdrawals)
         } else {
             // TODO: check order?
-            (&mut self.deposits, &mut self.withdrawals)
+            (&mut self.withdrawals, &mut self.deposits)
         };
 
         let mut amount = delta.unsigned_abs();
@@ -213,8 +213,11 @@ impl Transfers {
         Some(*transfer)
     }
 
-    pub fn into_event(&self) -> MtEvent<'_> {
-        MtEvent::MtTransfer(
+    pub fn into_event(&self) -> Option<MtEvent<'_>> {
+        if self.0.is_empty() {
+            return None;
+        }
+        Some(MtEvent::MtTransfer(
             self.0
                 .iter()
                 .flat_map(|(sender_id, transfers)| iter::repeat(sender_id).zip(transfers))
@@ -234,7 +237,7 @@ impl Transfers {
                 })
                 .collect::<Vec<_>>()
                 .into(),
-        )
+        ))
     }
 }
 
