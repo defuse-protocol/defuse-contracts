@@ -80,10 +80,14 @@ pub struct InvalidateNonces {
 
 impl ExecutableIntent for InvalidateNonces {
     #[inline]
-    fn execute_intent<S, I>(self, signer_id: &AccountIdRef, engine: &mut Engine<S, I>) -> crate::Result<()>
+    fn execute_intent<S, I>(
+        self,
+        signer_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+    ) -> crate::Result<()>
     where
         S: State,
-        I: Inspector
+        I: Inspector,
     {
         for nonce in self.nonces {
             if !engine.state.commit_nonce(signer_id.to_owned(), nonce) {

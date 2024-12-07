@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, iter, mem};
+use std::{borrow::Cow, collections::HashMap, iter};
 
 use defuse_map_utils::cleanup::DefaultMap;
 use defuse_nep245::{MtEvent, MtTransferEvent};
@@ -6,190 +6,153 @@ use near_sdk::{json_types::U128, AccountId};
 
 use crate::{
     tokens::{TokenAmounts, TokenId},
-    DefuseError, Result,
+    Result,
 };
 
-// #[derive(Debug, Default)]
-// pub struct Runtime {
-//     pub total_supply_deltas: TokenAmounts<HashMap<TokenId, i128>>,
-// }
-
-// impl Runtime {
-//     #[inline]
-//     pub fn finalize(mut self) -> Result<()> {
-//         if !mem::take(&mut self).total_supply_deltas.is_empty() {
-//             return Err(DefuseError::InvariantViolated);
-//         }
-//         Ok(())
-//     }
-// }
-
-type TokenAccountAmounts = HashMap<TokenId, HashMap<AccountId, u128>>;
-
+// TODO: docs
 /// Accumulates deltas and
 #[derive(Debug, Default)]
-pub struct TransferMatcher {
-    deposits: TokenAccountAmounts,
-    withdrawals: TokenAccountAmounts,
-}
+pub struct DeltaMatcher(HashMap<TokenId, TokenAmounts<HashMap<AccountId, i128>>>);
 
-impl TransferMatcher {
+impl DeltaMatcher {
+    #[inline]
     pub fn add_delta(
         &mut self,
         owner_id: AccountId,
         token_id: TokenId,
         delta: i128,
     ) -> Option<i128> {
-        let (sub, add) = if delta.is_negative() {
-            (&mut self.deposits, &mut self.withdrawals)
-        } else {
-            // TODO: check order?
-            (&mut self.withdrawals, &mut self.deposits)
-        };
-
-        let mut amount = delta.unsigned_abs();
-
-        let mut token_sub = sub.entry_or_default(token_id.clone());
-        let mut sub = token_sub.entry_or_default(owner_id.clone());
-
-        // sub as much as we can
-        let old_sub = *sub;
-        *sub = sub.saturating_sub(amount);
-        amount = amount.saturating_sub(old_sub);
-
-        if amount == 0 {
-            // TODO: early return
-        }
-
-        let mut token_add = add.entry_or_default(token_id);
-        let mut add = token_add.entry_or_default(owner_id);
-        *add = add.checked_add(amount)?;
-
-        // TODO
-        Some(0)
+        self.0.entry_or_default(token_id).add_delta(owner_id, delta)
     }
 
-    pub fn deposit(
-        &mut self,
-        owner_id: AccountId,
-        token_id: TokenId,
-        amount: u128,
-    ) -> Option<i128> {
-        todo!()
-        // Self::add(owner_id, token_id, sub, add, amount)
-    }
-
-    pub fn withdraw(
-        &mut self,
-        owner_id: AccountId,
-        token_id: TokenId,
-        amount: u128,
-    ) -> Option<i128> {
-        todo!()
-    }
-
-    fn add(
-        owner_id: AccountId,
-        token_id: TokenId,
-        sub: &mut TokenAccountAmounts,
-        add: &mut TokenAccountAmounts,
-        mut amount: u128,
-    ) -> Option<u128> {
-        let mut token_sub = sub.entry_or_default(token_id.clone());
-        let mut sub = token_sub.entry_or_default(owner_id.clone());
-
-        // sub as much as we can
-        let old_sub = *sub;
-        *sub = sub.saturating_sub(amount);
-        amount = amount.saturating_sub(old_sub);
-
-        if amount == 0 {
-            // TODO: early return
-        }
-
-        let mut token_add = add.entry_or_default(token_id);
-        let mut add = token_add.entry_or_default(owner_id);
-        *add = add.checked_add(amount)?;
-
-        // TODO
-        Some(0)
-    }
-
-    pub fn finalize(mut self) -> Result<Transfers> {
+    pub fn finalize(self) -> Result<Transfers> {
         let mut transfers = Transfers::default();
-
-        for (token_id, deposits) in self.deposits {
-            // get counterpart from withdrawals
-            let Some(withdrawals) = self.withdrawals.remove(&token_id) else {
-                // no counterpart found
-                return Err(DefuseError::InvariantViolated);
-            };
-
-            let mut withdrawals = withdrawals.into_iter();
-            let mut deposits = deposits.into_iter();
-
-            // get first sender, receiver and their amounts
-            let ((mut sender_id, mut sender_amount), (mut receiver_id, mut receiver_amount)) =
-                match (withdrawals.next(), deposits.next()) {
-                    (Some(w), Some(d)) => (w, d),
-                    (None, None) => continue,
-                    // no counterpart found
-                    _ => return Err(DefuseError::InvariantViolated),
-                };
-
-            loop {
-                // find next sender with non-zero amount
-                if sender_amount == 0 {
-                    let Some((s, a)) = withdrawals.next() else {
-                        break;
-                    };
-                    (sender_id, sender_amount) = (s, a);
-                    continue;
-                }
-
-                // find next receiver with non-zero amount
-                if receiver_amount == 0 {
-                    let Some((r, a)) = deposits.next() else {
-                        break;
-                    };
-                    (receiver_id, receiver_amount) = (r, a);
-                    continue;
-                }
-
-                // get min amount and transfer
-                let amount = sender_amount.min(receiver_amount);
-                transfers
-                    .transfer(
-                        sender_id.clone(),
-                        receiver_id.clone(),
-                        token_id.clone(),
-                        amount,
-                    )
-                    .ok_or(DefuseError::BalanceOverflow)?;
-
-                // subtract amount from sender's and receiver's amounts
-                sender_amount = sender_amount.saturating_sub(amount);
-                receiver_amount = receiver_amount.saturating_sub(amount);
-            }
-
-            if sender_amount != 0
-                || receiver_amount != 0
-                || deposits.len() != 0
-                || withdrawals.len() != 0
-            {
-                // non-zero amount left and was not destributed
-                return Err(DefuseError::InvariantViolated);
-            }
+        // TODO
+        for (token_id, token_transfers) in self.0 {
+            // TODO
+            // token_transfers.finalize_into(token_id, &mut transfers)?;
         }
-
-        if !self.withdrawals.is_empty() {
-            // no counterpart found for
-            return Err(DefuseError::InvariantViolated);
-        }
-
         Ok(transfers)
     }
 }
+
+// #[derive(Debug, Default)]
+// pub struct TokenTransfers {
+//     withdrawals: HashMap<AccountId, u128>,
+//     deposits: HashMap<AccountId, u128>,
+// }
+
+// impl TokenTransfers {
+//     #[inline]
+//     pub fn deposit(&mut self, owner_id: AccountId, amount: u128) -> Result<()> {
+//         Self::sub_add(&mut self.withdrawals, &mut self.deposits, owner_id, amount)
+//     }
+
+//     #[inline]
+//     pub fn withdraw(&mut self, owner_id: AccountId, amount: u128) -> Result<()> {
+//         Self::sub_add(&mut self.deposits, &mut self.withdrawals, owner_id, amount)
+//     }
+
+//     #[inline]
+//     pub fn add_delta(&mut self, owner_id: AccountId, delta: i128) -> Result<()> {
+//         let amount = delta.unsigned_abs();
+//         if delta.is_negative() {
+//             self.withdraw(owner_id, amount)
+//         } else {
+//             self.deposit(owner_id, amount)
+//         }
+//     }
+
+//     fn sub_add(
+//         sub: &mut HashMap<AccountId, u128>,
+//         add: &mut HashMap<AccountId, u128>,
+//         owner_id: AccountId,
+//         mut amount: u128,
+//     ) -> Result<()> {
+//         if let Some(s) = sub.get_mut(&owner_id) {
+//             let a = (*s).min(amount);
+//             amount = amount.saturating_sub(a);
+//             *s = s.saturating_sub(a);
+//             if *s == 0 {
+//                 sub.remove(k)
+//             }
+//         }
+//         // let mut sub = sub.entry_or_default(owner_id);
+//         // let s = sub.min(amount);
+//         // *sub = sub.saturating_sub(s);
+//         // amount = amount.saturating_sub(s);
+
+//         if amount > 0 {
+//             let mut add = add.entry_or_default(sub.key().clone());
+//             *add = add
+//                 .checked_add(amount)
+//                 .ok_or(DefuseError::BalanceOverflow)?;
+//         }
+
+//         Ok(())
+//     }
+
+//     pub fn finalize_into(self, token_id: TokenId, transfers: &mut Transfers) -> Result<()> {
+//         let [mut withdrawals, mut deposits] =
+//             [self.withdrawals, self.deposits].map(IntoIterator::into_iter);
+
+//         // get first sender, receiver and their amounts
+//         let ((mut sender_id, mut sender_amount), (mut receiver_id, mut receiver_amount)) =
+//             match (withdrawals.next(), deposits.next()) {
+//                 (Some(w), Some(d)) => (w, d),
+//                 // nothing to match
+//                 (None, None) => return Ok(()),
+//                 // no counterpart found
+//                 _ => return Err(DefuseError::InvariantViolated),
+//             };
+
+//         loop {
+//             // find next sender with non-zero amount
+//             if sender_amount == 0 {
+//                 let Some((s, a)) = withdrawals.next() else {
+//                     break;
+//                 };
+//                 (sender_id, sender_amount) = (s, a);
+//                 continue;
+//             }
+
+//             // find next receiver with non-zero amount
+//             if receiver_amount == 0 {
+//                 let Some((r, a)) = deposits.next() else {
+//                     break;
+//                 };
+//                 (receiver_id, receiver_amount) = (r, a);
+//                 continue;
+//             }
+
+//             // get min amount and transfer
+//             let amount = sender_amount.min(receiver_amount);
+//             transfers
+//                 .transfer(
+//                     sender_id.clone(),
+//                     receiver_id.clone(),
+//                     token_id.clone(),
+//                     amount,
+//                 )
+//                 .ok_or(DefuseError::BalanceOverflow)?;
+
+//             // subtract amount from sender's and receiver's amounts
+//             sender_amount = sender_amount.saturating_sub(amount);
+//             receiver_amount = receiver_amount.saturating_sub(amount);
+//         }
+
+//         if sender_amount != 0
+//             || receiver_amount != 0
+//             || deposits.len() != 0
+//             || withdrawals.len() != 0
+//         {
+//             // non-zero amount left and was not destributed
+//             return Err(DefuseError::InvariantViolated);
+//         }
+
+//         Ok(())
+//     }
+// }
 
 /// Accumulates transfers between
 #[derive(Debug, Default)]
@@ -247,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_deltas() {
-        let mut l = TransferMatcher::default();
+        let mut l = DeltaMatcher::default();
         // TODO
         // l.add_delta(owner_id, token_id, delta)
     }

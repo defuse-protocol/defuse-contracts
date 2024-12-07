@@ -3,6 +3,7 @@ use impl_tools::autoimpl;
 use near_sdk::{env, near};
 use serde_with::serde_as;
 
+/// See [ERC-191](https://github.com/ethereum/ercs/blob/master/ERCS/erc-191.md)
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
 pub struct Erc191Payload(pub String);
@@ -25,37 +26,6 @@ impl Payload for Erc191Payload {
         env::keccak256_array(&self.prehash())
     }
 }
-
-// impl Payload for Erc191Payload {
-//     type Curve = Secp256k1;
-//     type Hasher = Keccak256;
-
-//     #[inline]
-//     fn curve(&self) -> Self::Curve {
-//         Secp256k1
-//     }
-
-//     #[inline]
-//     fn serialize(&self) -> Cow<'_, [u8]> {
-//         let data = self.0.as_bytes();
-//         [
-//             format!("\x19Ethereum Signed Message:\n{}", data.len()).as_bytes(),
-//             data,
-//         ]
-//         .concat()
-//         .into()
-//     }
-
-//     #[inline]
-//     fn pre_sign(&self) -> impl AsRef<<Self::Curve as Curve>::Message> {
-//         Cow::Owned(self.hash())
-//     }
-
-//     #[inline]
-//     fn hasher(&self) -> Self::Hasher {
-//         Keccak256
-//     }
-// }
 
 #[cfg_attr(
     all(feature = "abi", not(target_arch = "wasm32")),
@@ -97,22 +67,3 @@ impl SignedPayload for SignedErc191Payload {
         )
     }
 }
-
-// impl SignedPayload for SignedErc191Payload {
-//     type Payload = Erc191Payload;
-
-//     #[inline]
-//     fn payload(&self) -> &Self::Payload {
-//         &self.payload
-//     }
-
-//     #[inline]
-//     fn verifying_key(&self) -> &<<Self::Payload as Payload>::Curve as Curve>::VerifyingKey {
-//         &()
-//     }
-
-//     #[inline]
-//     fn signature(&self) -> &<<Self::Payload as Payload>::Curve as Curve>::Signature {
-//         &self.signature
-//     }
-// }

@@ -28,6 +28,8 @@ pub enum DefuseEvent<'a> {
     #[event_version("0.1.0")]
     IntentsExecuted(Cow<'a, [AccountEvent<'a, IntentExecutedEvent>]>),
 
+    // TODO: add fee_collected event: both for distribution channel & protocol
+    // TODO: add intent hash inside token_diff
     #[event_version("0.1.0")]
     TokenDiff(AccountEvent<'a, Cow<'a, TokenDiff>>),
 }

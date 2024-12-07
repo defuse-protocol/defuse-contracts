@@ -16,7 +16,7 @@ use crate::{
 use self::{
     account::{AddPublicKey, InvalidateNonces, RemovePublicKey},
     token_diff::TokenDiff,
-    tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NftWithdraw},
+    tokens::{FtWithdraw, MtWithdraw, NftWithdraw, Transfer},
 };
 
 #[near(serializers = [borsh, json])]
@@ -37,7 +37,7 @@ pub enum Intent {
     RemovePublicKey(RemovePublicKey),
     InvalidateNonces(InvalidateNonces),
 
-    MtBatchTransfer(MtBatchTransfer),
+    Transfer(Transfer),
 
     FtWithdraw(FtWithdraw),
     NftWithdraw(NftWithdraw),
@@ -45,6 +45,10 @@ pub enum Intent {
     NativeWithdraw(NativeWithdraw),
 
     TokenDiff(TokenDiff),
+}
+
+pub struct MetaIntent {
+    pub intent: Intent,
 }
 
 pub trait ExecutableIntent {
@@ -81,7 +85,7 @@ impl ExecutableIntent for Intent {
             Self::AddPublicKey(intent) => intent.execute_intent(signer_id, engine),
             Self::RemovePublicKey(intent) => intent.execute_intent(signer_id, engine),
             Self::InvalidateNonces(intent) => intent.execute_intent(signer_id, engine),
-            Self::MtBatchTransfer(intent) => intent.execute_intent(signer_id, engine),
+            Self::Transfer(intent) => intent.execute_intent(signer_id, engine),
             Self::FtWithdraw(intent) => intent.execute_intent(signer_id, engine),
             Self::NftWithdraw(intent) => intent.execute_intent(signer_id, engine),
             Self::MtWithdraw(intent) => intent.execute_intent(signer_id, engine),

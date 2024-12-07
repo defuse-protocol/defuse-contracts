@@ -9,7 +9,7 @@ use near_sdk::{AccountId, AccountIdRef};
 
 use crate::{
     fees::Pips,
-    intents::tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NativeWithdraw, NftWithdraw},
+    intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw, Transfer},
     tokens::{TokenAmounts, TokenId},
     DefuseError, Nonce, Nonces, Result,
 };
@@ -202,7 +202,7 @@ where
         self.internal_withdraw(owner_id, token_amounts)
     }
 
-    fn on_mt_transfer(&mut self, sender_id: &AccountIdRef, transfer: MtBatchTransfer) {
+    fn on_mt_transfer(&mut self, sender_id: &AccountIdRef, transfer: Transfer) {
         todo!()
     }
 

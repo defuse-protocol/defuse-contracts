@@ -1,10 +1,10 @@
 use defuse::core::{
-    intents::{tokens::MtBatchTransfer, DefuseIntents},
+    intents::{tokens::Transfer, DefuseIntents},
     payload::{multi::MultiPayload, DefusePayload},
     tokens::TokenId,
     Deadline,
 };
-use near_sdk::{json_types::U128, AccountId};
+use near_sdk::AccountId;
 use rand::{thread_rng, Rng};
 use serde_json::json;
 
@@ -104,12 +104,10 @@ async fn test_simulate_is_view_method() {
                 deadline: Deadline::MAX,
                 nonce: thread_rng().gen(),
                 message: DefuseIntents {
-                    intents: [MtBatchTransfer {
+                    intents: [Transfer {
                         receiver_id: env.user2.id().clone(),
-                        token_ids: [ft1.clone()].into(),
-                        amounts: [U128(1000)].into(),
+                        tokens: [(ft1.clone(), 1000)].into_iter().collect(),
                         memo: None,
-                        msg: None,
                     }
                     .into()]
                     .into(),

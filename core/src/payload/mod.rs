@@ -1,6 +1,7 @@
 pub mod erc191;
 pub mod multi;
 pub mod nep413;
+pub mod raw;
 
 use core::convert::Infallible;
 
@@ -35,6 +36,8 @@ pub struct DefusePayload<T> {
     )]
     pub nonce: Nonce,
 
+    // TODO
+    // pub referral: Option<AccountId>,
     #[serde(flatten)]
     pub message: T,
 }

@@ -4,7 +4,7 @@ use defuse_core::{
     crypto::PublicKey,
     engine::{State, StateView},
     fees::Pips,
-    intents::tokens::{FtWithdraw, MtBatchTransfer, MtWithdraw, NativeWithdraw, NftWithdraw},
+    intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw, Transfer},
     tokens::TokenId,
     DefuseError, Nonce, Result,
 };
@@ -217,7 +217,7 @@ impl State for Contract {
         Ok(())
     }
 
-    fn on_mt_transfer(&mut self, sender_id: &AccountIdRef, transfer: MtBatchTransfer) {
+    fn on_mt_transfer(&mut self, sender_id: &AccountIdRef, transfer: Transfer) {
         todo!()
     }
 

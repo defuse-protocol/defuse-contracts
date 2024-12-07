@@ -157,117 +157,98 @@ impl<T> TokenAmounts<T> {
 
 impl<T> TokenAmounts<T>
 where
-    T: DefaultMap<K = TokenId>,
+    T: DefaultMap,
     T::V: Copy,
 {
     #[inline]
-    pub fn balance_of(&self, token_id: &TokenId) -> T::V {
-        self.0.get(token_id).copied().unwrap_or_default()
+    pub fn balance_of(&self, k: &T::K) -> T::V {
+        self.0.get(k).copied().unwrap_or_default()
     }
 
     #[inline]
-    pub fn deposit(&mut self, token_id: TokenId, amount: u128) -> Option<T::V>
+    pub fn deposit(&mut self, k: T::K, amount: u128) -> Option<T::V>
     where
         T::V: CheckedAdd<u128>,
     {
-        self.checked_apply(token_id, |a| a.checked_add(amount))
+        self.checked_apply(k, |a| a.checked_add(amount))
     }
 
     #[inline]
-    pub fn with_deposit(mut self, token_id: TokenId, amount: u128) -> Option<Self>
+    pub fn with_deposit(mut self, k: T::K, amount: u128) -> Option<Self>
     where
         T::V: CheckedAdd<u128>,
     {
-        self.deposit(token_id, amount)?;
+        self.deposit(k, amount)?;
         Some(self)
     }
 
     #[inline]
-    pub fn with_deposit_many(
-        self,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
-    ) -> Option<Self>
+    pub fn with_deposit_many(self, amounts: impl IntoIterator<Item = (T::K, u128)>) -> Option<Self>
     where
         T::V: CheckedAdd<u128>,
     {
-        token_amounts
+        amounts
             .into_iter()
-            .try_fold(self, |amounts, (token_id, amount)| {
-                amounts.with_deposit(token_id, amount)
-            })
+            .try_fold(self, |amounts, (k, amount)| amounts.with_deposit(k, amount))
     }
 
     #[inline]
-    pub fn withdraw(&mut self, token_id: TokenId, amount: u128) -> Option<T::V>
+    pub fn withdraw(&mut self, k: T::K, amount: u128) -> Option<T::V>
     where
         T::V: CheckedSub<u128>,
     {
-        self.checked_apply(token_id, |a| a.checked_sub(amount))
+        self.checked_apply(k, |a| a.checked_sub(amount))
     }
 
     #[inline]
-    pub fn with_withdraw(mut self, token_id: TokenId, amount: u128) -> Option<Self>
+    pub fn with_withdraw(mut self, k: T::K, amount: u128) -> Option<Self>
     where
         T::V: CheckedSub<u128>,
     {
-        self.withdraw(token_id, amount)?;
+        self.withdraw(k, amount)?;
         Some(self)
     }
 
     #[inline]
-    pub fn with_withdraw_many(
-        self,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
-    ) -> Option<Self>
+    pub fn with_withdraw_many(self, amounts: impl IntoIterator<Item = (T::K, u128)>) -> Option<Self>
     where
         T::V: CheckedSub<u128>,
     {
-        token_amounts
-            .into_iter()
-            .try_fold(self, |amounts, (token_id, amount)| {
-                amounts.with_withdraw(token_id, amount)
-            })
+        amounts.into_iter().try_fold(self, |amounts, (k, amount)| {
+            amounts.with_withdraw(k, amount)
+        })
     }
 
     #[inline]
-    pub fn add_delta(&mut self, token_id: TokenId, delta: i128) -> Option<T::V>
+    pub fn add_delta(&mut self, k: T::K, delta: i128) -> Option<T::V>
     where
         T::V: CheckedAdd<i128>,
     {
-        self.checked_apply(token_id, |a| a.checked_add(delta))
+        self.checked_apply(k, |a| a.checked_add(delta))
     }
 
     #[inline]
-    pub fn with_add_delta(mut self, token_id: TokenId, delta: i128) -> Option<Self>
+    pub fn with_add_delta(mut self, k: T::K, delta: i128) -> Option<Self>
     where
         T::V: CheckedAdd<i128>,
     {
-        self.add_delta(token_id, delta)?;
+        self.add_delta(k, delta)?;
         Some(self)
     }
 
     #[inline]
-    pub fn with_add_deltas(
-        self,
-        token_amounts: impl IntoIterator<Item = (TokenId, i128)>,
-    ) -> Option<Self>
+    pub fn with_add_deltas(self, amounts: impl IntoIterator<Item = (T::K, i128)>) -> Option<Self>
     where
         T::V: CheckedAdd<i128>,
     {
-        token_amounts
+        amounts
             .into_iter()
-            .try_fold(self, |amounts, (token_id, delta)| {
-                amounts.with_add_delta(token_id, delta)
-            })
+            .try_fold(self, |amounts, (k, delta)| amounts.with_add_delta(k, delta))
     }
 
     #[inline]
-    fn checked_apply(
-        &mut self,
-        token_id: TokenId,
-        f: impl FnOnce(T::V) -> Option<T::V>,
-    ) -> Option<T::V> {
-        let mut a = self.0.entry_or_default(token_id);
+    fn checked_apply(&mut self, k: T::K, f: impl FnOnce(T::V) -> Option<T::V>) -> Option<T::V> {
+        let mut a = self.0.entry_or_default(k);
         *a = f(*a)?;
         Some(*a)
     }

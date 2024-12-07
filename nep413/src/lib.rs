@@ -1,7 +1,6 @@
 use core::fmt::Display;
-use std::borrow::Cow;
 
-use defuse_crypto::{serde::AsCurve, CryptoHash, Curve, Ed25519, Payload, Sha256, SignedPayload};
+use defuse_crypto::{serde::AsCurve, CryptoHash, Curve, Ed25519, Payload, SignedPayload};
 use defuse_near_utils::UnwrapOrPanicError;
 use defuse_nep461::{OffchainMessage, SignedMessageNep};
 use defuse_serde_utils::base64::Base64;
@@ -9,6 +8,7 @@ use impl_tools::autoimpl;
 use near_sdk::{borsh, env, near};
 use serde_with::serde_as;
 
+/// See [NEP-413](https://github.com/near/NEPs/blob/master/neps/nep-0413.md)
 #[cfg_attr(
     all(feature = "abi", not(target_arch = "wasm32")),
     serde_as(schemars = true)
@@ -81,33 +81,6 @@ impl Payload for Nep413Payload {
     }
 }
 
-// impl Payload for Nep413Payload {
-//     type Curve = Ed25519;
-//     type Hasher = Sha256;
-
-//     #[inline]
-//     fn curve(&self) -> Self::Curve {
-//         Ed25519
-//     }
-
-//     #[inline]
-//     fn serialize(&self) -> Cow<'_, [u8]> {
-//         borsh::to_vec(&(Self::OFFCHAIN_PREFIX_TAG, self))
-//             .unwrap_or_panic_display()
-//             .into()
-//     }
-
-//     #[inline]
-//     fn pre_sign(&self) -> impl AsRef<<Self::Curve as Curve>::Message> {
-//         self.hash()
-//     }
-
-//     #[inline]
-//     fn hasher(&self) -> Self::Hasher {
-//         Sha256
-//     }
-// }
-
 #[cfg_attr(
     all(feature = "abi", not(target_arch = "wasm32")),
     serde_as(schemars = true)
@@ -145,19 +118,3 @@ impl SignedPayload for SignedNep413Payload {
             .cloned()
     }
 }
-
-// impl SignedPayload for SignedNep413Payload {
-//     type Payload = Nep413Payload;
-
-//     fn payload(&self) -> &Self::Payload {
-//         &self.payload
-//     }
-
-//     fn verifying_key(&self) -> &<<Self::Payload as Payload>::Curve as Curve>::VerifyingKey {
-//         &self.public_key
-//     }
-
-//     fn signature(&self) -> &<<Self::Payload as Payload>::Curve as Curve>::Signature {
-//         &self.signature
-//     }
-// }

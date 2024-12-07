@@ -1,19 +1,21 @@
+use std::collections::HashMap;
+
 use defuse_crypto::{PublicKey, SignedPayload};
 use near_sdk::{AccountId, AccountIdRef};
 
 use crate::{
     intents::ExecutableIntent,
     payload::{DefusePayload, ExtractDefusePayload},
-    tokens::TokenId,
+    tokens::{TokenAmounts, TokenId},
     DefuseError, Result,
 };
 
-use super::{Inspector, State, TransferMatcher, Transfers};
+use super::{DeltaMatcher, Inspector, State, Transfers};
 
 pub struct Engine<S, I> {
-    pub(crate) state: S,
-    pub(crate) inspector: I,
-    postponed_transfers: TransferMatcher,
+    pub state: S,
+    pub inspector: I,
+    pub deltas: DeltaMatcher,
 }
 
 impl<S, I> Engine<S, I>
@@ -26,7 +28,7 @@ where
         Self {
             state,
             inspector,
-            postponed_transfers: Default::default(),
+            deltas: Default::default(),
         }
     }
 
@@ -101,6 +103,30 @@ where
         intent.execute_intent(signer_id, self)
     }
 
+    // pub(crate) fn withdraw(
+    //     &mut self,
+    //     owner_id: AccountId,
+    //     token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+    // ) -> Result<()> {
+    //     let owner_withdrawals = self.postponed_withdrawals.entry(owner_id).or_default();
+    //     for (token_id, amount) in token_amounts {
+    //         owner_withdrawals.withdraw(token_id, amount).ok_or(err)?;
+    //     }
+    //     Ok(())
+    // }
+
+    // pub(crate) fn internal_transfer(
+    //     &mut self,
+    //     sender_id: AccountId,
+    //     receiver_id: AccountId,
+    //     token_amounts: impl IntoIterator<Item = (TokenId, u128)> + Clone,
+    // ) -> Result<()> {
+    //     // TODO: own log?
+    //     self.postponed_transfers
+    //         .withdraw(sender_id, token_amounts.clone())?;
+    //     self.postponed_transfers.deposit(receiver_id, token_amounts)
+    // }
+
     pub(crate) fn internal_add_delta(
         &mut self,
         owner_id: AccountId,
@@ -119,14 +145,13 @@ where
             self.state
                 .internal_deposit(owner_id.clone(), token_amounts)?;
         }
-        self.postponed_transfers
+        self.deltas
             .add_delta(owner_id, token_id, delta)
             .ok_or(DefuseError::BalanceOverflow)?;
-        // TODO: result?
         Ok(())
     }
 
     pub fn finalize(self) -> Result<Transfers> {
-        self.postponed_transfers.finalize()
+        self.deltas.finalize()
     }
 }

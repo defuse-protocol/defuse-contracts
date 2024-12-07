@@ -1,7 +1,9 @@
 use core::iter;
+use std::collections::HashMap;
 
 use near_contract_standards::non_fungible_token;
 use near_sdk::{json_types::U128, near, AccountId, AccountIdRef, NearToken};
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
     engine::{Engine, Inspector, State},
@@ -11,47 +13,45 @@ use crate::{
 
 use super::ExecutableIntent;
 
+// TODO: rename to Transfer
+// TODO: decouple from NEP-245, emit out own logs
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone)]
-pub struct MtBatchTransfer {
+pub struct Transfer {
     pub receiver_id: AccountId,
-    pub token_ids: Vec<TokenId>,
-    pub amounts: Vec<U128>,
 
+    #[serde_as(as = "HashMap<_, DisplayFromStr>")]
+    pub tokens: HashMap<TokenId, u128>,
+
+    // TODO: remove due to reduce
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
-
-    // TODO: feature_flag
-    /// `msg` to pass in `mt_on_transfer`
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub msg: Option<String>,
 }
 
-impl ExecutableIntent for MtBatchTransfer {
+impl ExecutableIntent for Transfer {
     fn execute_intent<S, I>(self, sender_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
         I: Inspector,
     {
-        if sender_id == self.receiver_id
-            || self.token_ids.is_empty()
-            || self.token_ids.len() != self.amounts.len()
-        {
+        if sender_id == self.receiver_id || self.tokens.is_empty() {
             return Err(DefuseError::ZeroAmount);
         }
 
-        let token_amounts = self
-            .token_ids
-            .iter()
-            .cloned()
-            .zip(self.amounts.iter().map(|a| a.0));
-
         engine
             .state
-            .internal_withdraw(sender_id, token_amounts.clone())?;
+            .internal_withdraw(sender_id, self.tokens.clone())?;
         engine
             .state
-            .internal_deposit(self.receiver_id.clone(), token_amounts.clone())?;
+            .internal_deposit(self.receiver_id.clone(), self.tokens.clone())?;
 
         engine.state.on_mt_transfer(sender_id, self);
         Ok(())

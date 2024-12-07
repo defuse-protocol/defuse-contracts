@@ -25,6 +25,7 @@ use super::{Contract, ContractExt};
 impl Intents for Contract {
     #[pause(name = "intents")]
     #[inline]
+    // TODO: rename intents -> signed?
     fn execute_intents(&mut self, intents: Vec<MultiPayload>) {
         let mut insp = ExecuteInspector::default();
         let mut engine = Engine::new(self, &mut insp);
