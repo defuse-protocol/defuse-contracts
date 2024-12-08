@@ -6,7 +6,7 @@ use near_sdk::{json_types::U128, near, AccountId, AccountIdRef, NearToken};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
-    engine::{Engine, Inspector, State},
+    engine::{Engine, Inspector, State, StateView},
     tokens::TokenId,
     DefuseError, Result,
 };
@@ -41,7 +41,17 @@ impl ExecutableIntent for Transfer {
         S: State,
         I: Inspector,
     {
-        engine.internal_transfer(sender_id, self)
+        if sender_id == self.receiver_id || self.tokens.is_empty() {
+            return Err(DefuseError::InvalidIntent);
+        }
+        engine.inspector.on_transfer(sender_id, &self);
+        engine
+            .state
+            .internal_withdraw(sender_id, self.tokens.clone())?;
+        engine
+            .state
+            .internal_deposit(self.receiver_id, self.tokens)?;
+        Ok(())
     }
 }
 

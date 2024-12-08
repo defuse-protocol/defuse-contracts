@@ -6,7 +6,7 @@ use near_sdk::{near, AccountIdRef};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
-    engine::{Engine, Inspector, State},
+    engine::{Engine, Inspector, State, StateView},
     fees::Pips,
     tokens::{TokenAmounts, TokenId},
     DefuseError, Result,
@@ -46,7 +46,9 @@ impl ExecutableIntent for TokenDiff {
             }
 
             // add delta to signer's account
-            engine.internal_add_delta(signer_id.to_owned(), token_id.clone(), delta)?;
+            engine
+                .state
+                .internal_add_deltas(signer_id.to_owned(), [(token_id.clone(), delta)])?;
 
             let amount = delta.unsigned_abs();
             let fee = Self::token_fee(&token_id, amount, fees).fee_ceil(amount);
@@ -54,12 +56,14 @@ impl ExecutableIntent for TokenDiff {
             // TODO: no need to check, or is it?
             if fee > 0 {
                 // deposit fee to collector
-                engine.internal_add_delta(
+                engine.state.internal_add_deltas(
                     fee_collector.to_owned(),
-                    token_id,
-                    fee.try_into()
-                        // fee is always less than amount
-                        .unwrap_or_else(|_| unreachable!()),
+                    [(
+                        token_id,
+                        fee.try_into()
+                            // fee is always less than amount
+                            .unwrap_or_else(|_| unreachable!()),
+                    )],
                 )?;
             }
         }

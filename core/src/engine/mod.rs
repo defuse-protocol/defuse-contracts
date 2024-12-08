@@ -5,21 +5,18 @@ mod state;
 pub use self::{inspector::*, runtime::*, state::*};
 
 use defuse_crypto::{Payload, SignedPayload};
-use near_sdk::{AccountId, AccountIdRef};
 
 use crate::{
-    intents::{tokens::Transfer, DefuseIntents, ExecutableIntent},
+    intents::{DefuseIntents, ExecutableIntent},
     payload::{multi::MultiPayload, DefusePayload, ExtractDefusePayload},
-    tokens::TokenId,
     DefuseError, Result,
 };
 
+use self::deltas::Deltas;
+
 pub struct Engine<S, I> {
-    // TODO: make private
-    // TODO: impl State for TransferMatcherState
-    pub state: S,
+    pub state: Deltas<S>,
     pub inspector: I,
-    pub deltas: TransferMatcher,
 }
 
 impl<S, I> Engine<S, I>
@@ -30,9 +27,8 @@ where
     #[inline]
     pub fn new(state: S, inspector: I) -> Self {
         Self {
-            state,
+            state: Deltas::new(state),
             inspector,
-            deltas: Default::default(),
         }
     }
 
@@ -89,67 +85,8 @@ where
         Ok(())
     }
 
-    pub(crate) fn internal_deposit(
-        &mut self,
-        owner_id: AccountId,
-        token_id: TokenId,
-        amount: u128,
-    ) -> Result<()> {
-        self.state
-            .internal_deposit(owner_id.clone(), [(token_id.clone(), amount)])?;
-        if !self.deltas.deposit(owner_id, token_id, amount) {
-            return Err(DefuseError::BalanceOverflow);
-        }
-        Ok(())
-    }
-    pub(crate) fn internal_withdraw(
-        &mut self,
-        owner_id: AccountId,
-        token_id: TokenId,
-        amount: u128,
-    ) -> Result<()> {
-        self.state
-            .internal_withdraw(&owner_id, [(token_id.clone(), amount)])?;
-        if !self.deltas.withdraw(owner_id, token_id, amount) {
-            return Err(DefuseError::BalanceOverflow);
-        }
-        Ok(())
-    }
-
-    pub(crate) fn internal_add_delta(
-        &mut self,
-        owner_id: AccountId,
-        token_id: TokenId,
-        delta: i128,
-    ) -> Result<()> {
-        let amount = delta.unsigned_abs();
-        if delta.is_negative() {
-            self.internal_withdraw(owner_id, token_id, amount)?;
-        } else {
-            self.internal_deposit(owner_id.clone(), token_id, amount)?;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn internal_transfer(
-        &mut self,
-        sender_id: &AccountIdRef,
-        transfer: Transfer,
-    ) -> Result<()> {
-        if sender_id == transfer.receiver_id || transfer.tokens.is_empty() {
-            return Err(DefuseError::InvalidIntent);
-        }
-        self.inspector.on_transfer(sender_id, &transfer);
-        for (token_id, amount) in transfer.tokens {
-            self.internal_withdraw(sender_id.to_owned(), token_id.clone(), amount)?;
-            self.internal_deposit(transfer.receiver_id.clone(), token_id, amount)?;
-        }
-        Ok(())
-    }
-
+    #[inline]
     pub fn finalize(self) -> Result<Transfers> {
-        self.deltas
-            .finalize()
-            .map_err(|unmatched_deltas| DefuseError::InvariantViolated { unmatched_deltas })
+        self.state.finalize()
     }
 }

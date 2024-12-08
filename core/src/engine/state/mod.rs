@@ -1,4 +1,5 @@
 pub mod cached;
+pub mod deltas;
 
 use std::borrow::Cow;
 
@@ -54,17 +55,33 @@ pub trait State: StateView {
         owner_id: AccountId,
         tokens: impl IntoIterator<Item = (TokenId, u128)>,
     ) -> Result<()>;
+    fn internal_withdraw(
+        &mut self,
+        owner_id: &AccountIdRef,
+        tokens: impl IntoIterator<Item = (TokenId, u128)>,
+    ) -> Result<()>;
+    fn internal_add_deltas(
+        &mut self,
+        owner_id: AccountId,
+        tokens: impl IntoIterator<Item = (TokenId, i128)>,
+    ) -> Result<()> {
+        for (token_id, delta) in tokens {
+            let tokens = [(token_id, delta.unsigned_abs())];
+            if delta.is_negative() {
+                self.internal_withdraw(&owner_id, tokens)?;
+            } else {
+                self.internal_deposit(owner_id.clone(), tokens)?;
+            }
+        }
+        Ok(())
+    }
+
     // TODO: docs
     fn deposit(
         &mut self,
         owner_id: AccountId,
         tokens: impl IntoIterator<Item = (TokenId, u128)>,
         memo: Option<&str>,
-    ) -> Result<()>;
-    fn internal_withdraw(
-        &mut self,
-        owner_id: &AccountIdRef,
-        tokens: impl IntoIterator<Item = (TokenId, u128)>,
     ) -> Result<()>;
     // TODO: docs
     fn withdraw(
