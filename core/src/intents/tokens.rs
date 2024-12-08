@@ -1,4 +1,3 @@
-use core::iter;
 use std::collections::HashMap;
 
 use near_contract_standards::non_fungible_token;
@@ -6,7 +5,7 @@ use near_sdk::{json_types::U128, near, AccountId, AccountIdRef, NearToken};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
-    engine::{Engine, Inspector, State, StateView},
+    engine::{Engine, Inspector, State},
     tokens::TokenId,
     DefuseError, Result,
 };
@@ -72,26 +71,13 @@ pub struct FtWithdraw {
 }
 
 impl ExecutableIntent for FtWithdraw {
+    #[inline]
     fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
         I: Inspector,
     {
-        let token_amounts = iter::once((TokenId::Nep141(self.token.clone()), self.amount.0)).chain(
-            self.storage_deposit.map(|amount| {
-                (
-                    TokenId::Nep141(engine.state.wnear_id().into_owned()),
-                    amount.as_yoctonear(),
-                )
-            }),
-        );
-
-        engine
-            .state
-            .withdraw(owner_id, token_amounts.clone(), Some("withdraw"))?;
-
-        engine.state.on_ft_withdraw(owner_id, self);
-        Ok(())
+        engine.state.ft_withdraw(owner_id, self)
     }
 }
 
@@ -112,28 +98,13 @@ pub struct NftWithdraw {
 }
 
 impl ExecutableIntent for NftWithdraw {
+    #[inline]
     fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
         I: Inspector,
     {
-        let token_amounts = iter::once((
-            TokenId::Nep171(self.token.clone(), self.token_id.clone()),
-            1,
-        ))
-        .chain(self.storage_deposit.map(|amount| {
-            (
-                TokenId::Nep141(engine.state.wnear_id().into_owned()),
-                amount.as_yoctonear(),
-            )
-        }));
-
-        engine
-            .state
-            .withdraw(owner_id, token_amounts.clone(), Some("withdraw"))?;
-
-        engine.state.on_nft_withdraw(owner_id, self);
-        Ok(())
+        engine.state.nft_withdraw(owner_id, self)
     }
 }
 
@@ -154,31 +125,13 @@ pub struct MtWithdraw {
     pub storage_deposit: Option<NearToken>,
 }
 impl ExecutableIntent for MtWithdraw {
+    #[inline]
     fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
         I: Inspector,
     {
-        if self.token_ids.len() != self.amounts.len() || self.token_ids.is_empty() {
-            return Err(DefuseError::InvalidIntent);
-        }
-
-        let token_amounts = iter::repeat(self.token.clone())
-            .zip(self.token_ids.iter().cloned())
-            .map(|(token, token_id)| TokenId::Nep245(token, token_id))
-            .zip(self.amounts.iter().map(|a| a.0))
-            .chain(self.storage_deposit.map(|amount| {
-                (
-                    TokenId::Nep141(engine.state.wnear_id().into_owned()),
-                    amount.as_yoctonear(),
-                )
-            }));
-
-        engine
-            .state
-            .withdraw(owner_id, token_amounts.clone(), Some("withdraw"))?;
-        engine.state.on_mt_withdraw(owner_id, self);
-        Ok(())
+        engine.state.mt_withdraw(owner_id, self)
     }
 }
 
@@ -194,21 +147,12 @@ pub struct NativeWithdraw {
 }
 
 impl ExecutableIntent for NativeWithdraw {
+    #[inline]
     fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
     where
         S: State,
         I: Inspector,
     {
-        engine.state.withdraw(
-            owner_id,
-            [(
-                TokenId::Nep141(engine.state.wnear_id().into_owned()),
-                self.amount.as_yoctonear(),
-            )],
-            Some("withdraw"),
-        )?;
-
-        engine.state.on_native_withdraw(owner_id, self);
-        Ok(())
+        engine.state.native_withdraw(owner_id, self)
     }
 }

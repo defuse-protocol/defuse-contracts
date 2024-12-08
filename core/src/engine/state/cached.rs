@@ -9,7 +9,6 @@ use near_sdk::{AccountId, AccountIdRef};
 
 use crate::{
     fees::Pips,
-    intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw},
     tokens::{TokenAmounts, TokenId},
     DefuseError, Nonce, Nonces, Result,
 };
@@ -183,38 +182,6 @@ where
         }
         Ok(())
     }
-
-    #[inline]
-    fn deposit(
-        &mut self,
-        owner_id: AccountId,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
-        _memo: Option<&str>,
-    ) -> Result<()> {
-        self.internal_deposit(owner_id, token_amounts)
-    }
-
-    #[inline]
-    fn withdraw(
-        &mut self,
-        owner_id: &AccountIdRef,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
-        _memo: Option<&str>,
-    ) -> Result<()> {
-        self.internal_withdraw(owner_id, token_amounts)
-    }
-
-    #[inline]
-    fn on_ft_withdraw(&mut self, _owner_id: &AccountIdRef, _withdraw: FtWithdraw) {}
-
-    #[inline]
-    fn on_nft_withdraw(&mut self, _owner_id: &AccountIdRef, _withdraw: NftWithdraw) {}
-
-    #[inline]
-    fn on_mt_withdraw(&mut self, _owner_id: &AccountIdRef, _withdraw: MtWithdraw) {}
-
-    #[inline]
-    fn on_native_withdraw(&mut self, _owner_id: &AccountIdRef, _withdraw: NativeWithdraw) {}
 }
 
 #[derive(Debug, Default, Clone)]

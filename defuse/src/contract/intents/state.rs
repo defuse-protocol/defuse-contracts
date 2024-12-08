@@ -9,7 +9,6 @@ use defuse_core::{
     DefuseError, Nonce, Result,
 };
 use defuse_near_utils::CURRENT_ACCOUNT_ID;
-use defuse_nep245::{MtBurnEvent, MtEvent, MtMintEvent};
 use defuse_wnear::{ext_wnear, NEAR_WITHDRAW_GAS};
 use near_sdk::{json_types::U128, AccountId, AccountIdRef, NearToken};
 
@@ -115,44 +114,6 @@ impl State for Contract {
         Ok(())
     }
 
-    fn deposit(
-        &mut self,
-        owner_id: AccountId,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
-        memo: Option<&str>,
-    ) -> Result<()> {
-        let owner = self.accounts.get_or_create(owner_id.clone());
-
-        let mut mint_event = MtMintEvent {
-            owner_id: Cow::Borrowed(owner_id.as_ref()),
-            token_ids: Default::default(),
-            amounts: Default::default(),
-            memo: memo.map(Into::into),
-        };
-
-        for (token_id, amount) in token_amounts {
-            if amount == 0 {
-                return Err(DefuseError::InvalidIntent);
-            }
-
-            mint_event.token_ids.to_mut().push(token_id.to_string());
-            mint_event.amounts.to_mut().push(U128(amount));
-
-            self.state
-                .total_supplies
-                .deposit(token_id.clone(), amount)
-                .ok_or(DefuseError::BalanceOverflow)?;
-            owner
-                .token_balances
-                .deposit(token_id, amount)
-                .ok_or(DefuseError::BalanceOverflow)?;
-        }
-
-        MtEvent::MtMint([mint_event].as_slice().into()).emit();
-
-        Ok(())
-    }
-
     fn internal_withdraw(
         &mut self,
         owner_id: &AccountIdRef,
@@ -175,64 +136,34 @@ impl State for Contract {
         Ok(())
     }
 
-    fn withdraw(
-        &mut self,
-        owner_id: &AccountIdRef,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
-        memo: Option<&str>,
-    ) -> Result<()> {
-        let owner = self
-            .accounts
-            .get_mut(owner_id)
-            .ok_or(DefuseError::AccountNotFound)?;
-
-        let mut burn_event = MtBurnEvent {
-            owner_id: Cow::Borrowed(owner_id),
-            authorized_id: None,
-            token_ids: Default::default(),
-            amounts: Default::default(),
-            memo: memo.map(Into::into),
-        };
-
-        for (token_id, amount) in token_amounts {
-            if amount == 0 {
-                return Err(DefuseError::InvalidIntent);
-            }
-
-            burn_event.token_ids.to_mut().push(token_id.to_string());
-            burn_event.amounts.to_mut().push(U128(amount));
-
-            owner
-                .token_balances
-                .withdraw(token_id.clone(), amount)
-                .ok_or(DefuseError::BalanceOverflow)?;
-            self.state
-                .total_supplies
-                .withdraw(token_id, amount)
-                .ok_or(DefuseError::BalanceOverflow)?;
-        }
-
-        MtEvent::MtBurn([burn_event].as_slice().into()).emit();
-
-        Ok(())
+    fn ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw) -> Result<()> {
+        self.internal_ft_withdraw(owner_id.to_owned(), withdraw)
+            // detach promise
+            .map(|_promise| ())
     }
 
-    fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw) {
-        // detach promise
-        let _ = self.internal_ft_withdraw(owner_id.to_owned(), withdraw);
+    fn nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw) -> Result<()> {
+        self.internal_nft_withdraw(owner_id.to_owned(), withdraw)
+            // detach promise
+            .map(|_promise| ())
     }
 
-    fn on_nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw) {
-        // detach promise
-        let _ = self.internal_nft_withdraw(owner_id.to_owned(), withdraw);
+    fn mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw) -> Result<()> {
+        self.internal_mt_withdraw(owner_id.to_owned(), withdraw)
+            // detach promise
+            .map(|_promise| ())
     }
 
-    fn on_mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw) {
-        // detach promise
-        let _ = self.internal_mt_withdraw(owner_id.to_owned(), withdraw);
-    }
+    fn native_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NativeWithdraw) -> Result<()> {
+        self.withdraw(
+            owner_id,
+            [(
+                TokenId::Nep141(self.wnear_id().into_owned()),
+                withdraw.amount.as_yoctonear(),
+            )],
+            Some("withdraw"),
+        )?;
 
-    fn on_native_withdraw(&mut self, _owner_id: &AccountIdRef, withdraw: NativeWithdraw) {
         // detach promise
         let _ = ext_wnear::ext(self.wnear_id.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
@@ -244,5 +175,7 @@ impl State for Contract {
                     .with_static_gas(Contract::DO_NATIVE_WITHDRAW_GAS)
                     .do_native_withdraw(withdraw),
             );
+
+        Ok(())
     }
 }

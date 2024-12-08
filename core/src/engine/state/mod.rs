@@ -1,7 +1,7 @@
 pub mod cached;
 pub mod deltas;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, iter};
 
 use cached::CachedState;
 use defuse_crypto::PublicKey;
@@ -12,7 +12,7 @@ use crate::{
     fees::Pips,
     intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw},
     tokens::TokenId,
-    Nonce, Result,
+    DefuseError, Nonce, Result,
 };
 
 #[autoimpl(for<T: trait + ?Sized> &T, &mut T, Box<T>)]
@@ -76,23 +76,63 @@ pub trait State: StateView {
         Ok(())
     }
 
-    // TODO: docs
-    fn deposit(
-        &mut self,
-        owner_id: AccountId,
-        tokens: impl IntoIterator<Item = (TokenId, u128)>,
-        memo: Option<&str>,
-    ) -> Result<()>;
-    // TODO: docs
-    fn withdraw(
-        &mut self,
-        owner_id: &AccountIdRef,
-        tokens: impl IntoIterator<Item = (TokenId, u128)>,
-        memo: Option<&str>,
-    ) -> Result<()>;
+    fn ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw) -> Result<()> {
+        self.internal_withdraw(
+            owner_id,
+            iter::once((TokenId::Nep141(withdraw.token.clone()), withdraw.amount.0)).chain(
+                withdraw.storage_deposit.map(|amount| {
+                    (
+                        TokenId::Nep141(self.wnear_id().into_owned()),
+                        amount.as_yoctonear(),
+                    )
+                }),
+            ),
+        )
+    }
 
-    fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw);
-    fn on_nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw);
-    fn on_mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw);
-    fn on_native_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NativeWithdraw);
+    fn nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw) -> Result<()> {
+        self.internal_withdraw(
+            owner_id,
+            iter::once((
+                TokenId::Nep171(withdraw.token.clone(), withdraw.token_id.clone()),
+                1,
+            ))
+            .chain(withdraw.storage_deposit.map(|amount| {
+                (
+                    TokenId::Nep141(self.wnear_id().into_owned()),
+                    amount.as_yoctonear(),
+                )
+            })),
+        )
+    }
+
+    fn mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw) -> Result<()> {
+        if withdraw.token_ids.len() != withdraw.amounts.len() || withdraw.token_ids.is_empty() {
+            return Err(DefuseError::InvalidIntent);
+        }
+
+        self.internal_withdraw(
+            owner_id,
+            iter::repeat(withdraw.token.clone())
+                .zip(withdraw.token_ids.iter().cloned())
+                .map(|(token, token_id)| TokenId::Nep245(token, token_id))
+                .zip(withdraw.amounts.iter().map(|a| a.0))
+                .chain(withdraw.storage_deposit.map(|amount| {
+                    (
+                        TokenId::Nep141(self.wnear_id().into_owned()),
+                        amount.as_yoctonear(),
+                    )
+                })),
+        )
+    }
+
+    fn native_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NativeWithdraw) -> Result<()> {
+        self.internal_withdraw(
+            owner_id,
+            [(
+                TokenId::Nep141(self.wnear_id().into_owned()),
+                withdraw.amount.as_yoctonear(),
+            )],
+        )
+    }
 }

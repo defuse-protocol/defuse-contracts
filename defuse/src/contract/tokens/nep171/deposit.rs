@@ -1,4 +1,4 @@
-use defuse_core::{engine::State, tokens::TokenId};
+use defuse_core::tokens::TokenId;
 use defuse_near_utils::{
     UnwrapOrPanic, UnwrapOrPanicError, CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID,
 };

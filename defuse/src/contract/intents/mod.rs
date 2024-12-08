@@ -2,7 +2,6 @@ mod execute;
 mod relayer;
 mod simulate;
 mod state;
-mod tokens;
 
 use defuse_core::{
     engine::{Engine, StateView},

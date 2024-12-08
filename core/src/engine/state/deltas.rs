@@ -137,43 +137,23 @@ where
     }
 
     #[inline]
-    fn deposit(
-        &mut self,
-        owner_id: AccountId,
-        tokens: impl IntoIterator<Item = (TokenId, u128)>,
-        memo: Option<&str>,
-    ) -> Result<()> {
-        self.state.deposit(owner_id, tokens, memo)
+    fn ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw) -> Result<()> {
+        self.state.ft_withdraw(owner_id, withdraw)
     }
 
     #[inline]
-    fn withdraw(
-        &mut self,
-        owner_id: &AccountIdRef,
-        tokens: impl IntoIterator<Item = (TokenId, u128)>,
-        memo: Option<&str>,
-    ) -> Result<()> {
-        self.state.withdraw(owner_id, tokens, memo)
+    fn nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw) -> Result<()> {
+        self.state.nft_withdraw(owner_id, withdraw)
     }
 
     #[inline]
-    fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw) {
-        self.state.on_ft_withdraw(owner_id, withdraw);
+    fn mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw) -> Result<()> {
+        self.state.mt_withdraw(owner_id, withdraw)
     }
 
     #[inline]
-    fn on_nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw) {
-        self.state.on_nft_withdraw(owner_id, withdraw);
-    }
-
-    #[inline]
-    fn on_mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw) {
-        self.state.on_mt_withdraw(owner_id, withdraw);
-    }
-
-    #[inline]
-    fn on_native_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NativeWithdraw) {
-        self.state.on_native_withdraw(owner_id, withdraw);
+    fn native_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NativeWithdraw) -> Result<()> {
+        self.state.native_withdraw(owner_id, withdraw)
     }
 }
 
