@@ -6,14 +6,15 @@ mod state;
 use defuse_core::{
     engine::{Engine, StateView},
     payload::multi::MultiPayload,
+    DefuseError,
 };
 use defuse_near_utils::UnwrapOrPanic;
 use execute::ExecuteInspector;
 use near_plugins::{pause, Pausable};
-use near_sdk::near;
+use near_sdk::{near, FunctionError};
 use simulate::SimulateInspector;
 
-use crate::intents::{Intents, SimulationOutput, StateOutput, TokenDiffOutput};
+use crate::intents::{Intents, SimulationOutput, StateOutput};
 
 use super::{Contract, ContractExt};
 
@@ -26,12 +27,7 @@ impl Intents for Contract {
         let mut insp = ExecuteInspector::default();
         let mut engine = Engine::new(self, &mut insp);
         engine.execute_signed_intents(intents).unwrap_or_panic();
-        if let Some(event) = engine.finalize().unwrap_or_panic().as_event() {
-            event.emit();
-        }
-
-        // TODO: finalize transfers & emit?
-        // TODO: finalize?
+        engine.finalize().unwrap_or_panic();
     }
 
     #[pause(name = "intents")]
@@ -40,10 +36,16 @@ impl Intents for Contract {
         let mut inspector = SimulateInspector::default();
         let mut engine = Engine::new(self.cached(), &mut inspector);
         engine.execute_signed_intents(intents).unwrap_or_panic();
+
+        let unmatched_deltas = match engine.finalize() {
+            Ok(_) => None,
+            Err(DefuseError::UnmatchedDeltas(v)) => v,
+            Err(err) => err.panic(),
+        };
         SimulationOutput {
             intents_executed: inspector.intents_executed,
             min_deadline: inspector.min_deadline,
-            token_diff: TokenDiffOutput { closure: todo!() },
+            unmatched_deltas,
             state: StateOutput { fee: self.fee() },
         }
     }

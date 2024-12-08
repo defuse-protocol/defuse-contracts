@@ -32,10 +32,8 @@ impl<S> Deltas<S> {
     }
 
     #[inline]
-    pub fn finalize(self) -> Result<Transfers> {
-        self.deltas
-            .finalize()
-            .map_err(|unmatched_deltas| DefuseError::InvariantViolated { unmatched_deltas })
+    pub fn finalize(self) -> Result<Transfers, Option<TokenDeltas>> {
+        self.deltas.finalize()
     }
 }
 
@@ -178,15 +176,14 @@ impl TransferMatcher {
         self.0.entry_or_default(token_id).add_delta(owner_id, delta)
     }
 
+    // Finalizes all transfers, or returns unmatched deltas.
+    // If unmatched deltas overflow, then Err(None) is returned.
     pub fn finalize(self) -> Result<Transfers, Option<TokenDeltas>> {
         let mut transfers = Transfers::default();
         let mut unmatched_deltas = TokenDeltas::default();
         for (token_id, deltas) in self.0 {
             if let Err(unmatched) = deltas.finalize_into(token_id.clone(), &mut transfers) {
-                if unmatched
-                    .and_then(|d| unmatched_deltas.add_delta(token_id, d))
-                    .is_none()
-                {
+                if unmatched == 0 || unmatched_deltas.add_delta(token_id, unmatched).is_none() {
                     return Err(None);
                 }
             }
@@ -245,28 +242,32 @@ impl TokenTransferMatcher {
         add.deposit(owner_id, amount).is_some()
     }
 
-    pub fn finalize_into(
-        self,
-        token_id: TokenId,
-        transfers: &mut Transfers,
-    ) -> Result<(), Option<i128>> {
+    // Finalizes transfer of this token, or returns unmatched delta.
+    // If returned delta is zero, then overflow happened
+    pub fn finalize_into(self, token_id: TokenId, transfers: &mut Transfers) -> Result<(), i128> {
+        // sort deposits and withdrawals in descending order
         let [mut deposits, mut withdrawals] = [self.deposits, self.withdrawals].map(|amounts| {
             let mut amounts: Vec<_> = amounts.into_iter().collect();
             amounts.sort_unstable_by_key(|(_, amount)| Reverse(*amount));
             amounts.into_iter()
         });
 
+        // take first sender and receiver
         let (mut deposit, mut withdraw) = (deposits.next(), withdrawals.next());
 
-        while let (Some((sender, ref mut send)), Some((receiver, receive))) =
+        // as long as there is both: sender and receiver
+        while let (Some((sender, send)), Some((receiver, receive))) =
             (withdraw.as_mut(), deposit.as_mut())
         {
             // get min amount and transfer
             let transfer = (*send).min(*receive);
-            let _ =
-                transfers.transfer(sender.clone(), receiver.clone(), token_id.clone(), transfer);
+            transfers
+                .transfer(sender.clone(), receiver.clone(), token_id.clone(), transfer)
+                // no error can happen since we add only one transfer for each
+                // combination of (sender, receiver, token_id)
+                .unwrap_or_else(|| unreachable!());
 
-            // subtract amount from sender's and receiver's amounts
+            // subtract amount from sender and receiver
             *send = send.saturating_sub(transfer);
             *receive = receive.saturating_sub(transfer);
 
@@ -280,16 +281,20 @@ impl TokenTransferMatcher {
             }
         }
 
+        // only sender left
         if let Some((_, send)) = withdraw {
             return Err(withdrawals
                 .try_fold(send, |total, (_, s)| total.checked_add(s))
                 .and_then(|total| i128::try_from(total).ok())
-                .and_then(i128::checked_neg));
+                .and_then(i128::checked_neg)
+                .unwrap_or_default());
         }
+        // only receiver left
         if let Some((_, receive)) = deposit {
             return Err(deposits
                 .try_fold(receive, |total, (_, r)| total.checked_add(r))
-                .and_then(|total| i128::try_from(total).ok()));
+                .and_then(|total| i128::try_from(total).ok())
+                .unwrap_or_default());
         }
 
         Ok(())

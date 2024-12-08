@@ -1,13 +1,17 @@
+use std::collections::BTreeMap;
+
 use defuse_core::{
     accounts::AccountEvent,
     fees::Pips,
     intents::{token_diff::TokenDeltas, IntentExecutedEvent},
     payload::multi::MultiPayload,
+    tokens::TokenAmounts,
     Deadline,
 };
 
 use near_plugins::AccessControllable;
 use near_sdk::{ext_contract, near, Promise, PublicKey};
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::fees::FeesManager;
 
@@ -18,6 +22,14 @@ pub trait Intents: FeesManager {
     fn simulate_intents(&self, intents: Vec<MultiPayload>) -> SimulationOutput;
 }
 
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
 #[near(serializers = [json])]
 #[derive(Debug, Clone)]
 pub struct SimulationOutput {
@@ -27,21 +39,14 @@ pub struct SimulationOutput {
     /// Minimum deadline among all simulated intents
     pub min_deadline: Deadline,
 
-    /// `token_diff`-related output
-    pub token_diff: TokenDiffOutput,
+    /// Unmatched token deltas needed to keep the invariant.
+    /// If not empty, can be used along with fee to calculate `token_diff` closure.
+    #[serde_as(as = "Option<TokenAmounts<BTreeMap<_, DisplayFromStr>>>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unmatched_deltas: Option<TokenDeltas>,
 
     /// Additional info about current state
     pub state: StateOutput,
-}
-
-#[near(serializers = [json])]
-#[derive(Debug, Clone)]
-pub struct TokenDiffOutput {
-    /// Closure for a **single** `token_diff` intent that needs
-    /// to be added to sequence of simulated intents to keep
-    /// the invariant.  
-    /// Empty closure means that the invariant was not violated.
-    pub closure: TokenDeltas,
 }
 
 #[near(serializers = [json])]

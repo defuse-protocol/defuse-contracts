@@ -16,7 +16,14 @@ use super::ExecutableIntent;
 
 pub type TokenDeltas = TokenAmounts<BTreeMap<TokenId, i128>>;
 
-#[serde_as]
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
 #[near(serializers = [borsh, json])]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[autoimpl(Deref using self.diff)]
@@ -163,74 +170,6 @@ impl TokenDiff {
         )
     }
 }
-
-// #[derive(Debug, Default)]
-// struct DeltaTransferEventsBuilder {
-//     withdraw_token_ids: Vec<defuse_nep245::TokenId>,
-//     withdraw_amounts: Vec<U128>,
-//     deposit_token_ids: Vec<defuse_nep245::TokenId>,
-//     deposit_amounts: Vec<U128>,
-// }
-
-// impl DeltaTransferEventsBuilder {
-//     #[inline]
-//     pub fn push_delta(&mut self, token_id: &TokenId, delta: i128) {
-//         let (token_ids, amounts) = if delta.is_negative() {
-//             (&mut self.withdraw_token_ids, &mut self.withdraw_amounts)
-//         } else {
-//             (&mut self.deposit_token_ids, &mut self.deposit_amounts)
-//         };
-//         token_ids.push(token_id.to_string());
-//         amounts.push(U128(delta.unsigned_abs()));
-//     }
-
-//     pub fn make<'a>(
-//         &'a self,
-//         signer: &'a AccountIdRef,
-//         collector: &'a AccountIdRef,
-//     ) -> MtEvent<'a> {
-//         MtEvent::MtTransfer(Cow::Owned(
-//             [
-//                 (!self.withdraw_amounts.is_empty()).then(|| {
-//                     Self::make_event(
-//                         signer,
-//                         collector,
-//                         &self.withdraw_token_ids,
-//                         &self.withdraw_amounts,
-//                     )
-//                 }),
-//                 (!self.deposit_amounts.is_empty()).then(|| {
-//                     Self::make_event(
-//                         collector,
-//                         signer,
-//                         &self.deposit_token_ids,
-//                         &self.deposit_amounts,
-//                     )
-//                 }),
-//             ]
-//             .into_iter()
-//             .flatten()
-//             .collect(),
-//         ))
-//     }
-
-//     #[inline]
-//     fn make_event<'a>(
-//         old_owner_id: &'a AccountIdRef,
-//         new_owner_id: &'a AccountIdRef,
-//         token_ids: &'a [defuse_nep245::TokenId],
-//         amounts: &'a [U128],
-//     ) -> MtTransferEvent<'a> {
-//         MtTransferEvent {
-//             authorized_id: None,
-//             old_owner_id: old_owner_id.into(),
-//             new_owner_id: new_owner_id.into(),
-//             token_ids: token_ids.into(),
-//             amounts: amounts.into(),
-//             memo: Some("token_diff".into()),
-//         }
-//     }
-// }
 
 #[cfg(test)]
 mod tests {

@@ -30,7 +30,7 @@ impl Transfers {
         Some(*transfer)
     }
 
-    pub fn as_event(&self) -> Option<MtEvent<'_>> {
+    pub fn as_mt_event(&self) -> Option<MtEvent<'_>> {
         if self.0.is_empty() {
             return None;
         }

@@ -103,7 +103,7 @@ impl FromStr for TokenId {
     }
 }
 
-// TODO
+// TODO: use it
 pub enum TokenIdRef<'a> {
     Nep141(
         /// Contract
@@ -316,52 +316,7 @@ where
     }
 }
 
-// impl<'a, K, VE, OE> TokenBalance for DefaultEntry<'a, K, u128, VE, OE>
-// where
-//     K: Ord,
-//     VE: VacantEntry<'a, K, u128>,
-//     OE: OccupiedEntry<K, u128>,
-// {
-//     #[inline]
-//     fn add_delta(&mut self, delta: i128) -> Option<u128> {
-//         **self = self.checked_add_signed(delta)?;
-//         Some(**self)
-//     }
-
-//     #[inline]
-//     fn deposit(&mut self, amount: u128) -> Option<u128> {
-//         **self = self.checked_add(amount)?;
-//         Some(**self)
-//     }
-
-//     #[inline]
-//     fn withdraw(&mut self, amount: u128) -> Option<u128> {
-//         **self = self.checked_sub(amount)?;
-//         Some(**self)
-//     }
-// }
-
-// impl TokenBalancesView for TokenAmounts<u128> {
-//     #[inline]
-//     fn balance_of(&self, token_id: &TokenId) -> u128 {
-//         self.0.get(token_id).cloned().unwrap_or_default()
-//     }
-// }
-
-// impl TokenBalances for TokenAmounts<u128> {
-//     type Balance<'a> = DefaultEntry<
-//         'a,
-//         TokenId,
-//         u128,
-//         btree_map::VacantEntry<'a, TokenId, u128>, btree_map::OccupiedEntry<'a, TokenId, u128>,
-//     > where
-//         Self: 'a;
-
-//     fn balance_of_mut(&mut self, token_id: TokenId) -> Self::Balance<'_> {
-//         self.0.entry_or_default(token_id)
-//     }
-// }
-
+// TODO
 // #[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
 // mod abi {
 //     use super::*;
@@ -398,124 +353,6 @@ where
 //             }
 //             .into()
 //         }
-//     }
-// }
-
-// #[cfg_attr(
-//     all(feature = "abi", not(target_arch = "wasm32")),
-//     serde_as(schemars = true)
-// )]
-// #[cfg_attr(
-//     not(all(feature = "abi", not(target_arch = "wasm32"))),
-//     serde_as(schemars = false)
-// )]
-// #[near(serializers = [borsh, json])]
-// #[serde(bound(serialize = "T: Display", deserialize = "T: FromStr<Err: Display>"))]
-// #[autoimpl(Deref using self.0)]
-// #[autoimpl(Default)]
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub struct TokenAmounts<T>(
-//     /// [`BTreeMap`] ensures deterministic order
-//     #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
-//     BTreeMap<TokenId, T>,
-// );
-
-// impl<A> TokenAmounts<A> {
-//     #[inline]
-//     pub fn checked_add<T>(&mut self, token_id: TokenId, amount: T) -> Option<A>
-//     where
-//         A: CheckedAdd<T> + Default + Eq + Copy,
-//     {
-//         self.checked_apply(token_id, |a| a.checked_add(amount))
-//     }
-
-//     #[inline]
-//     pub fn checked_sub<T>(&mut self, token_id: TokenId, amount: T) -> Option<A>
-//     where
-//         A: CheckedSub<T> + Default + Eq + Copy,
-//     {
-//         self.checked_apply(token_id, |a| a.checked_sub(amount))
-//     }
-
-//     #[inline]
-//     fn checked_apply(&mut self, token_id: TokenId, f: impl FnOnce(A) -> Option<A>) -> Option<A>
-//     where
-//         A: Default + Eq + Copy,
-//     {
-//         let mut d = self.0.entry_or_default(token_id);
-//         *d = f(*d)?;
-//         Some(*d)
-//     }
-
-//     #[inline]
-//     pub fn extend<T>(
-//         &mut self,
-//         amounts: impl IntoIterator<Item = (TokenId, T)>,
-//     ) -> Option<&mut Self>
-//     where
-//         A: CheckedAdd<T> + Default + Eq + Copy,
-//     {
-//         for (token_id, amount) in amounts {
-//             self.checked_add(token_id, amount)?;
-//         }
-//         Some(self)
-//     }
-
-//     #[inline]
-//     pub fn with_extend<T>(mut self, amounts: impl IntoIterator<Item = (TokenId, T)>) -> Option<Self>
-//     where
-//         A: CheckedAdd<T> + Default + Eq + Copy,
-//     {
-//         self.extend(amounts)?;
-//         Some(self)
-//     }
-
-//     #[inline]
-//     pub fn from_iter<T>(iter: impl IntoIterator<Item = (TokenId, T)>) -> Option<Self>
-//     where
-//         A: CheckedAdd<T> + Default + Eq + Copy,
-//     {
-//         iter.into_iter()
-//             .try_fold(Self::default(), |mut amounts, (token_id, amount)| {
-//                 amounts.checked_add(token_id, amount).map(|_| amounts)
-//             })
-//     }
-
-//     #[inline]
-//     pub fn into_tokens(self) -> impl Iterator<Item = TokenId> {
-//         self.0.into_keys()
-//     }
-
-//     #[inline]
-//     pub fn into_amounts(self) -> impl Iterator<Item = A> {
-//         self.0.into_values()
-//     }
-
-//     #[inline]
-//     pub fn is_empty(&self) -> bool {
-//         self.0.is_empty()
-//     }
-// }
-
-// impl<A> IntoIterator for TokenAmounts<A> {
-//     type Item = (TokenId, A);
-
-//     type IntoIter = btree_map::IntoIter<TokenId, A>;
-
-//     #[inline]
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.0.into_iter()
-//     }
-// }
-
-// impl<'a, T> IntoIterator for &'a TokenAmounts<T> {
-//     type Item = (&'a TokenId, &'a T);
-
-//     type IntoIter = btree_map::Iter<'a, TokenId, T>;
-
-//     #[inline]
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.0.iter()
 //     }
 // }
 

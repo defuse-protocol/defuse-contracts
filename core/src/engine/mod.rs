@@ -87,6 +87,6 @@ where
 
     #[inline]
     pub fn finalize(self) -> Result<Transfers> {
-        self.state.finalize()
+        self.state.finalize().map_err(DefuseError::UnmatchedDeltas)
     }
 }

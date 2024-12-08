@@ -22,10 +22,18 @@ pub enum DefuseError {
     #[error("invalid signature")]
     InvalidSignature,
 
-    #[error("invariant violated")]
-    InvariantViolated {
-        unmatched_deltas: Option<TokenDeltas>,
-    },
+    #[error(
+        "invariant violated, unmatched deltas{}",
+        .0.as_ref()
+            .map(|v| {
+                format!(
+                    ": {}",
+                    serde_json::to_string(v).unwrap_or_else(|_| unreachable!()),
+                )
+            })
+            .unwrap_or_default()
+    )]
+    UnmatchedDeltas(Option<TokenDeltas>),
 
     #[error("JSON: {0}")]
     JSON(#[from] serde_json::Error),
