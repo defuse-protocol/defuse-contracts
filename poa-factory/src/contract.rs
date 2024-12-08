@@ -23,8 +23,7 @@ use near_sdk::{
 
 use crate::PoaFactory;
 
-const POA_TOKEN_WASM: &[u8] = if !cfg!(clippy) && !cfg!(test) {
-    // TODO
+const POA_TOKEN_WASM: &[u8] = if !cfg!(clippy) {
     include_bytes!(std::env!(
         "POA_TOKEN_WASM",
         "Set ${POA_TOKEN_WASM} to be the path of the PoA token binary",

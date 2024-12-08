@@ -34,7 +34,7 @@ impl ExecutableIntent for TokenDiff {
     {
         engine.inspector.on_token_diff(signer_id, &self);
         if self.diff.is_empty() {
-            return Err(DefuseError::ZeroAmount);
+            return Err(DefuseError::InvalidIntent);
         }
 
         let fees = engine.state.fee();
@@ -42,7 +42,7 @@ impl ExecutableIntent for TokenDiff {
 
         for (token_id, delta) in self.diff {
             if delta == 0 {
-                return Err(DefuseError::ZeroAmount);
+                return Err(DefuseError::InvalidIntent);
             }
 
             // add delta to signer's account
@@ -56,7 +56,7 @@ impl ExecutableIntent for TokenDiff {
                 // deposit fee to collector
                 engine.internal_add_delta(
                     fee_collector.to_owned(),
-                    token_id.clone(),
+                    token_id,
                     fee.try_into()
                         // fee is always less than amount
                         .unwrap_or_else(|_| unreachable!()),

@@ -4,12 +4,10 @@ use defuse_core::{
     accounts::AccountEvent,
     engine::Inspector,
     events::DefuseEvent,
-    intents::{token_diff::TokenDiff, IntentExecutedEvent},
-    tokens::TokenId,
+    intents::{token_diff::TokenDiff, tokens::Transfer, IntentExecutedEvent},
     Deadline,
 };
-use defuse_nep245::{MtBurnEvent, MtEvent, MtMintEvent};
-use near_sdk::{json_types::U128, AccountIdRef, CryptoHash};
+use near_sdk::{AccountIdRef, CryptoHash};
 
 // TODO: rename?
 #[derive(Debug, Default)]
@@ -20,6 +18,11 @@ pub struct ExecuteInspector {
 impl Inspector for ExecuteInspector {
     #[inline]
     fn on_deadline(&mut self, _deadline: Deadline) {}
+
+    #[inline]
+    fn on_transfer(&mut self, sender_id: &AccountIdRef, transfer: &Transfer) {
+        DefuseEvent::Transfer(AccountEvent::new(sender_id, Cow::Borrowed(transfer))).emit();
+    }
 
     #[inline]
     fn on_token_diff(&mut self, owner_id: &AccountIdRef, token_diff: &TokenDiff) {

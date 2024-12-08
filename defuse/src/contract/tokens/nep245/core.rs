@@ -166,17 +166,17 @@ impl Contract {
         memo: Option<&str>,
     ) -> Result<()> {
         if sender_id == receiver_id || token_ids.len() != amounts.len() || amounts.is_empty() {
-            return Err(DefuseError::ZeroAmount);
+            return Err(DefuseError::InvalidIntent);
         }
 
         for (token_id, amount) in token_ids.iter().zip(amounts.iter().map(|a| a.0)) {
             if amount == 0 {
-                return Err(DefuseError::ZeroAmount);
+                return Err(DefuseError::InvalidIntent);
             }
             let token_id: TokenId = token_id.parse()?;
 
             self.accounts
-                .get_mut(&sender_id)
+                .get_mut(sender_id)
                 .ok_or(DefuseError::AccountNotFound)?
                 .token_balances
                 .withdraw(token_id.clone(), amount)
@@ -205,7 +205,6 @@ impl Contract {
         Ok(())
     }
 
-    #[must_use]
     pub(crate) fn internal_mt_batch_transfer_call(
         &mut self,
         sender_id: AccountId,
@@ -214,6 +213,7 @@ impl Contract {
         amounts: Vec<U128>,
         memo: Option<&str>,
         msg: String,
+        // TODO
         gas_for_mt_on_transfer: impl Into<Option<Gas>>,
     ) -> Result<PromiseOrValue<Vec<U128>>> {
         self.internal_mt_batch_transfer(

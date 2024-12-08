@@ -6,7 +6,7 @@ use near_sdk::{near, serde::Deserialize};
 use crate::{
     accounts::{AccountEvent, PublicKeyEvent},
     fees::{FeeChangedEvent, FeeCollectorChangedEvent},
-    intents::{token_diff::TokenDiff, IntentExecutedEvent},
+    intents::{token_diff::TokenDiff, tokens::Transfer, IntentExecutedEvent},
 };
 
 #[must_use = "make sure to `.emit()` this event"]
@@ -24,6 +24,9 @@ pub enum DefuseEvent<'a> {
     FeeChanged(FeeChangedEvent),
     #[event_version("0.1.0")]
     FeeCollectorChanged(FeeCollectorChangedEvent<'a>),
+
+    #[event_version("0.1.0")]
+    Transfer(AccountEvent<'a, Cow<'a, Transfer>>),
 
     #[event_version("0.1.0")]
     IntentsExecuted(Cow<'a, [AccountEvent<'a, IntentExecutedEvent>]>),

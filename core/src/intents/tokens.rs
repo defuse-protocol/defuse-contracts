@@ -13,7 +13,6 @@ use crate::{
 
 use super::ExecutableIntent;
 
-// TODO: rename to Transfer
 // TODO: decouple from NEP-245, emit out own logs
 #[cfg_attr(
     all(feature = "abi", not(target_arch = "wasm32")),
@@ -42,19 +41,7 @@ impl ExecutableIntent for Transfer {
         S: State,
         I: Inspector,
     {
-        if sender_id == self.receiver_id || self.tokens.is_empty() {
-            return Err(DefuseError::ZeroAmount);
-        }
-
-        engine
-            .state
-            .internal_withdraw(sender_id, self.tokens.clone())?;
-        engine
-            .state
-            .internal_deposit(self.receiver_id.clone(), self.tokens.clone())?;
-
-        engine.state.on_mt_transfer(sender_id, self);
-        Ok(())
+        engine.internal_transfer(sender_id, self)
     }
 }
 
@@ -163,7 +150,7 @@ impl ExecutableIntent for MtWithdraw {
         I: Inspector,
     {
         if self.token_ids.len() != self.amounts.len() || self.token_ids.is_empty() {
-            return Err(DefuseError::ZeroAmount);
+            return Err(DefuseError::InvalidIntent);
         }
 
         let token_amounts = iter::repeat(self.token.clone())

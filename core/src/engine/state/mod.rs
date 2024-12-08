@@ -9,7 +9,7 @@ use near_sdk::{AccountId, AccountIdRef};
 
 use crate::{
     fees::Pips,
-    intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw, Transfer},
+    intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw},
     tokens::TokenId,
     Nonce, Result,
 };
@@ -52,29 +52,27 @@ pub trait State: StateView {
     fn internal_deposit(
         &mut self,
         owner_id: AccountId,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        tokens: impl IntoIterator<Item = (TokenId, u128)>,
     ) -> Result<()>;
     // TODO: docs
     fn deposit(
         &mut self,
         owner_id: AccountId,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        tokens: impl IntoIterator<Item = (TokenId, u128)>,
         memo: Option<&str>,
     ) -> Result<()>;
     fn internal_withdraw(
         &mut self,
         owner_id: &AccountIdRef,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        tokens: impl IntoIterator<Item = (TokenId, u128)>,
     ) -> Result<()>;
     // TODO: docs
     fn withdraw(
         &mut self,
         owner_id: &AccountIdRef,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        tokens: impl IntoIterator<Item = (TokenId, u128)>,
         memo: Option<&str>,
     ) -> Result<()>;
-
-    fn on_mt_transfer(&mut self, sender_id: &AccountIdRef, transfer: Transfer);
 
     fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw);
     fn on_nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw);

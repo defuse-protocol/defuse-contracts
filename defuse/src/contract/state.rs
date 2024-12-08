@@ -1,10 +1,13 @@
-use defuse_core::fees::FeesConfig;
+use defuse_core::{
+    fees::FeesConfig,
+    tokens::{TokenAmounts, TokenId},
+};
 use defuse_near_utils::NestPrefix;
 use near_sdk::{
     borsh::BorshSerialize, near, store::IterableMap, AccountId, BorshStorageKey, IntoStorageKey,
 };
 
-use super::tokens::TokenBalances;
+pub type TokenBalances = TokenAmounts<IterableMap<TokenId, u128>>;
 
 #[near(serializers = [borsh])]
 #[derive(Debug)]

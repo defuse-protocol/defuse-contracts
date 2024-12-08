@@ -9,7 +9,7 @@ use near_sdk::{AccountId, AccountIdRef};
 
 use crate::{
     fees::Pips,
-    intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw, Transfer},
+    intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw},
     tokens::{TokenAmounts, TokenId},
     DefuseError, Nonce, Nonces, Result,
 };
@@ -167,13 +167,13 @@ where
             .ok_or(DefuseError::AccountNotFound)?;
         for (token_id, amount) in token_amounts {
             if amount == 0 {
-                return Err(DefuseError::ZeroAmount);
+                return Err(DefuseError::InvalidIntent);
             }
 
             if account.token_amounts.get(&token_id).is_none() {
                 account
                     .token_amounts
-                    .deposit(token_id.clone(), self.view.balance_of(&owner_id, &token_id))
+                    .deposit(token_id.clone(), self.view.balance_of(owner_id, &token_id))
                     .ok_or(DefuseError::BalanceOverflow)?;
             }
             account
@@ -184,6 +184,7 @@ where
         Ok(())
     }
 
+    #[inline]
     fn deposit(
         &mut self,
         owner_id: AccountId,
@@ -193,6 +194,7 @@ where
         self.internal_deposit(owner_id, token_amounts)
     }
 
+    #[inline]
     fn withdraw(
         &mut self,
         owner_id: &AccountIdRef,
@@ -202,25 +204,17 @@ where
         self.internal_withdraw(owner_id, token_amounts)
     }
 
-    fn on_mt_transfer(&mut self, sender_id: &AccountIdRef, transfer: Transfer) {
-        todo!()
-    }
+    #[inline]
+    fn on_ft_withdraw(&mut self, _owner_id: &AccountIdRef, _withdraw: FtWithdraw) {}
 
-    fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw) {
-        todo!()
-    }
+    #[inline]
+    fn on_nft_withdraw(&mut self, _owner_id: &AccountIdRef, _withdraw: NftWithdraw) {}
 
-    fn on_nft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NftWithdraw) {
-        todo!()
-    }
+    #[inline]
+    fn on_mt_withdraw(&mut self, _owner_id: &AccountIdRef, _withdraw: MtWithdraw) {}
 
-    fn on_mt_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: MtWithdraw) {
-        todo!()
-    }
-
-    fn on_native_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: NativeWithdraw) {
-        todo!()
-    }
+    #[inline]
+    fn on_native_withdraw(&mut self, _owner_id: &AccountIdRef, _withdraw: NativeWithdraw) {}
 }
 
 #[derive(Debug, Default, Clone)]

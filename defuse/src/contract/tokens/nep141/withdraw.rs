@@ -1,11 +1,8 @@
-use core::iter;
-use std::borrow::Cow;
-
 use defuse_core::{engine::State, intents::tokens::FtWithdraw, tokens::TokenId, Result};
 use defuse_near_utils::{
     UnwrapOrPanic, UnwrapOrPanicError, CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_ID,
 };
-use defuse_nep245::{MtBurnEvent, MtEvent};
+
 use defuse_wnear::{ext_wnear, NEAR_WITHDRAW_GAS};
 use near_contract_standards::storage_management::ext_storage_management;
 use near_plugins::{access_control_any, pause, AccessControllable, Pausable};

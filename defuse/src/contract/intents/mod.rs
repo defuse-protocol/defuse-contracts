@@ -5,13 +5,10 @@ mod state;
 mod tokens;
 
 use defuse_core::{
-    crypto::{Payload, SignedPayload},
-    engine::{Engine, State, StateView},
-    intents::{DefuseIntents, ExecutableIntent},
-    payload::{multi::MultiPayload, DefusePayload, ExtractDefusePayload},
-    DefuseError, Result,
+    engine::{Engine, StateView},
+    payload::multi::MultiPayload,
 };
-use defuse_near_utils::{UnwrapOrPanic, CURRENT_ACCOUNT_ID};
+use defuse_near_utils::UnwrapOrPanic;
 use execute::ExecuteInspector;
 use near_plugins::{pause, Pausable};
 use near_sdk::near;
@@ -29,10 +26,8 @@ impl Intents for Contract {
     fn execute_intents(&mut self, intents: Vec<MultiPayload>) {
         let mut insp = ExecuteInspector::default();
         let mut engine = Engine::new(self, &mut insp);
-        engine
-            .execute_signed_intents::<_, DefuseIntents>(intents)
-            .unwrap_or_panic();
-        if let Some(event) = engine.finalize().unwrap_or_panic().into_event() {
+        engine.execute_signed_intents(intents).unwrap_or_panic();
+        if let Some(event) = engine.finalize().unwrap_or_panic().as_event() {
             event.emit();
         }
 
@@ -45,9 +40,7 @@ impl Intents for Contract {
     fn simulate_intents(&self, intents: Vec<MultiPayload>) -> SimulationOutput {
         let mut inspector = SimulateInspector::default();
         let mut engine = Engine::new(self.cached(), &mut inspector);
-        engine
-            .execute_signed_intents::<_, DefuseIntents>(intents)
-            .unwrap_or_panic();
+        engine.execute_signed_intents(intents).unwrap_or_panic();
         SimulationOutput {
             intents_executed: inspector.intents_executed,
             min_deadline: inspector.min_deadline,

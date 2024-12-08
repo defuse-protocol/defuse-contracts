@@ -1,7 +1,7 @@
 use near_sdk::{serde_json, FunctionError};
 use thiserror::Error as ThisError;
 
-use crate::tokens::ParseTokenIdError;
+use crate::{intents::token_diff::TokenDeltas, tokens::ParseTokenIdError};
 
 pub type Result<T, E = DefuseError> = ::core::result::Result<T, E>;
 
@@ -16,11 +16,16 @@ pub enum DefuseError {
     #[error("deadline has expired")]
     DeadlineExpired,
 
+    #[error("invalid intent")]
+    InvalidIntent,
+
     #[error("invalid signature")]
     InvalidSignature,
 
     #[error("invariant violated")]
-    InvariantViolated,
+    InvariantViolated {
+        unmatched_deltas: Option<TokenDeltas>,
+    },
 
     #[error("JSON: {0}")]
     JSON(#[from] serde_json::Error),
@@ -39,7 +44,4 @@ pub enum DefuseError {
 
     #[error("wrong verifying_contract")]
     WrongVerifyingContract,
-
-    #[error("zero amount(s)")]
-    ZeroAmount,
 }

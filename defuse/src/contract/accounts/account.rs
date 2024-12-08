@@ -67,12 +67,12 @@ impl Account {
         ))
         .emit();
 
-        return true;
+        true
     }
 
     #[inline]
     fn maybe_add_public_key(&mut self, me: &AccountIdRef, public_key: PublicKey) -> bool {
-        if me == &public_key.to_implicit_account_id() {
+        if me == public_key.to_implicit_account_id() {
             let was_removed = self.implicit_public_key_removed;
             self.implicit_public_key_removed = false;
             was_removed
@@ -95,12 +95,12 @@ impl Account {
         ))
         .emit();
 
-        return true;
+        true
     }
 
     #[inline]
     fn maybe_remove_public_key(&mut self, me: &AccountIdRef, public_key: &PublicKey) -> bool {
-        if me == &public_key.to_implicit_account_id() {
+        if me == public_key.to_implicit_account_id() {
             let was_removed = self.implicit_public_key_removed;
             self.implicit_public_key_removed = true;
             !was_removed
@@ -111,7 +111,7 @@ impl Account {
 
     #[inline]
     pub fn has_public_key(&self, me: &AccountIdRef, public_key: &PublicKey) -> bool {
-        !self.implicit_public_key_removed && me == &public_key.to_implicit_account_id()
+        !self.implicit_public_key_removed && me == public_key.to_implicit_account_id()
             || self.public_keys.contains(public_key)
     }
 
@@ -119,7 +119,7 @@ impl Account {
     pub fn iter_public_keys(&self, me: &AccountIdRef) -> impl Iterator<Item = PublicKey> + '_ {
         self.public_keys.iter().cloned().chain(
             (!self.implicit_public_key_removed)
-                .then(|| PublicKey::from_implicit_account_id(&me))
+                .then(|| PublicKey::from_implicit_account_id(me))
                 .flatten(),
         )
     }

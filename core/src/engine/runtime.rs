@@ -1,158 +1,153 @@
-use std::{borrow::Cow, collections::HashMap, iter};
+use std::{borrow::Cow, cmp::Reverse, collections::HashMap, iter};
 
 use defuse_map_utils::cleanup::DefaultMap;
 use defuse_nep245::{MtEvent, MtTransferEvent};
 use near_sdk::{json_types::U128, AccountId};
 
 use crate::{
+    intents::token_diff::TokenDeltas,
     tokens::{TokenAmounts, TokenId},
-    Result,
 };
 
 // TODO: docs
 /// Accumulates deltas and
 #[derive(Debug, Default)]
-pub struct DeltaMatcher(HashMap<TokenId, TokenAmounts<HashMap<AccountId, i128>>>);
+pub struct TransferMatcher(HashMap<TokenId, TokenTransferMatcher>);
 
-impl DeltaMatcher {
+impl TransferMatcher {
     #[inline]
-    pub fn add_delta(
-        &mut self,
-        owner_id: AccountId,
-        token_id: TokenId,
-        delta: i128,
-    ) -> Option<i128> {
+    pub fn deposit(&mut self, owner_id: AccountId, token_id: TokenId, amount: u128) -> bool {
+        self.0.entry_or_default(token_id).deposit(owner_id, amount)
+    }
+
+    #[inline]
+    pub fn withdraw(&mut self, owner_id: AccountId, token_id: TokenId, amount: u128) -> bool {
+        self.0.entry_or_default(token_id).withdraw(owner_id, amount)
+    }
+    #[inline]
+    pub fn add_delta(&mut self, owner_id: AccountId, token_id: TokenId, delta: i128) -> bool {
         self.0.entry_or_default(token_id).add_delta(owner_id, delta)
     }
 
-    pub fn finalize(self) -> Result<Transfers> {
+    pub fn finalize(self) -> Result<Transfers, Option<TokenDeltas>> {
         let mut transfers = Transfers::default();
-        // TODO
-        for (token_id, token_transfers) in self.0 {
-            // TODO
-            // token_transfers.finalize_into(token_id, &mut transfers)?;
+        let mut unmatched_deltas = TokenDeltas::default();
+        for (token_id, deltas) in self.0 {
+            if let Err(unmatched) = deltas.finalize_into(token_id.clone(), &mut transfers) {
+                if unmatched
+                    .and_then(|d| unmatched_deltas.add_delta(token_id, d))
+                    .is_none()
+                {
+                    return Err(None);
+                }
+            }
+        }
+        if !unmatched_deltas.is_empty() {
+            return Err(Some(unmatched_deltas));
         }
         Ok(transfers)
     }
 }
 
-// #[derive(Debug, Default)]
-// pub struct TokenTransfers {
-//     withdrawals: HashMap<AccountId, u128>,
-//     deposits: HashMap<AccountId, u128>,
-// }
+type AccountAmounts = TokenAmounts<HashMap<AccountId, u128>>;
 
-// impl TokenTransfers {
-//     #[inline]
-//     pub fn deposit(&mut self, owner_id: AccountId, amount: u128) -> Result<()> {
-//         Self::sub_add(&mut self.withdrawals, &mut self.deposits, owner_id, amount)
-//     }
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct TokenTransferMatcher {
+    deposits: AccountAmounts,
+    withdrawals: AccountAmounts,
+}
 
-//     #[inline]
-//     pub fn withdraw(&mut self, owner_id: AccountId, amount: u128) -> Result<()> {
-//         Self::sub_add(&mut self.deposits, &mut self.withdrawals, owner_id, amount)
-//     }
+impl TokenTransferMatcher {
+    #[inline]
+    pub fn deposit(&mut self, owner_id: AccountId, amount: u128) -> bool {
+        Self::sub_add(&mut self.withdrawals, &mut self.deposits, owner_id, amount)
+    }
 
-//     #[inline]
-//     pub fn add_delta(&mut self, owner_id: AccountId, delta: i128) -> Result<()> {
-//         let amount = delta.unsigned_abs();
-//         if delta.is_negative() {
-//             self.withdraw(owner_id, amount)
-//         } else {
-//             self.deposit(owner_id, amount)
-//         }
-//     }
+    #[inline]
+    pub fn withdraw(&mut self, owner_id: AccountId, amount: u128) -> bool {
+        Self::sub_add(&mut self.deposits, &mut self.withdrawals, owner_id, amount)
+    }
 
-//     fn sub_add(
-//         sub: &mut HashMap<AccountId, u128>,
-//         add: &mut HashMap<AccountId, u128>,
-//         owner_id: AccountId,
-//         mut amount: u128,
-//     ) -> Result<()> {
-//         if let Some(s) = sub.get_mut(&owner_id) {
-//             let a = (*s).min(amount);
-//             amount = amount.saturating_sub(a);
-//             *s = s.saturating_sub(a);
-//             if *s == 0 {
-//                 sub.remove(k)
-//             }
-//         }
-//         // let mut sub = sub.entry_or_default(owner_id);
-//         // let s = sub.min(amount);
-//         // *sub = sub.saturating_sub(s);
-//         // amount = amount.saturating_sub(s);
+    #[inline]
+    pub fn add_delta(&mut self, owner_id: AccountId, delta: i128) -> bool {
+        let amount = delta.unsigned_abs();
+        if delta.is_negative() {
+            self.withdraw(owner_id, amount)
+        } else {
+            self.deposit(owner_id, amount)
+        }
+    }
 
-//         if amount > 0 {
-//             let mut add = add.entry_or_default(sub.key().clone());
-//             *add = add
-//                 .checked_add(amount)
-//                 .ok_or(DefuseError::BalanceOverflow)?;
-//         }
+    fn sub_add(
+        sub: &mut AccountAmounts,
+        add: &mut AccountAmounts,
+        owner_id: AccountId,
+        mut amount: u128,
+    ) -> bool {
+        let s = sub.balance_of(&owner_id);
+        if s > 0 {
+            let a = s.min(amount);
+            sub.withdraw(owner_id.clone(), a);
+            amount = amount.saturating_sub(a);
+            if amount == 0 {
+                return true;
+            }
+        }
+        add.deposit(owner_id, amount).is_some()
+    }
 
-//         Ok(())
-//     }
+    pub fn finalize_into(
+        self,
+        token_id: TokenId,
+        transfers: &mut Transfers,
+    ) -> Result<(), Option<i128>> {
+        let [mut deposits, mut withdrawals] = [self.deposits, self.withdrawals].map(|amounts| {
+            let mut amounts: Vec<_> = amounts.into_iter().collect();
+            amounts.sort_unstable_by_key(|(_, amount)| Reverse(*amount));
+            amounts.into_iter()
+        });
 
-//     pub fn finalize_into(self, token_id: TokenId, transfers: &mut Transfers) -> Result<()> {
-//         let [mut withdrawals, mut deposits] =
-//             [self.withdrawals, self.deposits].map(IntoIterator::into_iter);
+        let (mut deposit, mut withdraw) = (deposits.next(), withdrawals.next());
 
-//         // get first sender, receiver and their amounts
-//         let ((mut sender_id, mut sender_amount), (mut receiver_id, mut receiver_amount)) =
-//             match (withdrawals.next(), deposits.next()) {
-//                 (Some(w), Some(d)) => (w, d),
-//                 // nothing to match
-//                 (None, None) => return Ok(()),
-//                 // no counterpart found
-//                 _ => return Err(DefuseError::InvariantViolated),
-//             };
+        loop {
+            match (withdraw.as_mut(), deposit.as_mut()) {
+                (Some((sender, ref mut send)), Some((receiver, receive))) => {
+                    // get min amount and transfer
+                    let transfer = (*send).min(*receive);
+                    let _ = transfers.transfer(
+                        sender.clone(),
+                        receiver.clone(),
+                        token_id.clone(),
+                        transfer,
+                    );
 
-//         loop {
-//             // find next sender with non-zero amount
-//             if sender_amount == 0 {
-//                 let Some((s, a)) = withdrawals.next() else {
-//                     break;
-//                 };
-//                 (sender_id, sender_amount) = (s, a);
-//                 continue;
-//             }
+                    // subtract amount from sender's and receiver's amounts
+                    *send = send.saturating_sub(transfer);
+                    *receive = receive.saturating_sub(transfer);
 
-//             // find next receiver with non-zero amount
-//             if receiver_amount == 0 {
-//                 let Some((r, a)) = deposits.next() else {
-//                     break;
-//                 };
-//                 (receiver_id, receiver_amount) = (r, a);
-//                 continue;
-//             }
-
-//             // get min amount and transfer
-//             let amount = sender_amount.min(receiver_amount);
-//             transfers
-//                 .transfer(
-//                     sender_id.clone(),
-//                     receiver_id.clone(),
-//                     token_id.clone(),
-//                     amount,
-//                 )
-//                 .ok_or(DefuseError::BalanceOverflow)?;
-
-//             // subtract amount from sender's and receiver's amounts
-//             sender_amount = sender_amount.saturating_sub(amount);
-//             receiver_amount = receiver_amount.saturating_sub(amount);
-//         }
-
-//         if sender_amount != 0
-//             || receiver_amount != 0
-//             || deposits.len() != 0
-//             || withdrawals.len() != 0
-//         {
-//             // non-zero amount left and was not destributed
-//             return Err(DefuseError::InvariantViolated);
-//         }
-
-//         Ok(())
-//     }
-// }
+                    if *send == 0 {
+                        withdraw = withdrawals.next();
+                    }
+                    if *receive == 0 {
+                        deposit = deposits.next();
+                    }
+                }
+                (None, None) => return Ok(()),
+                (Some((_, send)), None) => {
+                    return Err(withdrawals
+                        .try_fold(*send, |total, (_, s)| total.checked_add(s))
+                        .and_then(|total| i128::try_from(total).ok())
+                        .and_then(i128::checked_neg));
+                }
+                (None, Some((_, receive))) => {
+                    return Err(deposits
+                        .try_fold(*receive, |total, (_, r)| total.checked_add(r))
+                        .and_then(|total| i128::try_from(total).ok()))
+                }
+            }
+        }
+    }
+}
 
 /// Accumulates transfers between
 #[derive(Debug, Default)]
@@ -162,6 +157,7 @@ pub struct Transfers(
 );
 
 impl Transfers {
+    #[must_use]
     pub fn transfer(
         &mut self,
         sender_id: AccountId,
@@ -176,7 +172,7 @@ impl Transfers {
         Some(*transfer)
     }
 
-    pub fn into_event(&self) -> Option<MtEvent<'_>> {
+    pub fn as_event(&self) -> Option<MtEvent<'_>> {
         if self.0.is_empty() {
             return None;
         }
@@ -186,13 +182,13 @@ impl Transfers {
                 .flat_map(|(sender_id, transfers)| iter::repeat(sender_id).zip(transfers))
                 .map(|(sender_id, (receiver_id, transfers))| {
                     let (token_ids, amounts) = transfers
-                        .into_iter()
+                        .iter()
                         .map(|(token_id, amount)| (token_id.to_string(), U128(*amount)))
                         .unzip();
                     MtTransferEvent {
                         authorized_id: None,
-                        old_owner_id: Cow::Borrowed(&sender_id),
-                        new_owner_id: Cow::Borrowed(&receiver_id),
+                        old_owner_id: Cow::Borrowed(sender_id),
+                        new_owner_id: Cow::Borrowed(receiver_id),
                         token_ids: Cow::Owned(token_ids),
                         amounts: Cow::Owned(amounts),
                         memo: None,
@@ -210,8 +206,28 @@ mod tests {
 
     #[test]
     fn test_deltas() {
-        let mut l = DeltaMatcher::default();
+        let mut deltas = TransferMatcher::default();
+        let [a, b, c, d, e, f, g, h, i]: [AccountId; 9] =
+            ["a", "b", "c", "d", "e", "f", "g", "h", "i"]
+                .map(|s| format!("{s}.near").parse().unwrap());
+        let [ft1, ft2] =
+            ["ft1", "ft2"].map(|a| TokenId::Nep141(format!("{a}.near").parse().unwrap()));
+
+        for (owner, token_id, delta) in [
+            (a, ft1.clone(), -5),
+            (b, ft1.clone(), 4),
+            (c, ft1.clone(), 3),
+            (d, ft1.clone(), -10),
+            (e, ft1.clone(), -1),
+            (f, ft1.clone(), 10),
+            (g, ft1.clone(), -1),
+            (h, ft2.clone(), -1),
+            (i, ft2.clone(), 1),
+        ] {
+            assert!(deltas.add_delta(owner, token_id, delta));
+        }
+
+        deltas.finalize().unwrap();
         // TODO
-        // l.add_delta(owner_id, token_id, delta)
     }
 }

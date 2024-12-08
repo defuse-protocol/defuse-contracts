@@ -4,7 +4,7 @@ use defuse_core::{
     crypto::PublicKey,
     engine::{State, StateView},
     fees::Pips,
-    intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw, Transfer},
+    intents::tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw},
     tokens::TokenId,
     DefuseError, Nonce, Result,
 };
@@ -41,7 +41,7 @@ impl StateView for Contract {
         self.accounts
             .get(account_id)
             .map(|account| account.has_public_key(account_id, public_key))
-            .unwrap_or_else(|| account_id == &public_key.to_implicit_account_id())
+            .unwrap_or_else(|| account_id == public_key.to_implicit_account_id())
     }
 
     fn iter_public_keys(&self, account_id: &AccountIdRef) -> impl Iterator<Item = PublicKey> + '_ {
@@ -105,7 +105,7 @@ impl State for Contract {
         let owner = self.accounts.get_or_create(owner_id);
         for (token_id, amount) in token_amounts {
             if amount == 0 {
-                return Err(DefuseError::ZeroAmount);
+                return Err(DefuseError::InvalidIntent);
             }
             owner
                 .token_balances
@@ -132,7 +132,7 @@ impl State for Contract {
 
         for (token_id, amount) in token_amounts {
             if amount == 0 {
-                return Err(DefuseError::ZeroAmount);
+                return Err(DefuseError::InvalidIntent);
             }
 
             mint_event.token_ids.to_mut().push(token_id.to_string());
@@ -164,7 +164,7 @@ impl State for Contract {
             .ok_or(DefuseError::AccountNotFound)?;
         for (token_id, amount) in token_amounts {
             if amount == 0 {
-                return Err(DefuseError::ZeroAmount);
+                return Err(DefuseError::InvalidIntent);
             }
 
             owner
@@ -196,7 +196,7 @@ impl State for Contract {
 
         for (token_id, amount) in token_amounts {
             if amount == 0 {
-                return Err(DefuseError::ZeroAmount);
+                return Err(DefuseError::InvalidIntent);
             }
 
             burn_event.token_ids.to_mut().push(token_id.to_string());
@@ -215,10 +215,6 @@ impl State for Contract {
         MtEvent::MtBurn([burn_event].as_slice().into()).emit();
 
         Ok(())
-    }
-
-    fn on_mt_transfer(&mut self, sender_id: &AccountIdRef, transfer: Transfer) {
-        todo!()
     }
 
     fn on_ft_withdraw(&mut self, owner_id: &AccountIdRef, withdraw: FtWithdraw) {
