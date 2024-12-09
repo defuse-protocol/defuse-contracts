@@ -1,0 +1,16 @@
+[package]
+name = "defuse-map-utils"
+edition.workspace = true
+version = "0.1.0"
+
+[lib]
+doctest = true
+
+[dependencies]
+impl-tools.workspace = true
+near-sdk = { workspace = true, optional = true }
+
+[features]
+default = ["near"]
+
+near = ["dep:near-sdk"]

@@ -1,4 +1,4 @@
-use defuse_contracts::crypto::PublicKey;
+use defuse::core::crypto::PublicKey;
 use near_sdk::{AccountId, NearToken};
 use serde_json::json;
 

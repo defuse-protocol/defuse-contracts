@@ -1,0 +1,14 @@
+[package]
+name = "defuse-erc191"
+edition.workspace = true
+version = "0.1.0"
+
+[dependencies]
+defuse-crypto = { workspace = true, features = ["serde"] }
+
+impl-tools.workspace = true
+near-sdk.workspace = true
+serde_with.workspace = true
+
+[features]
+abi = []

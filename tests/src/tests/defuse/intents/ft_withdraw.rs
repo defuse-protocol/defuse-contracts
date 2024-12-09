@@ -1,9 +1,9 @@
-use defuse_contracts::{
-    defuse::{
-        intents::{tokens::FtWithdraw, DefuseIntents},
-        tokens::TokenId,
-    },
-    utils::Deadline,
+use std::time::Duration;
+
+use defuse::core::{
+    intents::{tokens::FtWithdraw, DefuseIntents},
+    tokens::TokenId,
+    Deadline,
 };
 use near_sdk::{AccountId, NearToken};
 use rand::{thread_rng, Rng};
@@ -16,7 +16,7 @@ use crate::{
 
 #[tokio::test]
 async fn test_withdraw_intent() {
-    let env = Env::new().await.unwrap();
+    let env = Env::new().await;
 
     env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
         .await
@@ -28,13 +28,14 @@ async fn test_withdraw_intent() {
         .execute_intents([env.user1.sign_defuse_message(
             env.defuse.id(),
             thread_rng().gen(),
-            Deadline::infinity(),
+            Deadline::timeout(Duration::from_secs(120)),
             DefuseIntents {
                 intents: [FtWithdraw {
                     token: env.ft1.clone(),
                     receiver_id: other_user_id.clone(),
                     amount: 1000.into(),
                     memo: None,
+                    msg: None,
                     storage_deposit: None,
                 }
                 .into()]
@@ -65,13 +66,14 @@ async fn test_withdraw_intent() {
         .execute_intents([env.user1.sign_defuse_message(
             env.defuse.id(),
             thread_rng().gen(),
-            Deadline::infinity(),
+            Deadline::MAX,
             DefuseIntents {
                 intents: [FtWithdraw {
                     token: env.ft1.clone(),
                     receiver_id: other_user_id.clone(),
                     amount: 1000.into(),
                     memo: None,
+                    msg: None,
                     // user has no wnear yet
                     storage_deposit: Some(STORAGE_DEPOSIT),
                 }
@@ -116,13 +118,14 @@ async fn test_withdraw_intent() {
         [env.user1.sign_defuse_message(
             env.defuse.id(),
             thread_rng().gen(),
-            Deadline::infinity(),
+            Deadline::MAX,
             DefuseIntents {
                 intents: [FtWithdraw {
                     token: env.ft1.clone(),
                     receiver_id: other_user_id.clone(),
                     amount: 1000.into(),
                     memo: None,
+                    msg: None,
                     // now user has wNEAR to pay for it
                     storage_deposit: Some(STORAGE_DEPOSIT),
                 }

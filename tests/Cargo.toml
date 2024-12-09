@@ -1,5 +1,5 @@
 [package]
-name = "defuse-contracts-tests"
+name = "defuse-tests"
 version = "0.1.0"
 edition.workspace = true
 
@@ -7,9 +7,8 @@ edition.workspace = true
 workspace = true
 
 [dev-dependencies]
-defuse-contracts.workspace = true
-defuse-contract.workspace = true
-defuse-poa-factory-contract.workspace = true
+defuse = { workspace = true, features = ["contract"] }
+defuse-poa-factory = { workspace = true, features = ["contract"] }
 
 anyhow.workspace = true
 bnum = { workspace = true, features = ["rand"] }

@@ -3,7 +3,7 @@ use std::{
     sync::LazyLock,
 };
 
-use defuse_poa_factory_contract::Role;
+use defuse_poa_factory::contract::Role;
 use near_contract_standards::fungible_token::metadata::FungibleTokenMetadata;
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use near_workspaces::Contract;
@@ -11,8 +11,7 @@ use serde_json::json;
 
 use crate::utils::{account::AccountExt, read_wasm};
 
-static POA_FACTORY_WASM: LazyLock<Vec<u8>> =
-    LazyLock::new(|| read_wasm("defuse_poa_factory_contract"));
+static POA_FACTORY_WASM: LazyLock<Vec<u8>> = LazyLock::new(|| read_wasm("defuse_poa_factory"));
 
 pub trait PoAFactoryExt {
     async fn deploy_poa_factory(

@@ -1,0 +1,39 @@
+[package]
+name = "defuse-core"
+edition.workspace = true
+version = "0.1.0"
+
+[dependencies]
+defuse-bitmap.workspace = true
+defuse-crypto = { workspace = true, features = ["serde"] }
+defuse-erc191.workspace = true
+defuse-nep245.workspace = true
+defuse-nep413.workspace = true
+defuse-map-utils.workspace = true
+defuse-num-utils.workspace = true
+defuse-serde-utils.workspace = true
+
+chrono = { workspace = true, features = ["serde"] }
+derive_more = { workspace = true, features = ["from"] }
+impl-tools.workspace = true
+near-account-id.workspace = true
+near-contract-standards.workspace = true
+near-sdk.workspace = true
+serde_with.workspace = true
+strum.workspace = true
+thiserror.workspace = true
+
+[features]
+abi = [
+    "defuse-crypto/abi",
+    "defuse-erc191/abi",
+    "defuse-nep413/abi",
+    "defuse-serde-utils/abi",
+]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+chrono = { workspace = true, features = ["now"] }
+
+[dev-dependencies]
+itertools.workspace = true
+rstest.workspace = true

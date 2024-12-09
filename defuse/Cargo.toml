@@ -1,5 +1,5 @@
 [package]
-name = "defuse-contract"
+name = "defuse"
 version = "0.1.0"
 edition.workspace = true
 
@@ -10,11 +10,15 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
-defuse-contracts = { workspace = true, features = [
-    "defuse",
-    "upgrade",
-    "wnear",
-] }
+defuse-admin-utils.workspace = true
+defuse-bitmap = { workspace = true, optional = true }
+defuse-controller.workspace = true
+defuse-core.workspace = true
+defuse-near-utils.workspace = true
+defuse-nep245.workspace = true
+defuse-map-utils = { workspace = true, optional = true }
+defuse-serde-utils.workspace = true
+defuse-wnear = { workspace = true, optional = true }
 
 bnum.workspace = true
 impl-tools.workspace = true
@@ -22,6 +26,10 @@ near-account-id.workspace = true
 near-contract-standards.workspace = true
 near-plugins.workspace = true
 near-sdk.workspace = true
+serde_with.workspace = true
+strum.workspace = true
+thiserror.workspace = true
 
 [features]
-abi = ["defuse-contracts/abi"]
+abi = ["defuse-core/abi"]
+contract = ["dep:defuse-wnear", "dep:defuse-map-utils", "dep:defuse-bitmap"]

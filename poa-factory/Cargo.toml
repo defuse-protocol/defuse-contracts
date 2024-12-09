@@ -1,7 +1,7 @@
 [package]
-name = "defuse-poa-factory-contract"
-version = "0.1.0"
+name = "defuse-poa-factory"
 edition.workspace = true
+version = "0.1.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -10,11 +10,13 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
-defuse-contracts = { workspace = true, features = ["poa"] }
+defuse-admin-utils.workspace = true
+defuse-near-utils.workspace = true
+defuse-poa-token.workspace = true
 
 near-contract-standards.workspace = true
 near-plugins.workspace = true
 near-sdk.workspace = true
 
 [features]
-abi = ["defuse-contracts/abi"]
+contract = []

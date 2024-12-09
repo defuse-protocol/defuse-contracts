@@ -1,4 +1,4 @@
-use defuse_contract::Role;
+use defuse::contract::Role;
 use near_sdk::{AccountId, NearToken, PublicKey};
 use near_workspaces::Account;
 use serde_json::json;
@@ -7,11 +7,7 @@ use crate::{tests::defuse::env::Env, utils::acl::AclExt};
 
 #[tokio::test]
 async fn test_relayer_keys() {
-    let env = Env::builder()
-        .deployer_as_super_admin()
-        .build()
-        .await
-        .unwrap();
+    let env = Env::builder().deployer_as_super_admin().build().await;
 
     env.acl_grant_role(env.defuse.id(), Role::RelayerKeysManager, env.user1.id())
         .await
