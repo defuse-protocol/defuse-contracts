@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::Duration};
 
 use defuse::core::{
     fees::Pips,
@@ -193,7 +193,7 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
                 account.account.sign_defuse_message(
                     env.defuse.id(),
                     thread_rng().gen(),
-                    Deadline::MAX,
+                    Deadline::timeout(Duration::from_secs(120)),
                     DefuseIntents {
                         intents: [TokenDiff { diff }.into()].into(),
                     },

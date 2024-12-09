@@ -1,7 +1,7 @@
 use defuse::core::{
     intents::{tokens::Transfer, DefuseIntents},
     payload::{multi::MultiPayload, DefusePayload},
-    tokens::TokenId,
+    tokens::{TokenAmounts, TokenId},
     Deadline,
 };
 use near_sdk::AccountId;
@@ -107,7 +107,7 @@ async fn test_simulate_is_view_method() {
                 message: DefuseIntents {
                     intents: [Transfer {
                         receiver_id: env.user2.id().clone(),
-                        tokens: [(ft1.clone(), 1000)].into_iter().collect(),
+                        tokens: TokenAmounts::new([(ft1.clone(), 1000)].into_iter().collect()),
                         memo: None,
                     }
                     .into()]

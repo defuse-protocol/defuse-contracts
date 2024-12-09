@@ -117,7 +117,16 @@ impl ExecutableIntent for Intent {
 )]
 #[near(serializers = [json])]
 #[derive(Debug, Clone)]
-pub struct IntentExecutedEvent {
+pub struct IntentEvent<T> {
     #[serde_as(as = "Base58")]
-    pub hash: CryptoHash,
+    pub intent_hash: CryptoHash,
+    #[serde(flatten)]
+    pub event: T,
+}
+
+impl<T> IntentEvent<T> {
+    #[inline]
+    pub const fn new(event: T, intent_hash: CryptoHash) -> Self {
+        Self { event, intent_hash }
+    }
 }

@@ -2,6 +2,7 @@ use core::{
     fmt::{self, Debug, Display},
     str::FromStr,
 };
+use std::{borrow::Cow, collections::BTreeMap};
 
 use defuse_map_utils::{cleanup::DefaultMap, IterableMap};
 use defuse_num_utils::{CheckedAdd, CheckedSub};
@@ -113,7 +114,7 @@ pub enum ParseTokenIdError {
 #[near(serializers = [borsh, json])]
 #[autoimpl(Deref using self.0)]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct TokenAmounts<T>(T);
+pub struct TokenAmounts<T = BTreeMap<TokenId, u128>>(T);
 
 impl<T> TokenAmounts<T> {
     #[inline]
@@ -266,6 +267,15 @@ where
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+}
+
+impl<'a, T> From<TokenAmounts<T>> for Cow<'a, TokenAmounts<T>>
+where
+    T: Clone,
+{
+    fn from(value: TokenAmounts<T>) -> Self {
+        Self::Owned(value)
     }
 }
 

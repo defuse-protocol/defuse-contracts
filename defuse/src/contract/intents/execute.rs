@@ -3,8 +3,13 @@ use std::borrow::Cow;
 use defuse_core::{
     accounts::AccountEvent,
     engine::Inspector,
-    events::{DefuseEvent, IntentEvent},
-    intents::{token_diff::TokenDiff, tokens::Transfer, IntentExecutedEvent},
+    events::DefuseEvent,
+    intents::{
+        token_diff::{TokenDiff, TokenDiffEvent},
+        tokens::Transfer,
+        IntentEvent,
+    },
+    tokens::TokenAmounts,
     Deadline,
 };
 use near_sdk::{AccountIdRef, CryptoHash};
@@ -12,7 +17,7 @@ use near_sdk::{AccountIdRef, CryptoHash};
 // TODO: rename?
 #[derive(Debug, Default)]
 pub struct ExecuteInspector {
-    pub intents_executed: Vec<AccountEvent<'static, IntentExecutedEvent>>,
+    pub intents_executed: Vec<IntentEvent<AccountEvent<'static, ()>>>,
 }
 
 impl Inspector for ExecuteInspector {
@@ -42,20 +47,31 @@ impl Inspector for ExecuteInspector {
         &mut self,
         owner_id: &AccountIdRef,
         token_diff: &TokenDiff,
+        fees_collected: &TokenAmounts,
         intent_hash: CryptoHash,
     ) {
-        DefuseEvent::TokenDiff(IntentEvent::new(
-            AccountEvent::new(owner_id, Cow::Borrowed(token_diff)),
-            intent_hash,
-        ))
+        DefuseEvent::TokenDiff(
+            [IntentEvent::new(
+                AccountEvent::new(
+                    owner_id,
+                    TokenDiffEvent {
+                        diff: Cow::Borrowed(token_diff),
+                        fees_collected: fees_collected.clone(),
+                    },
+                ),
+                intent_hash,
+            )]
+            .as_slice()
+            .into(),
+        )
         .emit();
     }
 
     #[inline]
-    fn on_intent_executed(&mut self, signer_id: &AccountIdRef, hash: CryptoHash) {
-        self.intents_executed.push(AccountEvent::new(
-            Cow::Owned(signer_id.to_owned()),
-            IntentExecutedEvent { hash },
+    fn on_intent_executed(&mut self, signer_id: &AccountIdRef, intent_hash: CryptoHash) {
+        self.intents_executed.push(IntentEvent::new(
+            AccountEvent::new(Cow::Owned(signer_id.to_owned()), ()),
+            intent_hash,
         ));
     }
 }

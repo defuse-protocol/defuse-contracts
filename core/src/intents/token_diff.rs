@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use defuse_num_utils::CheckedMulDiv;
 use impl_tools::autoimpl;
@@ -44,17 +44,14 @@ impl ExecutableIntent for TokenDiff {
         S: State,
         I: Inspector,
     {
-        engine
-            .inspector
-            .on_token_diff(signer_id, &self, intent_hash);
         if self.diff.is_empty() {
             return Err(DefuseError::InvalidIntent);
         }
 
-        let fees = engine.state.fee();
-        let fee_collector = engine.state.fee_collector().into_owned();
+        let protocol_fee = engine.state.fee();
+        let mut fees_collected: TokenAmounts = Default::default();
 
-        for (token_id, delta) in self.diff {
+        for (token_id, delta) in self.diff.clone() {
             if delta == 0 {
                 return Err(DefuseError::InvalidIntent);
             }
@@ -65,17 +62,45 @@ impl ExecutableIntent for TokenDiff {
                 .internal_add_deltas(signer_id, [(token_id.clone(), delta)])?;
 
             let amount = delta.unsigned_abs();
-            let fee = Self::token_fee(&token_id, amount, fees).fee_ceil(amount);
-            if fee > 0 {
-                // deposit fee to collector
-                engine
-                    .state
-                    .internal_deposit(fee_collector.clone(), [(token_id, fee)])?;
-            }
+            let fee = Self::token_fee(&token_id, amount, protocol_fee).fee_ceil(amount);
+
+            // collect fee
+            fees_collected
+                .deposit(token_id, fee)
+                .ok_or(DefuseError::BalanceOverflow)?;
+        }
+
+        engine
+            .inspector
+            .on_token_diff(signer_id, &self, &fees_collected, intent_hash);
+
+        // deposit fees to collector
+        if !fees_collected.is_empty() {
+            engine
+                .state
+                .internal_deposit(engine.state.fee_collector().into_owned(), fees_collected)?;
         }
 
         Ok(())
     }
+}
+
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
+#[near(serializers = [borsh, json])]
+#[derive(Debug, Clone)]
+pub struct TokenDiffEvent<'a> {
+    #[serde(flatten)]
+    pub diff: Cow<'a, TokenDiff>,
+    #[serde_as(as = "TokenAmounts<BTreeMap<_, DisplayFromStr>>")]
+    #[serde(default, skip_serializing_if = "TokenAmounts::is_empty")]
+    pub fees_collected: TokenAmounts,
 }
 
 impl TokenDiff {

@@ -12,6 +12,3 @@ pub mod storage_management;
 pub mod wnear;
 
 pub use sandbox::*;
-
-// TODO: remove legacy:
-// pub mod cross_chain;

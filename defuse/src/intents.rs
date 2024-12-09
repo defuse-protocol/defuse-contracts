@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use defuse_core::{
     accounts::AccountEvent,
     fees::Pips,
-    intents::{token_diff::TokenDeltas, IntentExecutedEvent},
+    intents::{token_diff::TokenDeltas, IntentEvent},
     payload::multi::MultiPayload,
     tokens::TokenAmounts,
     Deadline,
@@ -34,7 +34,7 @@ pub trait Intents: FeesManager {
 #[derive(Debug, Clone)]
 pub struct SimulationOutput {
     /// Intent hashes along with corresponding signers
-    pub intents_executed: Vec<AccountEvent<'static, IntentExecutedEvent>>,
+    pub intents_executed: Vec<IntentEvent<AccountEvent<'static, ()>>>,
 
     /// Minimum deadline among all simulated intents
     pub min_deadline: Deadline,

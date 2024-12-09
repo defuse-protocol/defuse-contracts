@@ -36,8 +36,6 @@ pub struct DefusePayload<T> {
     )]
     pub nonce: Nonce,
 
-    // TODO
-    // pub referral: Option<AccountId>,
     #[serde(flatten)]
     pub message: T,
 }

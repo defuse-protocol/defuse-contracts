@@ -1,13 +1,14 @@
 use defuse_core::{
     accounts::AccountEvent,
     engine::Inspector,
-    intents::{token_diff::TokenDiff, tokens::Transfer, IntentExecutedEvent},
+    intents::{token_diff::TokenDiff, tokens::Transfer, IntentEvent},
+    tokens::TokenAmounts,
     Deadline,
 };
 use near_sdk::{AccountIdRef, CryptoHash};
 
 pub struct SimulateInspector {
-    pub intents_executed: Vec<AccountEvent<'static, IntentExecutedEvent>>,
+    pub intents_executed: Vec<IntentEvent<AccountEvent<'static, ()>>>,
     pub min_deadline: Deadline,
 }
 
@@ -40,15 +41,16 @@ impl Inspector for SimulateInspector {
         &mut self,
         _owner_id: &AccountIdRef,
         _token_diff: &TokenDiff,
+        _fees_collected: &TokenAmounts,
         _intent_hash: CryptoHash,
     ) {
     }
 
     #[inline]
-    fn on_intent_executed(&mut self, signer_id: &AccountIdRef, hash: CryptoHash) {
-        self.intents_executed.push(AccountEvent::new(
-            signer_id.to_owned(),
-            IntentExecutedEvent { hash },
+    fn on_intent_executed(&mut self, signer_id: &AccountIdRef, intent_hash: CryptoHash) {
+        self.intents_executed.push(IntentEvent::new(
+            AccountEvent::new(signer_id.to_owned(), ()),
+            intent_hash,
         ));
     }
 }

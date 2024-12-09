@@ -62,6 +62,11 @@ impl Pips {
     }
 
     #[inline]
+    pub const fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+
+    #[inline]
     pub fn as_f64(self) -> f64 {
         f64::from(self.as_pips()) / f64::from(Self::MAX.as_pips())
     }

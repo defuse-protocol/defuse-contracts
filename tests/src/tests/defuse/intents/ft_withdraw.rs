@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use defuse::core::{
     intents::{tokens::FtWithdraw, DefuseIntents},
     tokens::TokenId,
@@ -26,7 +28,7 @@ async fn test_withdraw_intent() {
         .execute_intents([env.user1.sign_defuse_message(
             env.defuse.id(),
             thread_rng().gen(),
-            Deadline::MAX,
+            Deadline::timeout(Duration::from_secs(120)),
             DefuseIntents {
                 intents: [FtWithdraw {
                     token: env.ft1.clone(),
