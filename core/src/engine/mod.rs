@@ -32,16 +32,16 @@ where
     }
 
     pub fn execute_signed_intents(
-        &mut self,
+        mut self,
         signed: impl IntoIterator<Item = MultiPayload>,
-    ) -> Result<()> {
+    ) -> Result<Transfers> {
         for signed in signed {
             self.execute_signed_intent(signed)?;
         }
-        Ok(())
+        self.finalize()
     }
 
-    pub fn execute_signed_intent(&mut self, signed: MultiPayload) -> Result<()> {
+    fn execute_signed_intent(&mut self, signed: MultiPayload) -> Result<()> {
         // verify signed payload and get public key
         let public_key = signed.verify().ok_or(DefuseError::InvalidSignature)?;
 
@@ -85,7 +85,9 @@ where
     }
 
     #[inline]
-    pub fn finalize(self) -> Result<Transfers> {
-        self.state.finalize().map_err(DefuseError::UnmatchedDeltas)
+    fn finalize(self) -> Result<Transfers> {
+        self.state
+            .finalize()
+            .map_err(DefuseError::InvariantViolated)
     }
 }

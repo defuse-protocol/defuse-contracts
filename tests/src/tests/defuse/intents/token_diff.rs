@@ -6,6 +6,7 @@ use defuse::core::{
         token_diff::{TokenDeltas, TokenDiff},
         DefuseIntents,
     },
+    payload::multi::MultiPayload,
     tokens::TokenId,
     Deadline,
 };
@@ -186,9 +187,9 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
         }
     }
 
-    // verify
-    env.defuse
-        .execute_intents(accounts.iter().flat_map(move |account| {
+    let signed: Vec<MultiPayload> = accounts
+        .iter()
+        .flat_map(move |account| {
             account.diff.iter().cloned().map(|diff| {
                 account.account.sign_defuse_message(
                     env.defuse.id(),
@@ -199,9 +200,19 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
                     },
                 )
             })
-        }))
+        })
+        .collect();
+
+    // simulate
+    env.defuse
+        .simulate_intents(signed.clone())
         .await
+        .unwrap()
+        .into_result()
         .unwrap();
+
+    // verify
+    env.defuse.execute_intents(signed).await.unwrap();
 
     // check balances
     for account in accounts {
@@ -239,39 +250,50 @@ async fn test_invariant_violated() {
         .await
         .unwrap();
 
-    env.defuse
-        .execute_intents([
-            env.user1.sign_defuse_message(
-                env.defuse.id(),
-                thread_rng().gen(),
-                Deadline::MAX,
-                DefuseIntents {
-                    intents: [TokenDiff {
-                        diff: TokenDeltas::default()
-                            .with_add_deltas([(ft1.clone(), -1000), (ft2.clone(), 2000)])
-                            .unwrap(),
-                    }
-                    .into()]
-                    .into(),
-                },
-            ),
-            env.user1.sign_defuse_message(
-                env.defuse.id(),
-                thread_rng().gen(),
-                Deadline::MAX,
-                DefuseIntents {
-                    intents: [TokenDiff {
-                        diff: TokenDeltas::default()
-                            .with_add_deltas([(ft1.clone(), 1000), (ft2.clone(), -1999)])
-                            .unwrap(),
-                    }
-                    .into()]
-                    .into(),
-                },
-            ),
-        ])
-        .await
-        .unwrap_err();
+    let signed: Vec<_> = [
+        env.user1.sign_defuse_message(
+            env.defuse.id(),
+            thread_rng().gen(),
+            Deadline::MAX,
+            DefuseIntents {
+                intents: [TokenDiff {
+                    diff: TokenDeltas::default()
+                        .with_add_deltas([(ft1.clone(), -1000), (ft2.clone(), 2000)])
+                        .unwrap(),
+                }
+                .into()]
+                .into(),
+            },
+        ),
+        env.user1.sign_defuse_message(
+            env.defuse.id(),
+            thread_rng().gen(),
+            Deadline::MAX,
+            DefuseIntents {
+                intents: [TokenDiff {
+                    diff: TokenDeltas::default()
+                        .with_add_deltas([(ft1.clone(), 1000), (ft2.clone(), -1999)])
+                        .unwrap(),
+                }
+                .into()]
+                .into(),
+            },
+        ),
+    ]
+    .into();
+
+    assert_eq!(
+        env.defuse
+            .simulate_intents(signed.clone())
+            .await
+            .unwrap()
+            .unmatched_deltas
+            .unwrap()
+            .into_unmatched_deltas(),
+        Some(TokenDeltas::new([(ft2.clone(), 1)].into_iter().collect()))
+    );
+
+    env.defuse.execute_intents(signed).await.unwrap_err();
 
     // balances should stay the same
     assert_eq!(

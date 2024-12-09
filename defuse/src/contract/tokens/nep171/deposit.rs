@@ -45,7 +45,8 @@ impl NonFungibleTokenReceiver for Contract {
                 self.execute_intents(msg.execute_intents);
             } else {
                 // detach promise
-                ext_intents::ext(CURRENT_ACCOUNT_ID.clone()).execute_intents(msg.execute_intents);
+                let _ = ext_intents::ext(CURRENT_ACCOUNT_ID.clone())
+                    .execute_intents(msg.execute_intents);
             }
         }
 

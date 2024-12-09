@@ -1,9 +1,15 @@
-use std::{borrow::Cow, cmp::Reverse, collections::HashMap, iter};
+use std::{
+    borrow::Cow,
+    cmp::Reverse,
+    collections::{BTreeMap, HashMap},
+    iter,
+};
 
 use defuse_crypto::PublicKey;
 use defuse_map_utils::cleanup::DefaultMap;
 use defuse_nep245::{MtEvent, MtTransferEvent};
-use near_sdk::{json_types::U128, AccountId, AccountIdRef};
+use near_sdk::{json_types::U128, near, AccountId, AccountIdRef};
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
     fees::Pips,
@@ -32,7 +38,7 @@ impl<S> Deltas<S> {
     }
 
     #[inline]
-    pub fn finalize(self) -> Result<Transfers, Option<TokenDeltas>> {
+    pub fn finalize(self) -> Result<Transfers, InvariantViolated> {
         self.deltas.finalize()
     }
 }
@@ -178,18 +184,21 @@ impl TransferMatcher {
 
     // Finalizes all transfers, or returns unmatched deltas.
     // If unmatched deltas overflow, then Err(None) is returned.
-    pub fn finalize(self) -> Result<Transfers, Option<TokenDeltas>> {
+    pub fn finalize(self) -> Result<Transfers, InvariantViolated> {
         let mut transfers = Transfers::default();
-        let mut unmatched_deltas = TokenDeltas::default();
-        for (token_id, deltas) in self.0 {
-            if let Err(unmatched) = deltas.finalize_into(token_id.clone(), &mut transfers) {
-                if unmatched == 0 || unmatched_deltas.add_delta(token_id, unmatched).is_none() {
-                    return Err(None);
+        let mut deltas = TokenDeltas::default();
+        for (token_id, transfer_matcher) in self.0 {
+            if let Err(unmatched) = transfer_matcher.finalize_into(token_id.clone(), &mut transfers)
+            {
+                if unmatched == 0 || deltas.add_delta(token_id, unmatched).is_none() {
+                    return Err(InvariantViolated::Overflow);
                 }
             }
         }
-        if !unmatched_deltas.is_empty() {
-            return Err(Some(unmatched_deltas));
+        if !deltas.is_empty() {
+            return Err(InvariantViolated::UnmatchedDeltas {
+                unmatched_deltas: deltas,
+            });
         }
         Ok(transfers)
     }
@@ -363,6 +372,47 @@ impl Transfers {
     }
 }
 
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
+#[near(serializers = [json])]
+#[serde(tag = "error", rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InvariantViolated {
+    UnmatchedDeltas {
+        #[serde_as(as = "TokenAmounts<BTreeMap<_, DisplayFromStr>>")]
+        unmatched_deltas: TokenDeltas,
+    },
+    Overflow,
+}
+
+impl InvariantViolated {
+    #[inline]
+    pub const fn as_unmatched_deltas(&self) -> Option<&TokenDeltas> {
+        match self {
+            Self::UnmatchedDeltas {
+                unmatched_deltas: deltas,
+            } => Some(deltas),
+            Self::Overflow => None,
+        }
+    }
+
+    #[inline]
+    pub fn into_unmatched_deltas(self) -> Option<TokenDeltas> {
+        match self {
+            Self::UnmatchedDeltas {
+                unmatched_deltas: deltas,
+            } => Some(deltas),
+            Self::Overflow => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -450,13 +500,13 @@ mod tests {
 
         assert_eq!(
             deltas.finalize().unwrap_err(),
-            Some(
-                TokenDeltas::default()
+            InvariantViolated::UnmatchedDeltas {
+                unmatched_deltas: TokenDeltas::default()
                     .with_add_delta(ft1.clone(), -3)
                     .unwrap()
                     .with_add_delta(ft2.clone(), -1)
                     .unwrap()
-            )
+            }
         );
     }
 }

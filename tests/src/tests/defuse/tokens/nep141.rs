@@ -131,7 +131,7 @@ async fn test_deposit_withdraw_intent() {
                                 FtWithdraw {
                                     token: env.ft1.clone(),
                                     receiver_id: env.user2.id().clone(),
-                                    amount: U128(1000),
+                                    amount: U128(600),
                                     memo: None,
                                     msg: None,
                                     storage_deposit: None,
@@ -163,7 +163,7 @@ async fn test_deposit_withdraw_intent() {
         env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
             .await
             .unwrap(),
-        0
+        400
     );
 
     assert_eq!(
@@ -176,7 +176,7 @@ async fn test_deposit_withdraw_intent() {
         env.ft_token_balance_of(&env.ft1, env.user2.id())
             .await
             .unwrap(),
-        1000
+        600
     );
 }
 

@@ -23,13 +23,9 @@ use super::{Contract, ContractExt};
 impl Intents for Contract {
     #[pause(name = "intents")]
     #[inline]
-    // TODO: rename intents -> signed?
-    fn execute_intents(&mut self, intents: Vec<MultiPayload>) {
-        let mut insp = ExecuteInspector::default();
-        let mut engine = Engine::new(self, &mut insp);
-        engine.execute_signed_intents(intents).unwrap_or_panic();
-        engine
-            .finalize()
+    fn execute_intents(&mut self, signed: Vec<MultiPayload>) {
+        Engine::new(self, ExecuteInspector::default())
+            .execute_signed_intents(signed)
             .unwrap_or_panic()
             .as_mt_event()
             .as_ref()
@@ -38,17 +34,17 @@ impl Intents for Contract {
 
     #[pause(name = "intents")]
     #[inline]
-    fn simulate_intents(&self, intents: Vec<MultiPayload>) -> SimulationOutput {
+    fn simulate_intents(&self, signed: Vec<MultiPayload>) -> SimulationOutput {
         let mut inspector = SimulateInspector::default();
-        let mut engine = Engine::new(self.cached(), &mut inspector);
-        engine.execute_signed_intents(intents).unwrap_or_panic();
+        let engine = Engine::new(self.cached(), &mut inspector);
 
-        let unmatched_deltas = match engine.finalize() {
+        let unmatched_deltas = match engine.execute_signed_intents(signed) {
             // do not log transfers
             Ok(_) => None,
-            Err(DefuseError::UnmatchedDeltas(v)) => v,
+            Err(DefuseError::InvariantViolated(v)) => Some(v),
             Err(err) => err.panic(),
         };
+
         SimulationOutput {
             intents_executed: inspector.intents_executed,
             min_deadline: inspector.min_deadline,

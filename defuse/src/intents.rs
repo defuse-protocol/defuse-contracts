@@ -1,25 +1,19 @@
-use std::collections::BTreeMap;
-
 use defuse_core::{
-    accounts::AccountEvent,
-    fees::Pips,
-    intents::{token_diff::TokenDeltas, IntentEvent},
-    payload::multi::MultiPayload,
-    tokens::TokenAmounts,
-    Deadline,
+    accounts::AccountEvent, engine::deltas::InvariantViolated, fees::Pips, intents::IntentEvent,
+    payload::multi::MultiPayload, Deadline, Result,
 };
 
 use near_plugins::AccessControllable;
 use near_sdk::{ext_contract, near, Promise, PublicKey};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::serde_as;
 
 use crate::fees::FeesManager;
 
 #[ext_contract(ext_intents)]
 pub trait Intents: FeesManager {
-    fn execute_intents(&mut self, intents: Vec<MultiPayload>);
+    fn execute_intents(&mut self, signed: Vec<MultiPayload>);
 
-    fn simulate_intents(&self, intents: Vec<MultiPayload>) -> SimulationOutput;
+    fn simulate_intents(&self, signed: Vec<MultiPayload>) -> SimulationOutput;
 }
 
 #[cfg_attr(
@@ -41,12 +35,20 @@ pub struct SimulationOutput {
 
     /// Unmatched token deltas needed to keep the invariant.
     /// If not empty, can be used along with fee to calculate `token_diff` closure.
-    #[serde_as(as = "Option<TokenAmounts<BTreeMap<_, DisplayFromStr>>>")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub unmatched_deltas: Option<TokenDeltas>,
+    pub unmatched_deltas: Option<InvariantViolated>,
 
     /// Additional info about current state
     pub state: StateOutput,
+}
+
+impl SimulationOutput {
+    pub fn into_result(self) -> Result<(), InvariantViolated> {
+        if let Some(unmatched_deltas) = self.unmatched_deltas {
+            return Err(unmatched_deltas);
+        }
+        Ok(())
+    }
 }
 
 #[near(serializers = [json])]

@@ -1,7 +1,7 @@
 use near_sdk::{serde_json, FunctionError};
 use thiserror::Error as ThisError;
 
-use crate::{intents::token_diff::TokenDeltas, tokens::ParseTokenIdError};
+use crate::{engine::deltas::InvariantViolated, tokens::ParseTokenIdError};
 
 pub type Result<T, E = DefuseError> = ::core::result::Result<T, E>;
 
@@ -23,17 +23,10 @@ pub enum DefuseError {
     InvalidSignature,
 
     #[error(
-        "invariant violated, unmatched deltas{}",
-        .0.as_ref()
-            .map(|v| {
-                format!(
-                    ": {}",
-                    serde_json::to_string(v).unwrap_or_else(|_| unreachable!()),
-                )
-            })
-            .unwrap_or_default()
+        "invariant violated: {}",
+        serde_json::to_string(.0).unwrap_or_else(|_| unreachable!())
     )]
-    UnmatchedDeltas(Option<TokenDeltas>),
+    InvariantViolated(InvariantViolated),
 
     #[error("JSON: {0}")]
     JSON(#[from] serde_json::Error),
