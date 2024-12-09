@@ -70,7 +70,7 @@ pub trait State: StateView {
         for (token_id, delta) in tokens {
             let tokens = [(token_id, delta.unsigned_abs())];
             if delta.is_negative() {
-                self.internal_withdraw(&owner_id, tokens)?;
+                self.internal_withdraw(owner_id, tokens)?;
             } else {
                 self.internal_deposit(owner_id.to_owned(), tokens)?;
             }

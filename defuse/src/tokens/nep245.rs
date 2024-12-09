@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use defuse_nep245::{receiver::MultiTokenReceiver, TokenId};
 use near_plugins::AccessControllable;
 use near_sdk::{ext_contract, json_types::U128, AccountId, PromiseOrValue};

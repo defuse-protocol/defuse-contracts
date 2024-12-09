@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use core::iter;
 
 use defuse_core::{
@@ -56,7 +58,6 @@ impl MultiTokenWithdrawer for Contract {
 }
 
 impl Contract {
-    #[must_use]
     pub(crate) fn internal_mt_withdraw(
         &mut self,
         owner_id: AccountId,

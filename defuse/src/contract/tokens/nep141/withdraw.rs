@@ -55,7 +55,6 @@ impl FungibleTokenWithdrawer for Contract {
 }
 
 impl Contract {
-    #[must_use]
     pub(crate) fn internal_ft_withdraw(
         &mut self,
         owner_id: AccountId,
