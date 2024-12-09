@@ -38,7 +38,7 @@ impl Intents for Contract {
         let mut inspector = SimulateInspector::default();
         let engine = Engine::new(self.cached(), &mut inspector);
 
-        let unmatched_deltas = match engine.execute_signed_intents(signed) {
+        let invariant_violated = match engine.execute_signed_intents(signed) {
             // do not log transfers
             Ok(_) => None,
             Err(DefuseError::InvariantViolated(v)) => Some(v),
@@ -48,7 +48,7 @@ impl Intents for Contract {
         SimulationOutput {
             intents_executed: inspector.intents_executed,
             min_deadline: inspector.min_deadline,
-            unmatched_deltas,
+            invariant_violated,
             state: StateOutput { fee: self.fee() },
         }
     }

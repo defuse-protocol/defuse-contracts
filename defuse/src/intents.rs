@@ -36,7 +36,7 @@ pub struct SimulationOutput {
     /// Unmatched token deltas needed to keep the invariant.
     /// If not empty, can be used along with fee to calculate `token_diff` closure.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub unmatched_deltas: Option<InvariantViolated>,
+    pub invariant_violated: Option<InvariantViolated>,
 
     /// Additional info about current state
     pub state: StateOutput,
@@ -44,7 +44,7 @@ pub struct SimulationOutput {
 
 impl SimulationOutput {
     pub fn into_result(self) -> Result<(), InvariantViolated> {
-        if let Some(unmatched_deltas) = self.unmatched_deltas {
+        if let Some(unmatched_deltas) = self.invariant_violated {
             return Err(unmatched_deltas);
         }
         Ok(())
