@@ -161,8 +161,8 @@ where
     }
 }
 
-// TODO: docs
-/// Accumulates deltas and
+/// Accumulates internal deposits and withdrawals on different tokens
+/// to match transfers using `.finalize()`
 #[derive(Debug, Default)]
 pub struct TransferMatcher(HashMap<TokenId, TokenTransferMatcher>);
 
@@ -206,6 +206,7 @@ impl TransferMatcher {
 
 type AccountAmounts = TokenAmounts<HashMap<AccountId, u128>>;
 
+// Accumulates internal deposits and withdrawals on a single token
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct TokenTransferMatcher {
     deposits: AccountAmounts,
@@ -310,8 +311,7 @@ impl TokenTransferMatcher {
     }
 }
 
-// TODO: docs
-/// Accumulates transfers between
+/// Raw transfers between accounts
 #[must_use]
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Transfers(

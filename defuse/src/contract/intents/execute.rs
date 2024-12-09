@@ -14,7 +14,6 @@ use defuse_core::{
 };
 use near_sdk::{AccountIdRef, CryptoHash};
 
-// TODO: rename?
 #[derive(Debug, Default)]
 pub struct ExecuteInspector {
     pub intents_executed: Vec<IntentEvent<AccountEvent<'static, ()>>>,
@@ -76,7 +75,6 @@ impl Inspector for ExecuteInspector {
     }
 }
 
-// TODO: or .emit() method?
 impl Drop for ExecuteInspector {
     fn drop(&mut self) {
         if !self.intents_executed.is_empty() {
