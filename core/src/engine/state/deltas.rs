@@ -1,11 +1,11 @@
-use std::{borrow::Cow, cmp::Reverse, collections::HashMap};
+use std::{borrow::Cow, cmp::Reverse, collections::HashMap, iter};
 
 use defuse_crypto::PublicKey;
 use defuse_map_utils::cleanup::DefaultMap;
-use near_sdk::{AccountId, AccountIdRef};
+use defuse_nep245::{MtEvent, MtTransferEvent};
+use near_sdk::{json_types::U128, AccountId, AccountIdRef};
 
 use crate::{
-    engine::Transfers,
     fees::Pips,
     intents::{
         token_diff::TokenDeltas,
@@ -301,34 +301,141 @@ impl TokenTransferMatcher {
     }
 }
 
+// TODO: docs
+/// Accumulates transfers between
+#[must_use]
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Transfers(
+    /// sender_id -> receiver_id -> token_id -> amount
+    HashMap<AccountId, HashMap<AccountId, TokenAmounts<HashMap<TokenId, u128>>>>,
+);
+
+impl Transfers {
+    #[must_use]
+    pub fn transfer(
+        &mut self,
+        sender_id: AccountId,
+        receiver_id: AccountId,
+        token_id: TokenId,
+        amount: u128,
+    ) -> Option<u128> {
+        let mut sender = self.0.entry_or_default(sender_id);
+        let mut receiver = sender.entry_or_default(receiver_id);
+        receiver.deposit(token_id, amount)
+    }
+
+    pub fn with_transfer(
+        mut self,
+        sender_id: AccountId,
+        receiver_id: AccountId,
+        token_id: TokenId,
+        amount: u128,
+    ) -> Option<Self> {
+        self.transfer(sender_id, receiver_id, token_id, amount)?;
+        Some(self)
+    }
+
+    pub fn as_mt_event(&self) -> Option<MtEvent<'_>> {
+        if self.0.is_empty() {
+            return None;
+        }
+        Some(MtEvent::MtTransfer(
+            self.0
+                .iter()
+                .flat_map(|(sender_id, transfers)| iter::repeat(sender_id).zip(transfers))
+                .map(|(sender_id, (receiver_id, transfers))| {
+                    let (token_ids, amounts) = transfers
+                        .iter()
+                        .map(|(token_id, amount)| (token_id.to_string(), U128(*amount)))
+                        .unzip();
+                    MtTransferEvent {
+                        authorized_id: None,
+                        old_owner_id: Cow::Borrowed(sender_id),
+                        new_owner_id: Cow::Borrowed(receiver_id),
+                        token_ids: Cow::Owned(token_ids),
+                        amounts: Cow::Owned(amounts),
+                        memo: None,
+                    }
+                })
+                .collect::<Vec<_>>()
+                .into(),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_deltas() {
+    fn test_transfers() {
         let mut deltas = TransferMatcher::default();
-        let [a, b, c, d, e, f, g, h, i]: [AccountId; 9] =
-            ["a", "b", "c", "d", "e", "f", "g", "h", "i"]
-                .map(|s| format!("{s}.near").parse().unwrap());
+        let [a, b, c, d, e, f, g]: [AccountId; 7] =
+            ["a", "b", "c", "d", "e", "f", "g"].map(|s| format!("{s}.near").parse().unwrap());
         let [ft1, ft2] =
             ["ft1", "ft2"].map(|a| TokenId::Nep141(format!("{a}.near").parse().unwrap()));
 
         for (owner, token_id, delta) in [
-            (a, ft1.clone(), -5),
-            (b, ft1.clone(), 4),
-            (c, ft1.clone(), 3),
-            (d, ft1.clone(), -10),
-            (e, ft1.clone(), -1),
-            (f, ft1.clone(), 10),
-            (g, ft1.clone(), -1),
-            (h, ft2.clone(), -1),
-            (i, ft2.clone(), 1),
+            (&a, &ft1, -5),
+            (&b, &ft1, 4),
+            (&c, &ft1, 3),
+            (&d, &ft1, -10),
+            (&e, &ft1, -1),
+            (&f, &ft1, 10),
+            (&g, &ft1, -1),
+            (&a, &ft2, -1),
+            (&b, &ft2, 1),
         ] {
-            assert!(deltas.add_delta(owner, token_id, delta));
+            assert!(deltas.add_delta(owner.clone(), token_id.clone(), delta));
         }
 
-        deltas.finalize().unwrap();
-        // TODO
+        assert_eq!(
+            deltas.finalize().unwrap(),
+            Transfers::default()
+                .with_transfer(a.clone(), b.clone(), ft1.clone(), 4)
+                .unwrap()
+                .with_transfer(a.clone(), c.clone(), ft1.clone(), 1)
+                .unwrap()
+                .with_transfer(a.clone(), b.clone(), ft2.clone(), 1)
+                .unwrap()
+                .with_transfer(d.clone(), f.clone(), ft1.clone(), 10)
+                .unwrap()
+                .with_transfer(e.clone(), c.clone(), ft1.clone(), 1)
+                .unwrap()
+                .with_transfer(g.clone(), c.clone(), ft1.clone(), 1)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_unmatched() {
+        let mut deltas = TransferMatcher::default();
+        let [a, b, _c, d, e, f, g]: [AccountId; 7] =
+            ["a", "b", "c", "d", "e", "f", "g"].map(|s| format!("{s}.near").parse().unwrap());
+        let [ft1, ft2] =
+            ["ft1", "ft2"].map(|a| TokenId::Nep141(format!("{a}.near").parse().unwrap()));
+
+        for (owner, token_id, delta) in [
+            (&a, &ft1, -5),
+            (&b, &ft1, 4),
+            (&d, &ft1, -10),
+            (&e, &ft1, -1),
+            (&f, &ft1, 10),
+            (&g, &ft1, -1),
+            (&a, &ft2, -1),
+        ] {
+            assert!(deltas.add_delta(owner.clone(), token_id.clone(), delta));
+        }
+
+        assert_eq!(
+            deltas.finalize().unwrap_err(),
+            Some(
+                TokenDeltas::default()
+                    .with_add_delta(ft1.clone(), 3)
+                    .unwrap()
+                    .with_add_delta(ft2.clone(), 1)
+                    .unwrap()
+            )
+        );
     }
 }

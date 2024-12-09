@@ -1,8 +1,7 @@
 mod inspector;
-mod runtime;
 mod state;
 
-pub use self::{inspector::*, runtime::*, state::*};
+pub use self::{inspector::*, state::*};
 
 use defuse_crypto::{Payload, SignedPayload};
 
@@ -12,7 +11,7 @@ use crate::{
     DefuseError, Result,
 };
 
-use self::deltas::Deltas;
+use self::deltas::{Deltas, Transfers};
 
 pub struct Engine<S, I> {
     pub state: Deltas<S>,
