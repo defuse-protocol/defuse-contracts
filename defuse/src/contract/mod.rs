@@ -97,16 +97,6 @@ impl Contract {
 #[near]
 impl Defuse for Contract {}
 
-// TODO:?
-// impl Drop for Contract {
-//     fn drop(&mut self) {
-//         mem::take(&mut self.transfer_runtime)
-//             .finalize()
-//             .unwrap_or_panic()
-//             .emit();
-//     }
-// }
-
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]
 enum Prefix {

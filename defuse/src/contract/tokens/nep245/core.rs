@@ -3,10 +3,12 @@ use defuse_near_utils::{UnwrapOrPanic, CURRENT_ACCOUNT_ID, PREDECESSOR_ACCOUNT_I
 use defuse_nep245::{receiver::ext_mt_receiver, MtEvent, MtTransferEvent, MultiTokenCore};
 use near_plugins::{pause, Pausable};
 use near_sdk::{
-    assert_one_yocto, json_types::U128, near, require, AccountId, AccountIdRef, Gas, PromiseOrValue,
+    assert_one_yocto, json_types::U128, near, require, AccountId, AccountIdRef, PromiseOrValue,
 };
 
 use crate::contract::{Contract, ContractExt};
+
+use super::resolver::MT_RESOLVE_TRANSFER_GAS;
 
 #[near]
 impl MultiTokenCore for Contract {
@@ -93,7 +95,6 @@ impl MultiTokenCore for Contract {
             amounts,
             memo.as_deref(),
             msg,
-            None,
         )
         .unwrap_or_panic()
     }
@@ -213,8 +214,6 @@ impl Contract {
         amounts: Vec<U128>,
         memo: Option<&str>,
         msg: String,
-        // TODO
-        gas_for_mt_on_transfer: impl Into<Option<Gas>>,
     ) -> Result<PromiseOrValue<Vec<U128>>> {
         self.internal_mt_batch_transfer(
             &sender_id,
@@ -226,12 +225,7 @@ impl Contract {
 
         let previous_owner_ids = vec![sender_id.clone(); token_ids.len()];
 
-        let mut ext = ext_mt_receiver::ext(receiver_id.clone());
-        if let Some(gas) = gas_for_mt_on_transfer.into() {
-            ext = ext.with_static_gas(gas);
-        }
-
-        Ok(ext
+        Ok(ext_mt_receiver::ext(receiver_id.clone())
             .mt_on_transfer(
                 sender_id.clone(),
                 previous_owner_ids.clone(),
@@ -241,12 +235,7 @@ impl Contract {
             )
             .then(
                 Contract::ext(CURRENT_ACCOUNT_ID.clone())
-                    .with_static_gas(Contract::mt_resolve_transfer_gas(
-                        token_ids
-                            .len()
-                            .try_into()
-                            .unwrap_or_else(|_| unreachable!()),
-                    ))
+                    .with_static_gas(MT_RESOLVE_TRANSFER_GAS)
                     .mt_resolve_transfer(previous_owner_ids, receiver_id, token_ids, amounts, None),
             )
             .into())

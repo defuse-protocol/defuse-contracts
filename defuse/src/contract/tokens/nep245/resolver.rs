@@ -8,18 +8,7 @@ use near_sdk::{env, json_types::U128, near, require, serde_json, AccountId, Gas,
 
 use crate::contract::{Contract, ContractExt};
 
-impl Contract {
-    // TODO: more accurate numbers
-    const MT_RESOLVE_TRANSFER_GAS_BASE: Gas = Gas::from_tgas(5);
-    const MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID: Gas = Gas::from_tgas(1);
-
-    pub(super) const fn mt_resolve_transfer_gas(token_count: u64) -> Gas {
-        // if these conversions overflow, then
-        // it should have exceeded gas before
-        Self::MT_RESOLVE_TRANSFER_GAS_BASE
-            .saturating_add(Self::MT_RESOLVE_TRANSFER_GAS_PER_TOKEN_ID.saturating_mul(token_count))
-    }
-}
+pub(super) const MT_RESOLVE_TRANSFER_GAS: Gas = Gas::from_tgas(7);
 
 #[near]
 impl MultiTokenResolver for Contract {
@@ -33,14 +22,11 @@ impl MultiTokenResolver for Contract {
         approvals: Option<Vec<Option<Vec<ClearedApproval>>>>,
     ) -> Vec<U128> {
         require!(approvals.is_none(), "approvals are not supported");
-        require!(!amounts.is_empty(), "zero amounts");
         require!(
-            previous_owner_ids.len() == token_ids.len(),
-            "previous_owner_ids.len() != token_ids.len()"
-        );
-        require!(
-            token_ids.len() == amounts.len(),
-            "token_ids.len() != amounts.len()"
+            !token_ids.is_empty()
+                && previous_owner_ids.len() == token_ids.len()
+                && amounts.len() == token_ids.len(),
+            "inavlid args"
         );
 
         let mut refunds = match env::promise_result(0) {
