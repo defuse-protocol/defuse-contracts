@@ -287,7 +287,7 @@ async fn test_invariant_violated() {
             .simulate_intents(signed.clone())
             .await
             .unwrap()
-            .unmatched_deltas
+            .invariant_violated
             .unwrap()
             .into_unmatched_deltas(),
         Some(TokenDeltas::new([(ft2.clone(), 1)].into_iter().collect()))

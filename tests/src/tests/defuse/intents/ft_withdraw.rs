@@ -1,21 +1,25 @@
 use std::time::Duration;
 
-use defuse::core::{
-    intents::{tokens::FtWithdraw, DefuseIntents},
-    tokens::TokenId,
-    Deadline,
+use defuse::{
+    contract::config::DefuseConfig,
+    core::{
+        fees::{FeesConfig, Pips},
+        intents::{tokens::FtWithdraw, DefuseIntents},
+        tokens::TokenId,
+        Deadline,
+    },
 };
 use near_sdk::{AccountId, NearToken};
 use rand::{thread_rng, Rng};
 
 use super::ExecuteIntentsExt;
 use crate::{
-    tests::defuse::{env::Env, tokens::nep141::DefuseFtReceiver, DefuseSigner},
+    tests::defuse::{env::Env, tokens::nep141::DefuseFtReceiver, DefuseExt, DefuseSigner},
     utils::{ft::FtExt, mt::MtExt, wnear::WNearExt},
 };
 
 #[tokio::test]
-async fn test_withdraw_intent() {
+async fn test_ft_withdraw_intent() {
     let env = Env::new().await;
 
     env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
@@ -167,6 +171,82 @@ async fn test_withdraw_intent() {
 
     assert_eq!(
         env.ft_token_balance_of(&env.ft1, &other_user_id)
+            .await
+            .unwrap(),
+        1000
+    );
+}
+
+#[tokio::test]
+async fn test_ft_withdraw_intent_msg() {
+    let env = Env::new().await;
+
+    let defuse2 = env
+        .deploy_defuse(
+            "defuse2",
+            DefuseConfig {
+                wnear_id: env.wnear.id().clone(),
+                fees: FeesConfig {
+                    fee: Pips::ZERO,
+                    fee_collector: env.id().clone(),
+                },
+                roles: Default::default(),
+            },
+        )
+        .await
+        .unwrap();
+    env.ft_storage_deposit(&env.ft1, &[defuse2.id()])
+        .await
+        .unwrap();
+
+    env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
+        .await
+        .unwrap();
+
+    env.defuse
+        .execute_intents([env.user1.sign_defuse_message(
+            env.defuse.id(),
+            thread_rng().gen(),
+            Deadline::timeout(Duration::from_secs(120)),
+            DefuseIntents {
+                intents: [FtWithdraw {
+                    token: env.ft1.clone(),
+                    receiver_id: defuse2.id().clone(),
+                    amount: 1000.into(),
+                    memo: Some("defuse-to-defuse".to_string()),
+                    msg: Some(env.user2.id().to_string()),
+                    storage_deposit: None,
+                }
+                .into()]
+                .into(),
+            },
+        )])
+        .await
+        .unwrap();
+
+    let ft1 = TokenId::Nep141(env.ft1.clone());
+
+    assert_eq!(
+        env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft1, env.defuse.id())
+            .await
+            .unwrap(),
+        0
+    );
+
+    assert_eq!(
+        env.ft_token_balance_of(&env.ft1, defuse2.id())
+            .await
+            .unwrap(),
+        1000
+    );
+    assert_eq!(
+        env.mt_contract_balance_of(defuse2.id(), env.user2.id(), &ft1.to_string())
             .await
             .unwrap(),
         1000

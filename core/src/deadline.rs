@@ -64,33 +64,3 @@ impl AddAssign<Duration> for Deadline {
         self.0 += rhs
     }
 }
-
-// #[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
-// mod abi {
-//     use super::*;
-
-//     use near_sdk::schemars::{
-//         gen::SchemaGenerator,
-//         schema::{InstanceType, Schema, SchemaObject},
-//         JsonSchema,
-//     };
-
-//     impl JsonSchema for Deadline {
-//         fn schema_name() -> String {
-//             String::new()
-//         }
-
-//         fn is_referenceable() -> bool {
-//             false
-//         }
-
-//         fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
-//             SchemaObject {
-//                 instance_type: Some(InstanceType::String.into()),
-//                 format: Some("date-time".to_string()),
-//                 ..Default::default()
-//             }
-//             .into()
-//         }
-//     }
-// }
