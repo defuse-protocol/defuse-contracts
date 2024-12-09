@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
-use defuse_core::Nonce;
-use defuse_crypto::PublicKey;
+use defuse_core::{crypto::PublicKey, Nonce};
 use defuse_serde_utils::base64::AsBase64;
 use near_sdk::{ext_contract, AccountId};
 

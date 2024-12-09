@@ -687,7 +687,6 @@ dependencies = [
  "defuse-bitmap",
  "defuse-controller",
  "defuse-core",
- "defuse-crypto",
  "defuse-map-utils",
  "defuse-near-utils",
  "defuse-nep245",

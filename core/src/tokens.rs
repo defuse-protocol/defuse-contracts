@@ -305,89 +305,106 @@ where
     }
 }
 
-// TODO
-// #[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
-// mod abi {
-//     use super::*;
+#[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
+mod abi {
+    use super::*;
 
-//     use near_sdk::schemars::{
-//         gen::SchemaGenerator,
-//         schema::{InstanceType, Schema, SchemaObject},
-//         JsonSchema,
-//     };
+    use near_sdk::schemars::{
+        gen::SchemaGenerator,
+        schema::{InstanceType, Schema, SchemaObject},
+        JsonSchema,
+    };
+    use serde_with::schemars_0_8::JsonSchemaAs;
 
-//     impl JsonSchema for TokenId {
-//         fn schema_name() -> String {
-//             stringify!(TokenId).to_string()
-//         }
+    impl JsonSchema for TokenId {
+        fn schema_name() -> String {
+            stringify!(TokenId).to_string()
+        }
 
-//         fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
-//             SchemaObject {
-//                 instance_type: Some(InstanceType::String.into()),
-//                 extensions: [(
-//                     "examples",
-//                     [
-//                         Self::Nep141("ft.near".parse().unwrap()),
-//                         Self::Nep171("nft.near".parse().unwrap(), "token_id1".to_string()),
-//                         Self::Nep245("mt.near".parse().unwrap(), "token_id1".to_string()),
-//                     ]
-//                     .map(|s| s.to_string())
-//                     .to_vec()
-//                     .into(),
-//                 )]
-//                 .into_iter()
-//                 .map(|(k, v)| (k.to_string(), v))
-//                 .collect(),
-//                 ..Default::default()
-//             }
-//             .into()
-//         }
-//     }
-// }
+        fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+            SchemaObject {
+                instance_type: Some(InstanceType::String.into()),
+                extensions: [(
+                    "examples",
+                    [
+                        Self::Nep141("ft.near".parse().unwrap()),
+                        Self::Nep171("nft.near".parse().unwrap(), "token_id1".to_string()),
+                        Self::Nep245("mt.near".parse().unwrap(), "token_id1".to_string()),
+                    ]
+                    .map(|s| s.to_string())
+                    .to_vec()
+                    .into(),
+                )]
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect(),
+                ..Default::default()
+            }
+            .into()
+        }
+    }
 
-// #[cfg(test)]
-// mod tests {
+    impl<T, As> JsonSchemaAs<TokenAmounts<T>> for TokenAmounts<As>
+    where
+        As: JsonSchemaAs<T>,
+    {
+        fn schema_name() -> String {
+            As::schema_name()
+        }
 
-//     use super::*;
+        fn is_referenceable() -> bool {
+            false
+        }
 
-//     #[test]
-//     fn invariant() {
-//         let [t1, t2] = ["t1.near", "t2.near"].map(|t| TokenId::Nep141(t.parse().unwrap()));
+        fn json_schema(gen: &mut SchemaGenerator) -> Schema {
+            As::json_schema(gen)
+        }
+    }
+}
 
-//         assert!(TokenAmounts::<()>::default().is_empty());
-//         assert!(TokenAmounts::<i32>::default()
-//             .with_extend([(t1.clone(), 0)])
-//             .unwrap()
-//             .is_empty());
+#[cfg(test)]
+mod tests {
 
-//         assert!(!TokenAmounts::<i32>::default()
-//             .with_extend([(t1.clone(), 1)])
-//             .unwrap()
-//             .is_empty());
+    use super::*;
 
-//         assert!(!TokenAmounts::<i32>::default()
-//             .with_extend([(t1.clone(), -1)])
-//             .unwrap()
-//             .is_empty());
+    #[test]
+    fn invariant() {
+        let [t1, t2] = ["t1.near", "t2.near"].map(|t| TokenId::Nep141(t.parse().unwrap()));
 
-//         assert!(TokenAmounts::<i32>::default()
-//             .with_extend([(t1.clone(), 1), (t1.clone(), -1)])
-//             .unwrap()
-//             .is_empty());
+        assert!(TokenAmounts::<BTreeMap<TokenId, i128>>::default().is_empty());
+        assert!(TokenAmounts::<BTreeMap<_, i128>>::default()
+            .with_add_deltas([(t1.clone(), 0)])
+            .unwrap()
+            .is_empty());
 
-//         assert!(!TokenAmounts::<i32>::default()
-//             .with_extend([(t1.clone(), 1), (t1.clone(), -1), (t2.clone(), -1)])
-//             .unwrap()
-//             .is_empty());
+        assert!(!TokenAmounts::<BTreeMap<_, i128>>::default()
+            .with_add_deltas([(t1.clone(), 1)])
+            .unwrap()
+            .is_empty());
 
-//         assert!(TokenAmounts::<i32>::default()
-//             .with_extend([
-//                 (t1.clone(), 1),
-//                 (t1.clone(), -1),
-//                 (t2.clone(), -1),
-//                 (t2.clone(), 1)
-//             ])
-//             .unwrap()
-//             .is_empty());
-//     }
-// }
+        assert!(!TokenAmounts::<BTreeMap<_, i128>>::default()
+            .with_add_deltas([(t1.clone(), -1)])
+            .unwrap()
+            .is_empty());
+
+        assert!(TokenAmounts::<BTreeMap<_, i128>>::default()
+            .with_add_deltas([(t1.clone(), 1), (t1.clone(), -1)])
+            .unwrap()
+            .is_empty());
+
+        assert!(!TokenAmounts::<BTreeMap<_, i128>>::default()
+            .with_add_deltas([(t1.clone(), 1), (t1.clone(), -1), (t2.clone(), -1)])
+            .unwrap()
+            .is_empty());
+
+        assert!(TokenAmounts::<BTreeMap<_, i128>>::default()
+            .with_add_deltas([
+                (t1.clone(), 1),
+                (t1.clone(), -1),
+                (t2.clone(), -1),
+                (t2.clone(), 1)
+            ])
+            .unwrap()
+            .is_empty());
+    }
+}

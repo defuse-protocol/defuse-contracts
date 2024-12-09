@@ -12,15 +12,6 @@ use crate::{Curve, CurveType, Ed25519, ParseCurveError, Secp256k1};
     feature = "serde",
     derive(serde_with::SerializeDisplay, serde_with::DeserializeFromStr)
 )]
-#[cfg_attr(
-    all(feature = "abi", not(target_arch = "wasm32")),
-    derive(::near_sdk::schemars::JsonSchema),
-    schemars(
-        crate = "::near_sdk::schemars",
-        example = "Self::example_ed25519",
-        example = "Self::example_secp256k1"
-    )
-)]
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Signature {
     Ed25519(<Ed25519 as Curve>::Signature),
@@ -88,6 +79,47 @@ impl FromStr for Signature {
 #[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
 mod abi {
     use super::*;
+
+    use near_sdk::{
+        schemars::{
+            gen::SchemaGenerator,
+            schema::{InstanceType, Metadata, Schema, SchemaObject},
+            JsonSchema,
+        },
+        serde_json,
+    };
+
+    impl JsonSchema for Signature {
+        fn schema_name() -> String {
+            String::schema_name()
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+
+        fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+            SchemaObject {
+                instance_type: Some(InstanceType::String.into()),
+                extensions: [("contentEncoding", "base58".into())]
+                    .into_iter()
+                    .map(|(k, v)| (k.to_string(), v))
+                    .collect(),
+                metadata: Some(
+                    Metadata {
+                        examples: [Self::example_ed25519(), Self::example_secp256k1()]
+                            .map(serde_json::to_value)
+                            .map(Result::unwrap)
+                            .into(),
+                        ..Default::default()
+                    }
+                    .into(),
+                ),
+                ..Default::default()
+            }
+            .into()
+        }
+    }
 
     impl Signature {
         pub(super) fn example_ed25519() -> Self {

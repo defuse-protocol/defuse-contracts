@@ -14,7 +14,6 @@ defuse-admin-utils.workspace = true
 defuse-bitmap = { workspace = true, optional = true }
 defuse-controller.workspace = true
 defuse-core.workspace = true
-defuse-crypto.workspace = true
 defuse-near-utils.workspace = true
 defuse-nep245.workspace = true
 defuse-map-utils = { workspace = true, optional = true }
@@ -32,5 +31,5 @@ strum.workspace = true
 thiserror.workspace = true
 
 [features]
-abi = ["defuse-crypto/abi"]
+abi = ["defuse-core/abi"]
 contract = ["dep:defuse-wnear", "dep:defuse-map-utils", "dep:defuse-bitmap"]

@@ -1,3 +1,5 @@
+#[cfg(all(feature = "abi", not(target_arch = "wasm32")))]
+mod abi;
 mod accounts;
 mod admin;
 pub mod config;

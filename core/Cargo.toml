@@ -24,7 +24,12 @@ strum.workspace = true
 thiserror.workspace = true
 
 [features]
-abi = ["defuse-crypto/abi"]
+abi = [
+    "defuse-crypto/abi",
+    "defuse-erc191/abi",
+    "defuse-nep413/abi",
+    "defuse-serde-utils/abi",
+]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 chrono = { workspace = true, features = ["now"] }

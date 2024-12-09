@@ -47,7 +47,7 @@ mod abi {
                 instance_type: Some(InstanceType::String.into()),
                 string: Some(
                     StringValidation {
-                        pattern: Some(format!("^{}:", C::PREFIX)),
+                        pattern: Some(format!("^{}:", C::CURVE_TYPE)),
                         ..Default::default()
                     }
                     .into(),

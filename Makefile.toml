@@ -24,12 +24,8 @@ args = [
     "build",
     "--manifest-path",
     "./defuse/Cargo.toml",
-    # TODO
-    # "--features",
-    # "abi,contract",
-    "--no-abi",
     "--features",
-    "contract",
+    "abi,contract",
     "--out-dir",
     "${TARGET_DIR}",
     "--no-docker",

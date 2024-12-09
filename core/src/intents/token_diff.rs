@@ -93,13 +93,14 @@ impl ExecutableIntent for TokenDiff {
     not(all(feature = "abi", not(target_arch = "wasm32"))),
     serde_as(schemars = false)
 )]
-#[near(serializers = [borsh, json])]
+#[near(serializers = [json])]
 #[derive(Debug, Clone)]
 pub struct TokenDiffEvent<'a> {
     #[serde(flatten)]
     pub diff: Cow<'a, TokenDiff>,
+
     #[serde_as(as = "TokenAmounts<BTreeMap<_, DisplayFromStr>>")]
-    #[serde(default, skip_serializing_if = "TokenAmounts::is_empty")]
+    #[serde(skip_serializing_if = "TokenAmounts::is_empty")]
     pub fees_collected: TokenAmounts,
 }
 

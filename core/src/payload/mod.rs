@@ -62,6 +62,6 @@ mod examples {
     use near_sdk::base64::{self, Engine};
 
     pub fn nonce() -> String {
-        base64::engine::general_purpose::STANDARD.encode(U256::default())
+        base64::engine::general_purpose::STANDARD.encode(Nonce::default())
     }
 }
