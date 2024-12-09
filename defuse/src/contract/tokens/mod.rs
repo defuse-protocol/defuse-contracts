@@ -55,7 +55,7 @@ impl Contract {
         &mut self,
         owner_id: &AccountIdRef,
         token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
-        memo: Option<&str>,
+        memo: Option<impl Into<String>>,
     ) -> Result<()> {
         let owner = self
             .accounts
@@ -63,11 +63,11 @@ impl Contract {
             .ok_or(DefuseError::AccountNotFound)?;
 
         let mut burn_event = MtBurnEvent {
-            owner_id: Cow::Borrowed(owner_id),
+            owner_id: Cow::Owned(owner_id.to_owned()),
             authorized_id: None,
             token_ids: Default::default(),
             amounts: Default::default(),
-            memo: memo.map(Into::into),
+            memo: memo.map(Into::into).map(Into::into),
         };
 
         for (token_id, amount) in token_amounts {
@@ -88,7 +88,11 @@ impl Contract {
                 .ok_or(DefuseError::BalanceOverflow)?;
         }
 
-        MtEvent::MtBurn([burn_event].as_slice().into()).emit();
+        // Schedule to emit `mt_burn` events only in the end of tx
+        // to avoid confusion when `mt_burn` occurs before relevant
+        // `mt_transfer` arrives. This can happen due to postponed
+        // delta-matching during intents execution.
+        self.postponed_burns.mt_burn(burn_event);
 
         Ok(())
     }

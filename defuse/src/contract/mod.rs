@@ -1,6 +1,7 @@
 mod accounts;
 mod admin;
 pub mod config;
+mod events;
 mod fees;
 mod intents;
 mod state;
@@ -11,6 +12,7 @@ use core::iter;
 
 use defuse_core::Result;
 
+use events::PostponedMtBurnEvents;
 use impl_tools::autoimpl;
 use near_plugins::{access_control, AccessControlRole, AccessControllable, Pausable};
 use near_sdk::{
@@ -57,6 +59,9 @@ pub struct Contract {
     state: ContractState,
 
     relayer_keys: LookupSet<near_sdk::PublicKey>,
+
+    #[borsh(skip)]
+    postponed_burns: PostponedMtBurnEvents,
 }
 
 #[near]
@@ -67,6 +72,7 @@ impl Contract {
             accounts: Accounts::new(Prefix::Accounts),
             state: ContractState::new(Prefix::State, config.wnear_id, config.fees),
             relayer_keys: LookupSet::new(Prefix::RelayerKeys),
+            postponed_burns: Default::default(),
         };
         contract.init_acl(config.roles);
         contract
