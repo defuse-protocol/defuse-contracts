@@ -9,6 +9,7 @@ use defuse_core::{
     DefuseError,
 };
 use defuse_near_utils::UnwrapOrPanic;
+use defuse_nep245::MtEvent;
 use execute::ExecuteInspector;
 use near_plugins::{pause, Pausable};
 use near_sdk::{near, FunctionError};
@@ -27,7 +28,12 @@ impl Intents for Contract {
         let mut insp = ExecuteInspector::default();
         let mut engine = Engine::new(self, &mut insp);
         engine.execute_signed_intents(intents).unwrap_or_panic();
-        engine.finalize().unwrap_or_panic();
+        engine
+            .finalize()
+            .unwrap_or_panic()
+            .as_mt_event()
+            .as_ref()
+            .map(MtEvent::emit);
     }
 
     #[pause(name = "intents")]
@@ -38,6 +44,7 @@ impl Intents for Contract {
         engine.execute_signed_intents(intents).unwrap_or_panic();
 
         let unmatched_deltas = match engine.finalize() {
+            // do not log transfers
             Ok(_) => None,
             Err(DefuseError::UnmatchedDeltas(v)) => v,
             Err(err) => err.panic(),

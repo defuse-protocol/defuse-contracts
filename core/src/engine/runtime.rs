@@ -8,6 +8,7 @@ use crate::tokens::TokenId;
 
 // TODO: docs
 /// Accumulates transfers between
+#[must_use]
 #[derive(Debug, Default)]
 pub struct Transfers(
     /// sender_id -> receiver_id -> token_id -> amount

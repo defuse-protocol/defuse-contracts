@@ -10,7 +10,7 @@ use near_account_id::ParseAccountError;
 use near_sdk::{
     near,
     serde::{Deserializer, Serializer},
-    AccountId, AccountIdRef,
+    AccountId,
 };
 use serde_with::{DeserializeAs, DeserializeFromStr, SerializeAs, SerializeDisplay};
 use strum::{EnumDiscriminants, EnumString};
@@ -81,7 +81,6 @@ impl FromStr for TokenId {
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // TODO: refactor
         let (typ, data) = s
             .split_once(':')
             .ok_or(strum::ParseError::VariantNotFound)?;
@@ -101,26 +100,6 @@ impl FromStr for TokenId {
             }
         })
     }
-}
-
-// TODO: use it
-pub enum TokenIdRef<'a> {
-    Nep141(
-        /// Contract
-        &'a AccountIdRef,
-    ),
-    Nep171(
-        /// Contract
-        &'a AccountIdRef,
-        /// Token ID
-        &'a str,
-    ),
-    Nep245(
-        /// Contract
-        &'a AccountIdRef,
-        /// Token ID
-        &'a str,
-    ),
 }
 
 #[derive(Debug, ThisError)]

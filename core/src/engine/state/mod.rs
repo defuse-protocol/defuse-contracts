@@ -23,13 +23,17 @@ pub trait StateView {
     fn fee(&self) -> Pips;
     fn fee_collector(&self) -> Cow<'_, AccountIdRef>;
 
+    #[must_use]
     fn has_public_key(&self, account_id: &AccountIdRef, public_key: &PublicKey) -> bool;
     fn iter_public_keys(&self, account_id: &AccountIdRef) -> impl Iterator<Item = PublicKey> + '_;
 
+    #[must_use]
     fn is_nonce_used(&self, account_id: &AccountIdRef, nonce: Nonce) -> bool;
 
+    #[must_use]
     fn balance_of(&self, account_id: &AccountIdRef, token_id: &TokenId) -> u128;
 
+    #[inline]
     fn cached(self) -> CachedState<Self>
     where
         Self: Sized,

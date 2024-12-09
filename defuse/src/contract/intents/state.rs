@@ -99,10 +99,10 @@ impl State for Contract {
     fn internal_deposit(
         &mut self,
         owner_id: AccountId,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        tokens: impl IntoIterator<Item = (TokenId, u128)>,
     ) -> Result<()> {
         let owner = self.accounts.get_or_create(owner_id);
-        for (token_id, amount) in token_amounts {
+        for (token_id, amount) in tokens {
             if amount == 0 {
                 return Err(DefuseError::InvalidIntent);
             }
@@ -117,13 +117,13 @@ impl State for Contract {
     fn internal_withdraw(
         &mut self,
         owner_id: &AccountIdRef,
-        token_amounts: impl IntoIterator<Item = (TokenId, u128)>,
+        tokens: impl IntoIterator<Item = (TokenId, u128)>,
     ) -> Result<()> {
         let owner = self
             .accounts
             .get_mut(owner_id)
             .ok_or(DefuseError::AccountNotFound)?;
-        for (token_id, amount) in token_amounts {
+        for (token_id, amount) in tokens {
             if amount == 0 {
                 return Err(DefuseError::InvalidIntent);
             }
