@@ -369,42 +369,63 @@ mod tests {
 
     #[test]
     fn test_transfers() {
-        let mut deltas = TransferMatcher::default();
+        let mut transfers = TransferMatcher::default();
         let [a, b, c, d, e, f, g]: [AccountId; 7] =
             ["a", "b", "c", "d", "e", "f", "g"].map(|s| format!("{s}.near").parse().unwrap());
         let [ft1, ft2] =
             ["ft1", "ft2"].map(|a| TokenId::Nep141(format!("{a}.near").parse().unwrap()));
 
-        for (owner, token_id, delta) in [
-            (&a, &ft1, -5),
-            (&b, &ft1, 4),
-            (&c, &ft1, 3),
-            (&d, &ft1, -10),
-            (&e, &ft1, -1),
-            (&f, &ft1, 10),
-            (&g, &ft1, -1),
-            (&a, &ft2, -1),
-            (&b, &ft2, 1),
-        ] {
-            assert!(deltas.add_delta(owner.clone(), token_id.clone(), delta));
+        let deltas: HashMap<AccountId, TokenDeltas> = [
+            (&a, [(&ft1, -5), (&ft2, 1)].as_slice()),
+            (&b, [(&ft1, 4), (&ft2, -1)].as_slice()),
+            (&c, [(&ft1, 3)].as_slice()),
+            (&d, [(&ft1, -10)].as_slice()),
+            (&e, [(&ft1, -1)].as_slice()),
+            (&f, [(&ft1, 10)].as_slice()),
+            (&g, [(&ft1, -1)].as_slice()),
+        ]
+        .into_iter()
+        .map(|(owner_id, deltas)| {
+            (
+                owner_id.clone(),
+                TokenDeltas::default()
+                    .with_add_deltas(
+                        deltas
+                            .iter()
+                            .map(|(token_id, delta)| ((*token_id).clone(), *delta)),
+                    )
+                    .unwrap(),
+            )
+        })
+        .collect();
+
+        for (owner, (token_id, delta)) in deltas
+            .iter()
+            .flat_map(|(owner_id, deltas)| iter::repeat(owner_id).zip(deltas))
+        {
+            assert!(transfers.add_delta(owner.clone(), token_id.clone(), *delta));
         }
 
-        assert_eq!(
-            deltas.finalize().unwrap(),
-            Transfers::default()
-                .with_transfer(a.clone(), b.clone(), ft1.clone(), 4)
-                .unwrap()
-                .with_transfer(a.clone(), c.clone(), ft1.clone(), 1)
-                .unwrap()
-                .with_transfer(a.clone(), b.clone(), ft2.clone(), 1)
-                .unwrap()
-                .with_transfer(d.clone(), f.clone(), ft1.clone(), 10)
-                .unwrap()
-                .with_transfer(e.clone(), c.clone(), ft1.clone(), 1)
-                .unwrap()
-                .with_transfer(g.clone(), c.clone(), ft1.clone(), 1)
-                .unwrap()
-        );
+        let transfers = transfers.finalize().unwrap();
+        let mut new_deltas: HashMap<AccountId, TokenDeltas> = Default::default();
+
+        for (sender_id, transfers) in transfers.0 {
+            for (receiver_id, amounts) in transfers {
+                for (token_id, amount) in amounts {
+                    new_deltas
+                        .entry_or_default(sender_id.clone())
+                        .withdraw(token_id.clone(), amount)
+                        .unwrap();
+
+                    new_deltas
+                        .entry_or_default(receiver_id.clone())
+                        .deposit(token_id, amount)
+                        .unwrap();
+                }
+            }
+        }
+
+        assert_eq!(new_deltas, deltas);
     }
 
     #[test]
