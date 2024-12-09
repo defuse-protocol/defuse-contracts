@@ -56,6 +56,7 @@ pub trait ExecutableIntent {
         self,
         signer_id: &AccountIdRef,
         engine: &mut Engine<S, I>,
+        intent_hash: CryptoHash,
     ) -> Result<()>
     where
         S: State,
@@ -63,34 +64,44 @@ pub trait ExecutableIntent {
 }
 
 impl ExecutableIntent for DefuseIntents {
-    fn execute_intent<S, I>(self, signer_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
+    fn execute_intent<S, I>(
+        self,
+        signer_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        intent_hash: CryptoHash,
+    ) -> Result<()>
     where
         S: State,
         I: Inspector,
     {
         for intent in self.intents {
-            intent.execute_intent(signer_id, engine)?;
+            intent.execute_intent(signer_id, engine, intent_hash)?;
         }
         Ok(())
     }
 }
 
 impl ExecutableIntent for Intent {
-    fn execute_intent<S, I>(self, signer_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
+    fn execute_intent<S, I>(
+        self,
+        signer_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        intent_hash: CryptoHash,
+    ) -> Result<()>
     where
         S: State,
         I: Inspector,
     {
         match self {
-            Self::AddPublicKey(intent) => intent.execute_intent(signer_id, engine),
-            Self::RemovePublicKey(intent) => intent.execute_intent(signer_id, engine),
-            Self::InvalidateNonces(intent) => intent.execute_intent(signer_id, engine),
-            Self::Transfer(intent) => intent.execute_intent(signer_id, engine),
-            Self::FtWithdraw(intent) => intent.execute_intent(signer_id, engine),
-            Self::NftWithdraw(intent) => intent.execute_intent(signer_id, engine),
-            Self::MtWithdraw(intent) => intent.execute_intent(signer_id, engine),
-            Self::NativeWithdraw(intent) => intent.execute_intent(signer_id, engine),
-            Self::TokenDiff(intent) => intent.execute_intent(signer_id, engine),
+            Self::AddPublicKey(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::RemovePublicKey(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::InvalidateNonces(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::Transfer(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::FtWithdraw(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::NftWithdraw(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::MtWithdraw(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::NativeWithdraw(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::TokenDiff(intent) => intent.execute_intent(signer_id, engine, intent_hash),
         }
     }
 }

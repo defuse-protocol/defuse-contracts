@@ -44,7 +44,6 @@ pub trait StateView {
 
 #[autoimpl(for<T: trait + ?Sized> &mut T, Box<T>)]
 pub trait State: StateView {
-    // TODO: Cow
     #[must_use]
     fn add_public_key(&mut self, account_id: AccountId, public_key: PublicKey) -> bool;
     #[must_use]

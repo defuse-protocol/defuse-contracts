@@ -78,7 +78,7 @@ where
             return Err(DefuseError::NonceUsed);
         }
 
-        intents.execute_intent(&signer_id, self)?;
+        intents.execute_intent(&signer_id, self, hash)?;
         self.inspector.on_intent_executed(&signer_id, hash);
 
         Ok(())

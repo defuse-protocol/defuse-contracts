@@ -1,6 +1,6 @@
 use defuse_crypto::PublicKey;
 use defuse_serde_utils::base64::Base64;
-use near_sdk::{near, AccountIdRef};
+use near_sdk::{near, AccountIdRef, CryptoHash};
 use serde_with::serde_as;
 
 use crate::{
@@ -19,7 +19,12 @@ pub struct AddPublicKey {
 
 impl ExecutableIntent for AddPublicKey {
     #[inline]
-    fn execute_intent<S, I>(self, signer_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
+    fn execute_intent<S, I>(
+        self,
+        signer_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        _intent_hash: CryptoHash,
+    ) -> Result<()>
     where
         S: State,
         I: Inspector,
@@ -47,6 +52,7 @@ impl ExecutableIntent for RemovePublicKey {
         self,
         signer_id: &AccountIdRef,
         engine: &mut Engine<S, I>,
+        _intent_hash: CryptoHash,
     ) -> crate::Result<()>
     where
         S: State,
@@ -84,6 +90,7 @@ impl ExecutableIntent for InvalidateNonces {
         self,
         signer_id: &AccountIdRef,
         engine: &mut Engine<S, I>,
+        _intent_hash: CryptoHash,
     ) -> crate::Result<()>
     where
         S: State,

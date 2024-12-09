@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use near_contract_standards::non_fungible_token;
-use near_sdk::{json_types::U128, near, AccountId, AccountIdRef, NearToken};
+use near_sdk::{json_types::U128, near, AccountId, AccountIdRef, CryptoHash, NearToken};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
@@ -33,7 +33,12 @@ pub struct Transfer {
 }
 
 impl ExecutableIntent for Transfer {
-    fn execute_intent<S, I>(self, sender_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
+    fn execute_intent<S, I>(
+        self,
+        sender_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        intent_hash: CryptoHash,
+    ) -> Result<()>
     where
         S: State,
         I: Inspector,
@@ -41,7 +46,7 @@ impl ExecutableIntent for Transfer {
         if sender_id == self.receiver_id || self.tokens.is_empty() {
             return Err(DefuseError::InvalidIntent);
         }
-        engine.inspector.on_transfer(sender_id, &self);
+        engine.inspector.on_transfer(sender_id, &self, intent_hash);
         engine
             .state
             .internal_withdraw(sender_id, self.tokens.clone())?;
@@ -76,7 +81,12 @@ pub struct FtWithdraw {
 
 impl ExecutableIntent for FtWithdraw {
     #[inline]
-    fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
+    fn execute_intent<S, I>(
+        self,
+        owner_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        _intent_hash: CryptoHash,
+    ) -> Result<()>
     where
         S: State,
         I: Inspector,
@@ -109,7 +119,12 @@ pub struct NftWithdraw {
 
 impl ExecutableIntent for NftWithdraw {
     #[inline]
-    fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
+    fn execute_intent<S, I>(
+        self,
+        owner_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        _intent_hash: CryptoHash,
+    ) -> Result<()>
     where
         S: State,
         I: Inspector,
@@ -142,7 +157,12 @@ pub struct MtWithdraw {
 }
 impl ExecutableIntent for MtWithdraw {
     #[inline]
-    fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
+    fn execute_intent<S, I>(
+        self,
+        owner_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        _intent_hash: CryptoHash,
+    ) -> Result<()>
     where
         S: State,
         I: Inspector,
@@ -164,7 +184,12 @@ pub struct NativeWithdraw {
 
 impl ExecutableIntent for NativeWithdraw {
     #[inline]
-    fn execute_intent<S, I>(self, owner_id: &AccountIdRef, engine: &mut Engine<S, I>) -> Result<()>
+    fn execute_intent<S, I>(
+        self,
+        owner_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        _intent_hash: CryptoHash,
+    ) -> Result<()>
     where
         S: State,
         I: Inspector,

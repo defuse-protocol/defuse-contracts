@@ -452,9 +452,9 @@ mod tests {
             deltas.finalize().unwrap_err(),
             Some(
                 TokenDeltas::default()
-                    .with_add_delta(ft1.clone(), 3)
+                    .with_add_delta(ft1.clone(), -3)
                     .unwrap()
-                    .with_add_delta(ft2.clone(), 1)
+                    .with_add_delta(ft2.clone(), -1)
                     .unwrap()
             )
         );

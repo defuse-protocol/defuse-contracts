@@ -27,10 +27,22 @@ impl Inspector for SimulateInspector {
     }
 
     #[inline]
-    fn on_transfer(&mut self, _sender_id: &AccountIdRef, _transfer: &Transfer) {}
+    fn on_transfer(
+        &mut self,
+        _sender_id: &AccountIdRef,
+        _transfer: &Transfer,
+        _intent_hash: CryptoHash,
+    ) {
+    }
 
     #[inline]
-    fn on_token_diff(&mut self, _owner_id: &AccountIdRef, _token_diff: &TokenDiff) {}
+    fn on_token_diff(
+        &mut self,
+        _owner_id: &AccountIdRef,
+        _token_diff: &TokenDiff,
+        _intent_hash: CryptoHash,
+    ) {
+    }
 
     #[inline]
     fn on_intent_executed(&mut self, signer_id: &AccountIdRef, hash: CryptoHash) {

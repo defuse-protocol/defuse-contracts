@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use defuse_core::{
     accounts::AccountEvent,
     engine::Inspector,
-    events::DefuseEvent,
+    events::{DefuseEvent, IntentEvent},
     intents::{token_diff::TokenDiff, tokens::Transfer, IntentExecutedEvent},
     Deadline,
 };
@@ -20,18 +20,35 @@ impl Inspector for ExecuteInspector {
     fn on_deadline(&mut self, _deadline: Deadline) {}
 
     #[inline]
-    fn on_transfer(&mut self, sender_id: &AccountIdRef, transfer: &Transfer) {
+    fn on_transfer(
+        &mut self,
+        sender_id: &AccountIdRef,
+        transfer: &Transfer,
+        intent_hash: CryptoHash,
+    ) {
         DefuseEvent::Transfer(
-            [AccountEvent::new(sender_id, Cow::Borrowed(transfer))]
-                .as_slice()
-                .into(),
+            [IntentEvent::new(
+                AccountEvent::new(sender_id, Cow::Borrowed(transfer)),
+                intent_hash,
+            )]
+            .as_slice()
+            .into(),
         )
         .emit();
     }
 
     #[inline]
-    fn on_token_diff(&mut self, owner_id: &AccountIdRef, token_diff: &TokenDiff) {
-        DefuseEvent::TokenDiff(AccountEvent::new(owner_id, Cow::Borrowed(token_diff))).emit();
+    fn on_token_diff(
+        &mut self,
+        owner_id: &AccountIdRef,
+        token_diff: &TokenDiff,
+        intent_hash: CryptoHash,
+    ) {
+        DefuseEvent::TokenDiff(IntentEvent::new(
+            AccountEvent::new(owner_id, Cow::Borrowed(token_diff)),
+            intent_hash,
+        ))
+        .emit();
     }
 
     #[inline]
