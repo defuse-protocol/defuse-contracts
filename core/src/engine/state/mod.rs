@@ -17,7 +17,6 @@ use crate::{
 
 #[autoimpl(for<T: trait + ?Sized> &T, &mut T, Box<T>)]
 pub trait StateView {
-    // TODO: remove?
     fn verifying_contract(&self) -> Cow<'_, AccountIdRef>;
     fn wnear_id(&self) -> Cow<'_, AccountIdRef>;
 
@@ -62,7 +61,7 @@ pub trait State: StateView {
     ) -> Result<()>;
     fn internal_add_deltas(
         &mut self,
-        owner_id: AccountId,
+        owner_id: &AccountIdRef,
         tokens: impl IntoIterator<Item = (TokenId, i128)>,
     ) -> Result<()> {
         for (token_id, delta) in tokens {
@@ -70,7 +69,7 @@ pub trait State: StateView {
             if delta.is_negative() {
                 self.internal_withdraw(&owner_id, tokens)?;
             } else {
-                self.internal_deposit(owner_id.clone(), tokens)?;
+                self.internal_deposit(owner_id.to_owned(), tokens)?;
             }
         }
         Ok(())

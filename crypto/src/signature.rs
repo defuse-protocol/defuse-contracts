@@ -14,8 +14,12 @@ use crate::{Curve, CurveType, Ed25519, ParseCurveError, Secp256k1};
 )]
 #[cfg_attr(
     all(feature = "abi", not(target_arch = "wasm32")),
-    derive(near_sdk::schemars::JsonSchema),
-    schemars(example = "Self::example_ed25519", example = "Self::example_secp256k1")
+    derive(::near_sdk::schemars::JsonSchema),
+    schemars(
+        crate = "::near_sdk::schemars",
+        example = "Self::example_ed25519",
+        example = "Self::example_secp256k1"
+    )
 )]
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Signature {

@@ -37,7 +37,7 @@ mod abi {
     };
     use serde_with::schemars_0_8::JsonSchemaAs;
 
-    impl<C: Curve, const N: usize> JsonSchemaAs<[u8; N]> for AsCurve<C> {
+    impl<C: TypedCurve, const N: usize> JsonSchemaAs<[u8; N]> for AsCurve<C> {
         fn schema_name() -> String {
             String::schema_name()
         }

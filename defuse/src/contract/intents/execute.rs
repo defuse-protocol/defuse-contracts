@@ -21,7 +21,12 @@ impl Inspector for ExecuteInspector {
 
     #[inline]
     fn on_transfer(&mut self, sender_id: &AccountIdRef, transfer: &Transfer) {
-        DefuseEvent::Transfer(AccountEvent::new(sender_id, Cow::Borrowed(transfer))).emit();
+        DefuseEvent::Transfer(
+            [AccountEvent::new(sender_id, Cow::Borrowed(transfer))]
+                .as_slice()
+                .into(),
+        )
+        .emit();
     }
 
     #[inline]

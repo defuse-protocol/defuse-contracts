@@ -55,23 +55,15 @@ impl ExecutableIntent for TokenDiff {
             // add delta to signer's account
             engine
                 .state
-                .internal_add_deltas(signer_id.to_owned(), [(token_id.clone(), delta)])?;
+                .internal_add_deltas(signer_id, [(token_id.clone(), delta)])?;
 
             let amount = delta.unsigned_abs();
             let fee = Self::token_fee(&token_id, amount, fees).fee_ceil(amount);
-
-            // TODO: no need to check, or is it?
             if fee > 0 {
                 // deposit fee to collector
-                engine.state.internal_add_deltas(
-                    fee_collector.to_owned(),
-                    [(
-                        token_id,
-                        fee.try_into()
-                            // fee is always less than amount
-                            .unwrap_or_else(|_| unreachable!()),
-                    )],
-                )?;
+                engine
+                    .state
+                    .internal_deposit(fee_collector.clone(), [(token_id, fee)])?;
             }
         }
 

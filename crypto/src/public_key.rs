@@ -117,6 +117,20 @@ impl FromStr for PublicKey {
 mod abi {
     use super::*;
 
+    use near_sdk::schemars::{JsonSchema, Schema};
+
+    impl JsonSchema for PublicKey {
+        fn schema_name() -> String {
+            String::scheme_name()
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+
+        fn json_schema() -> Schema {}
+    }
+
     impl PublicKey {
         pub(super) fn example_ed25519() -> Self {
             "ed25519:5TagutioHgKLh7KZ1VEFBYfgRkPtqnKm9LoMnJMJugxm"

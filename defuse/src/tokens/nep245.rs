@@ -17,7 +17,8 @@ pub trait MultiTokenWithdrawer: MultiTokenReceiver + MultiTokenWithdrawResolver 
         token_ids: Vec<TokenId>,
         amounts: Vec<U128>,
         memo: Option<String>,
-    ) -> PromiseOrValue<bool>;
+        msg: Option<String>,
+    ) -> PromiseOrValue<Vec<U128>>;
 }
 
 #[ext_contract(mt_withdraw_resolver)]
@@ -28,7 +29,8 @@ pub trait MultiTokenWithdrawResolver {
         sender_id: AccountId,
         token_ids: Vec<TokenId>,
         amounts: Vec<U128>,
-    ) -> bool;
+        is_call: bool,
+    ) -> Vec<U128>;
 }
 
 #[ext_contract(ext_mt_force_withdraw)]
@@ -41,5 +43,6 @@ pub trait MultiTokenForceWithdrawer: MultiTokenWithdrawer + AccessControllable {
         token_ids: Vec<TokenId>,
         amounts: Vec<U128>,
         memo: Option<String>,
-    ) -> PromiseOrValue<bool>;
+        msg: Option<String>,
+    ) -> PromiseOrValue<Vec<U128>>;
 }

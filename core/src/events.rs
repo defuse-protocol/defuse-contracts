@@ -26,7 +26,7 @@ pub enum DefuseEvent<'a> {
     FeeCollectorChanged(FeeCollectorChangedEvent<'a>),
 
     #[event_version("0.1.0")]
-    Transfer(AccountEvent<'a, Cow<'a, Transfer>>),
+    Transfer(Cow<'a, [AccountEvent<'a, Cow<'a, Transfer>>]>),
 
     #[event_version("0.1.0")]
     IntentsExecuted(Cow<'a, [AccountEvent<'a, IntentExecutedEvent>]>),

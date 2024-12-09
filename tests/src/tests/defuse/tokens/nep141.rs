@@ -36,11 +36,13 @@ async fn test_deposit_withdraw() {
         1000
     );
 
-    assert!(env
-        .user1
-        .defuse_ft_withdraw(env.defuse.id(), &env.ft1, env.user1.id(), 1000)
-        .await
-        .unwrap());
+    assert_eq!(
+        env.user1
+            .defuse_ft_withdraw(env.defuse.id(), &env.ft1, env.user1.id(), 1000)
+            .await
+            .unwrap(),
+        1000
+    );
 
     assert_eq!(
         env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
@@ -129,6 +131,7 @@ async fn test_deposit_withdraw_intent() {
                                     receiver_id: env.user2.id().clone(),
                                     amount: U128(1000),
                                     memo: None,
+                                    msg: None,
                                     storage_deposit: None,
                                 }
                                 .into(),
@@ -208,6 +211,7 @@ async fn test_deposit_withdraw_intent_refund() {
                                 receiver_id: env.user1.id().clone(),
                                 amount: U128(1001),
                                 memo: None,
+                                msg: None,
                                 storage_deposit: None,
                             }
                             .into(),]
@@ -279,17 +283,19 @@ async fn test_ft_force_withdraw() {
     .await
     .unwrap();
 
-    assert!(env
-        .user2
-        .defuse_ft_force_withdraw(
-            env.defuse.id(),
-            env.user1.id(),
-            &env.ft1,
-            env.user2.id(),
-            1000
-        )
-        .await
-        .unwrap());
+    assert_eq!(
+        env.user2
+            .defuse_ft_force_withdraw(
+                env.defuse.id(),
+                env.user1.id(),
+                &env.ft1,
+                env.user2.id(),
+                1000
+            )
+            .await
+            .unwrap(),
+        1000
+    );
 
     assert_eq!(
         env.mt_contract_balance_of(env.defuse.id(), env.user1.id(), &ft1.to_string())
@@ -358,7 +364,7 @@ pub trait DefuseFtWithdrawer {
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-    ) -> anyhow::Result<bool>;
+    ) -> anyhow::Result<u128>;
 
     async fn defuse_ft_force_withdraw(
         &self,
@@ -367,7 +373,7 @@ pub trait DefuseFtWithdrawer {
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-    ) -> anyhow::Result<bool>;
+    ) -> anyhow::Result<u128>;
 }
 
 impl DefuseFtWithdrawer for near_workspaces::Account {
@@ -377,7 +383,7 @@ impl DefuseFtWithdrawer for near_workspaces::Account {
         token: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<u128> {
         self.call(defuse_id, "ft_withdraw")
             .deposit(NearToken::from_yoctonear(1))
             .args_json(json!({
@@ -389,7 +395,8 @@ impl DefuseFtWithdrawer for near_workspaces::Account {
             .transact()
             .await?
             .into_result()?
-            .json()
+            .json::<U128>()
+            .map(|v| v.0)
             .map_err(Into::into)
     }
 
@@ -400,7 +407,7 @@ impl DefuseFtWithdrawer for near_workspaces::Account {
         token: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<u128> {
         self.call(defuse_id, "ft_force_withdraw")
             .deposit(NearToken::from_yoctonear(1))
             .args_json(json!({
@@ -413,7 +420,8 @@ impl DefuseFtWithdrawer for near_workspaces::Account {
             .transact()
             .await?
             .into_result()?
-            .json()
+            .json::<U128>()
+            .map(|v| v.0)
             .map_err(Into::into)
     }
 }
@@ -425,7 +433,7 @@ impl DefuseFtWithdrawer for near_workspaces::Contract {
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<u128> {
         self.as_account()
             .defuse_ft_withdraw(defuse_id, token_id, receiver_id, amount)
             .await
@@ -438,7 +446,7 @@ impl DefuseFtWithdrawer for near_workspaces::Contract {
         token_id: &AccountId,
         receiver_id: &AccountId,
         amount: u128,
-    ) -> anyhow::Result<bool> {
+    ) -> anyhow::Result<u128> {
         self.as_account()
             .defuse_ft_force_withdraw(defuse_id, owner_id, token_id, receiver_id, amount)
             .await

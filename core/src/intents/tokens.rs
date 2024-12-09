@@ -12,7 +12,6 @@ use crate::{
 
 use super::ExecutableIntent;
 
-// TODO: decouple from NEP-245, emit out own logs
 #[cfg_attr(
     all(feature = "abi", not(target_arch = "wasm32")),
     serde_as(schemars = true)
@@ -29,7 +28,6 @@ pub struct Transfer {
     #[serde_as(as = "HashMap<_, DisplayFromStr>")]
     pub tokens: HashMap<TokenId, u128>,
 
-    // TODO: remove due to reduce
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 }
@@ -63,9 +61,15 @@ pub struct FtWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
-    // TODO: msg for whitelisted ft_transfer_call
+    /// Message to pass to `ft_transfer_call`. Otherwise, `ft_transfer` will be used.
+    /// NOTE: No refund will be made in case of insufficient `storage_deposit`
+    /// on `token` for `receiver_id`
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub msg: Option<String>,
+
     /// Optionally make `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
+    /// NOTE: the `wNEAR` will not be refunded in case of fail
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage_deposit: Option<NearToken>,
 }
@@ -90,9 +94,15 @@ pub struct NftWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
-    // TODO: msg for whitelisted ft_transfer_call
+    /// Message to pass to `nft_transfer_call`. Otherwise, `nft_transfer` will be used.
+    /// NOTE: No refund will be made in case of insufficient `storage_deposit`
+    /// on `token` for `receiver_id`
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub msg: Option<String>,
+
     /// Optionally make `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
+    /// NOTE: the `wNEAR` will not be refunded in case of fail
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage_deposit: Option<NearToken>,
 }
@@ -118,9 +128,15 @@ pub struct MtWithdraw {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
 
-    // TODO: msg for whitelisted ft_transfer_call
+    /// Message to pass to `mt_batch_transfer_call`. Otherwise, `mt_batch_transfer` will be used.
+    /// NOTE: No refund will be made in case of insufficient `storage_deposit`
+    /// on `token` for `receiver_id`
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub msg: Option<String>,
+
     /// Optionally make `storage_deposit` for `receiver_id` on `token`.
     /// The amount will be subtracted from user's NEP-141 `wNEAR` balance.
+    /// NOTE: the `wNEAR` will not be refunded in case of fail
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage_deposit: Option<NearToken>,
 }

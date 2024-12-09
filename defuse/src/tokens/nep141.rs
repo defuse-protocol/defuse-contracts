@@ -16,14 +16,19 @@ pub trait FungibleTokenWithdrawer: FungibleTokenReceiver + FungibleTokenWithdraw
         receiver_id: AccountId,
         amount: U128,
         memo: Option<String>,
-        // TODO: msg for whitelisted tokens?
-    ) -> PromiseOrValue<bool>;
+        msg: Option<String>,
+    ) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_ft_withdraw_resolver)]
 pub trait FungibleTokenWithdrawResolver {
-    fn ft_resolve_withdraw(&mut self, token: AccountId, sender_id: AccountId, amount: U128)
-        -> bool;
+    fn ft_resolve_withdraw(
+        &mut self,
+        token: AccountId,
+        sender_id: AccountId,
+        amount: U128,
+        is_call: bool,
+    ) -> U128;
 }
 
 #[ext_contract(ext_ft_force_withdraw)]
@@ -35,5 +40,6 @@ pub trait FungibleTokenForceWithdrawer: FungibleTokenWithdrawer + AccessControll
         receiver_id: AccountId,
         amount: U128,
         memo: Option<String>,
-    ) -> PromiseOrValue<bool>;
+        msg: Option<String>,
+    ) -> PromiseOrValue<U128>;
 }

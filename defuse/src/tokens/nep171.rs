@@ -18,6 +18,7 @@ pub trait NonFungibleTokenWithdrawer:
         receiver_id: AccountId,
         token_id: TokenId,
         memo: Option<String>,
+        msg: Option<String>,
     ) -> PromiseOrValue<bool>;
 }
 
@@ -28,6 +29,7 @@ pub trait NonFungibleTokenWithdrawResolver {
         token: AccountId,
         sender_id: AccountId,
         token_id: TokenId,
+        is_call: bool,
     ) -> bool;
 }
 
@@ -40,5 +42,6 @@ pub trait NonFungibleTokenForceWithdrawer: NonFungibleTokenWithdrawer + AccessCo
         receiver_id: AccountId,
         token_id: TokenId,
         memo: Option<String>,
+        msg: Option<String>,
     ) -> PromiseOrValue<bool>;
 }

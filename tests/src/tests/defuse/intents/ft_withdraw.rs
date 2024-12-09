@@ -33,6 +33,7 @@ async fn test_withdraw_intent() {
                     receiver_id: other_user_id.clone(),
                     amount: 1000.into(),
                     memo: None,
+                    msg: None,
                     storage_deposit: None,
                 }
                 .into()]
@@ -70,6 +71,7 @@ async fn test_withdraw_intent() {
                     receiver_id: other_user_id.clone(),
                     amount: 1000.into(),
                     memo: None,
+                    msg: None,
                     // user has no wnear yet
                     storage_deposit: Some(STORAGE_DEPOSIT),
                 }
@@ -121,6 +123,7 @@ async fn test_withdraw_intent() {
                     receiver_id: other_user_id.clone(),
                     amount: 1000.into(),
                     memo: None,
+                    msg: None,
                     // now user has wNEAR to pay for it
                     storage_deposit: Some(STORAGE_DEPOSIT),
                 }
