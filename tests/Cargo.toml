@@ -12,6 +12,7 @@ defuse-poa-factory = { workspace = true, features = ["contract"] }
 
 anyhow.workspace = true
 bnum = { workspace = true, features = ["rand"] }
+hex-literal.workspace = true
 impl-tools.workspace = true
 near-crypto = "0.26"
 near-sdk = { workspace = true, features = ["unit-testing"] }

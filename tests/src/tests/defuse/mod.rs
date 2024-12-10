@@ -2,6 +2,7 @@ pub mod accounts;
 mod env;
 mod intents;
 mod tokens;
+mod upgrade;
 
 use std::sync::LazyLock;
 
