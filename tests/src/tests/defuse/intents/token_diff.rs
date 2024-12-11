@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, time::Duration};
+use std::{collections::BTreeMap, ops::Neg, time::Duration};
 
 use defuse::core::{
     fees::Pips,
@@ -315,5 +315,161 @@ async fn test_invariant_violated() {
         .await
         .unwrap(),
         [0, 2000]
+    );
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_solver_user_closure(
+    #[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips,
+) {
+    let env = Env::builder().fee(fee).build().await;
+
+    let user = &env.user1;
+    let solver = &env.user2;
+
+    const USER_BALANCE: u128 = 1100;
+    const SOLVER_BALANCE: u128 = 2100;
+
+    // deposit
+    env.defuse_ft_mint(&env.ft1, USER_BALANCE, user.id())
+        .await
+        .unwrap();
+    env.defuse_ft_mint(&env.ft2, SOLVER_BALANCE, solver.id())
+        .await
+        .unwrap();
+
+    let token_in = TokenId::Nep141(env.ft1.clone());
+    let token_out = TokenId::Nep141(env.ft2.clone());
+
+    // RFQ: 1000 token_in -> ??? token_out
+    const USER_DELTA_IN: i128 = -1000;
+    dbg!(USER_DELTA_IN);
+    // propagate RFQ to solver with adjusted amount_in
+    let solver_delta_in = TokenDiff::closure_delta(&token_in, USER_DELTA_IN, fee).unwrap();
+
+    // assume solver trades 1:2
+    let solver_delta_out = solver_delta_in * -2;
+    dbg!(solver_delta_in, solver_delta_out);
+
+    // solver signs his intent
+    let solver_commitment = solver.sign_defuse_message(
+        env.defuse.id(),
+        thread_rng().gen(),
+        Deadline::timeout(Duration::from_secs(90)),
+        DefuseIntents {
+            intents: [TokenDiff {
+                diff: TokenDeltas::new(
+                    [
+                        (token_in.clone(), solver_delta_in),
+                        (token_out.clone(), solver_delta_out),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            }
+            .into()]
+            .into(),
+        },
+    );
+
+    // simulate before returning quote
+    let simulation_before_return_quote = env
+        .defuse
+        .simulate_intents([solver_commitment.clone()])
+        .await
+        .unwrap();
+    println!(
+        "simulation_before_return_quote: {}",
+        serde_json::to_string_pretty(&simulation_before_return_quote).unwrap()
+    );
+
+    // we expect unmatched deltas to correspond with user_delta_in and
+    // user_delta_out and fee
+    let unmatched_deltas = simulation_before_return_quote
+        .invariant_violated
+        .unwrap()
+        .into_unmatched_deltas()
+        .unwrap();
+    // there should be unmatched deltas only for 2 tokens: token_in and token_out
+    assert_eq!(unmatched_deltas.len(), 2);
+
+    // expect unmatched delta on token_in to be fully covered by user_in
+    let expected_unmatched_delta_token_in =
+        TokenDiff::token_delta_in_with_fee(&token_in, USER_DELTA_IN, fee)
+            .unwrap()
+            .neg();
+    assert_eq!(
+        unmatched_deltas.balance_of(&token_in),
+        expected_unmatched_delta_token_in
+    );
+
+    // calculate user_delta_out to return to the user
+    let user_delta_out =
+        TokenDiff::token_delta_out(&token_out, unmatched_deltas.balance_of(&token_out), fee)
+            .unwrap();
+    dbg!(user_delta_out);
+
+    // user signs the message
+    let user_commitment = user.sign_defuse_message(
+        env.defuse.id(),
+        thread_rng().gen(),
+        Deadline::timeout(Duration::from_secs(90)),
+        DefuseIntents {
+            intents: [TokenDiff {
+                diff: TokenDeltas::new(
+                    [
+                        (token_in.clone(), USER_DELTA_IN),
+                        (token_out.clone(), user_delta_out),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            }
+            .into()]
+            .into(),
+        },
+    );
+
+    // simulating both solver's and user's intents now should succeed
+    env.defuse
+        .simulate_intents([solver_commitment.clone(), user_commitment.clone()])
+        .await
+        .unwrap()
+        .into_result()
+        .unwrap();
+
+    // execute intents
+    env.defuse
+        .execute_intents([solver_commitment, user_commitment])
+        .await
+        .unwrap();
+
+    assert_eq!(
+        env.mt_contract_batch_balance_of(
+            env.defuse.id(),
+            user.id(),
+            [&token_in.to_string(), &token_out.to_string()]
+        )
+        .await
+        .unwrap(),
+        [
+            USER_BALANCE - USER_DELTA_IN.unsigned_abs(),
+            user_delta_out.unsigned_abs()
+        ]
+    );
+
+    assert_eq!(
+        env.mt_contract_batch_balance_of(
+            env.defuse.id(),
+            solver.id(),
+            [&token_in.to_string(), &token_out.to_string()]
+        )
+        .await
+        .unwrap(),
+        [
+            solver_delta_in.unsigned_abs(),
+            SOLVER_BALANCE - solver_delta_out.unsigned_abs()
+        ]
     );
 }
