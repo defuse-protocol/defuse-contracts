@@ -7,3 +7,5 @@ metadata:
 spec:
   targets:
     - ./defuse/.catalog-info.yaml
+    - ./poa-factory/.catalog-info.yaml
+    - ./poa-token/.catalog-info.yaml
