@@ -26,6 +26,7 @@ pub struct DepositMessage {
 }
 
 impl DepositMessage {
+    #[must_use]
     #[inline]
     pub const fn new(receiver_id: AccountId) -> Self {
         Self {
@@ -35,12 +36,14 @@ impl DepositMessage {
         }
     }
 
+    #[must_use]
     #[inline]
     pub fn with_execute_intents(mut self, intents: impl IntoIterator<Item = MultiPayload>) -> Self {
         self.execute_intents.extend(intents);
         self
     }
 
+    #[must_use]
     #[inline]
     pub fn with_refund_if_fails(mut self) -> Self {
         self.refund_if_fails = true;
