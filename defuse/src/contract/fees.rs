@@ -6,7 +6,7 @@ use defuse_core::{
     fees::{FeeChangedEvent, FeeCollectorChangedEvent, Pips},
 };
 use near_plugins::{access_control_any, pause, AccessControllable, Pausable};
-use near_sdk::{near, require, AccountId};
+use near_sdk::{assert_one_yocto, near, require, AccountId};
 
 use crate::fees::FeesManager;
 
@@ -16,7 +16,9 @@ use super::{Contract, ContractExt, Role};
 impl FeesManager for Contract {
     #[pause(name = "intents")]
     #[access_control_any(roles(Role::DAO, Role::FeesManager))]
+    #[payable]
     fn set_fee(&mut self, #[allow(unused_mut)] mut fee: Pips) {
+        assert_one_yocto();
         require!(self.fees.fee != fee, "same");
         mem::swap(&mut self.fees.fee, &mut fee);
         FeeChangedEvent {
@@ -32,7 +34,9 @@ impl FeesManager for Contract {
 
     #[pause(name = "intents")]
     #[access_control_any(roles(Role::DAO, Role::FeesManager))]
+    #[payable]
     fn set_fee_collector(&mut self, #[allow(unused_mut)] mut fee_collector: AccountId) {
+        assert_one_yocto();
         require!(self.fees.fee_collector != fee_collector, "same");
         mem::swap(&mut self.fees.fee_collector, &mut fee_collector);
         FeeCollectorChangedEvent {
