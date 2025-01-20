@@ -243,7 +243,8 @@ impl TokenTransferMatcher {
         let s = sub.balance_of(&owner_id);
         if s > 0 {
             let a = s.min(amount);
-            sub.withdraw(owner_id.clone(), a);
+            sub.withdraw(owner_id.clone(), a)
+                .unwrap_or_else(|| unreachable!());
             amount = amount.saturating_sub(a);
             if amount == 0 {
                 return true;
@@ -291,7 +292,7 @@ impl TokenTransferMatcher {
             }
         }
 
-        // only sender left
+        // only sender(s) left
         if let Some((_, send)) = withdraw {
             return Err(withdrawals
                 .try_fold(send, |total, (_, s)| total.checked_add(s))
@@ -299,7 +300,7 @@ impl TokenTransferMatcher {
                 .and_then(i128::checked_neg)
                 .unwrap_or_default());
         }
-        // only receiver left
+        // only receiver(s) left
         if let Some((_, receive)) = deposit {
             return Err(deposits
                 .try_fold(receive, |total, (_, r)| total.checked_add(r))
