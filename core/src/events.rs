@@ -13,25 +13,25 @@ use crate::{
 #[near(event_json(standard = "dip4"))]
 #[derive(Debug, Clone, Deserialize, From)]
 pub enum DefuseEvent<'a> {
-    #[event_version("0.2.0")]
+    #[event_version("0.2.1")]
     #[from(skip)]
     PublicKeyAdded(AccountEvent<'a, PublicKeyEvent<'a>>),
-    #[event_version("0.2.0")]
+    #[event_version("0.2.1")]
     #[from(skip)]
     PublicKeyRemoved(AccountEvent<'a, PublicKeyEvent<'a>>),
 
-    #[event_version("0.2.0")]
+    #[event_version("0.2.1")]
     FeeChanged(FeeChangedEvent),
-    #[event_version("0.2.0")]
+    #[event_version("0.2.1")]
     FeeCollectorChanged(FeeCollectorChangedEvent<'a>),
 
-    #[event_version("0.2.0")]
+    #[event_version("0.2.1")]
     Transfer(Cow<'a, [IntentEvent<AccountEvent<'a, Cow<'a, Transfer>>>]>),
 
-    #[event_version("0.2.0")]
+    #[event_version("0.2.1")]
     TokenDiff(Cow<'a, [IntentEvent<AccountEvent<'a, TokenDiffEvent<'a>>>]>),
 
-    #[event_version("0.2.0")]
+    #[event_version("0.2.1")]
     IntentsExecuted(Cow<'a, [IntentEvent<AccountEvent<'a, ()>>]>),
 }
 

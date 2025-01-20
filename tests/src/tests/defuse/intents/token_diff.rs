@@ -196,7 +196,12 @@ async fn test_ft_diffs(env: &Env, accounts: Vec<AccountFtDiff<'_>>) {
                     thread_rng().gen(),
                     Deadline::timeout(Duration::from_secs(120)),
                     DefuseIntents {
-                        intents: [TokenDiff { diff }.into()].into(),
+                        intents: [TokenDiff {
+                            diff,
+                            referral: None,
+                        }
+                        .into()]
+                        .into(),
                     },
                 )
             })
@@ -260,6 +265,7 @@ async fn test_invariant_violated() {
                     diff: TokenDeltas::default()
                         .with_add_deltas([(ft1.clone(), -1000), (ft2.clone(), 2000)])
                         .unwrap(),
+                    referral: None,
                 }
                 .into()]
                 .into(),
@@ -274,6 +280,7 @@ async fn test_invariant_violated() {
                     diff: TokenDeltas::default()
                         .with_add_deltas([(ft1.clone(), 1000), (ft2.clone(), -1999)])
                         .unwrap(),
+                    referral: None,
                 }
                 .into()]
                 .into(),
@@ -367,6 +374,7 @@ async fn test_solver_user_closure(
                     .into_iter()
                     .collect(),
                 ),
+                referral: None,
             }
             .into()]
             .into(),
@@ -423,6 +431,7 @@ async fn test_solver_user_closure(
                     .into_iter()
                     .collect(),
                 ),
+                referral: None,
             }
             .into()]
             .into(),
