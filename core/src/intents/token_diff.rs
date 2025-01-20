@@ -2,7 +2,7 @@ use std::{borrow::Cow, collections::BTreeMap};
 
 use defuse_num_utils::CheckedMulDiv;
 use impl_tools::autoimpl;
-use near_sdk::{near, AccountIdRef, CryptoHash};
+use near_sdk::{near, AccountId, AccountIdRef, CryptoHash};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
@@ -31,6 +31,9 @@ pub type TokenDeltas = TokenAmounts<BTreeMap<TokenId, i128>>;
 pub struct TokenDiff {
     #[serde_as(as = "TokenAmounts<BTreeMap<_, DisplayFromStr>>")]
     pub diff: TokenDeltas,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub referral: Option<AccountId>,
 }
 
 impl ExecutableIntent for TokenDiff {
