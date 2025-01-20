@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, ops::Neg, time::Duration};
+use std::{collections::BTreeMap, time::Duration};
 
 use defuse::core::{
     fees::Pips,
@@ -396,9 +396,7 @@ async fn test_solver_user_closure(
 
     // expect unmatched delta on token_in to be fully covered by user_in
     let expected_unmatched_delta_token_in =
-        TokenDiff::token_delta_in_with_fee(&token_in, USER_DELTA_IN, fee)
-            .unwrap()
-            .neg();
+        TokenDiff::closure_delta(&token_in, USER_DELTA_IN, fee).unwrap();
     assert_eq!(
         unmatched_deltas.balance_of(&token_in),
         expected_unmatched_delta_token_in
@@ -406,7 +404,7 @@ async fn test_solver_user_closure(
 
     // calculate user_delta_out to return to the user
     let user_delta_out =
-        TokenDiff::token_delta_out(&token_out, unmatched_deltas.balance_of(&token_out), fee)
+        TokenDiff::closure_supply_delta(&token_out, unmatched_deltas.balance_of(&token_out), fee)
             .unwrap();
     dbg!(user_delta_out);
 

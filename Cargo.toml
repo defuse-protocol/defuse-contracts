@@ -18,7 +18,6 @@ members = [
     "poa-factory",
     "poa-token",
     "serde-utils",
-    # "solana-message",
     "tests",
     "wnear",
 ]
@@ -46,7 +45,6 @@ defuse-num-utils.path = "num-utils"
 defuse-poa-factory.path = "poa-factory"
 defuse-poa-token.path = "poa-token"
 defuse-serde-utils.path = "serde-utils"
-# defuse-solana-message.path = "solana-message"
 defuse-wnear.path = "wnear"
 
 anyhow = "1"

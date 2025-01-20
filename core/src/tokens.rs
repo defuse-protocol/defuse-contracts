@@ -138,6 +138,7 @@ where
         self.0.get(k).copied().unwrap_or_default()
     }
 
+    #[must_use]
     #[inline]
     pub fn deposit(&mut self, k: T::K, amount: u128) -> Option<T::V>
     where
@@ -146,6 +147,7 @@ where
         self.checked_apply(k, |a| a.checked_add(amount))
     }
 
+    #[must_use]
     #[inline]
     pub fn with_deposit(mut self, k: T::K, amount: u128) -> Option<Self>
     where
@@ -155,6 +157,7 @@ where
         Some(self)
     }
 
+    #[must_use]
     #[inline]
     pub fn with_deposit_many(self, amounts: impl IntoIterator<Item = (T::K, u128)>) -> Option<Self>
     where
@@ -165,6 +168,7 @@ where
             .try_fold(self, |amounts, (k, amount)| amounts.with_deposit(k, amount))
     }
 
+    #[must_use]
     #[inline]
     pub fn withdraw(&mut self, k: T::K, amount: u128) -> Option<T::V>
     where
@@ -173,6 +177,7 @@ where
         self.checked_apply(k, |a| a.checked_sub(amount))
     }
 
+    #[must_use]
     #[inline]
     pub fn with_withdraw(mut self, k: T::K, amount: u128) -> Option<Self>
     where
@@ -182,6 +187,7 @@ where
         Some(self)
     }
 
+    #[must_use]
     #[inline]
     pub fn with_withdraw_many(self, amounts: impl IntoIterator<Item = (T::K, u128)>) -> Option<Self>
     where
@@ -192,6 +198,7 @@ where
         })
     }
 
+    #[must_use]
     #[inline]
     pub fn add_delta(&mut self, k: T::K, delta: i128) -> Option<T::V>
     where
@@ -200,6 +207,7 @@ where
         self.checked_apply(k, |a| a.checked_add(delta))
     }
 
+    #[must_use]
     #[inline]
     pub fn with_add_delta(mut self, k: T::K, delta: i128) -> Option<Self>
     where
@@ -209,6 +217,7 @@ where
         Some(self)
     }
 
+    #[must_use]
     #[inline]
     pub fn with_add_deltas(self, amounts: impl IntoIterator<Item = (T::K, i128)>) -> Option<Self>
     where
@@ -219,6 +228,7 @@ where
             .try_fold(self, |amounts, (k, delta)| amounts.with_add_delta(k, delta))
     }
 
+    #[must_use]
     #[inline]
     fn checked_apply(&mut self, k: T::K, f: impl FnOnce(T::V) -> Option<T::V>) -> Option<T::V> {
         let mut a = self.0.entry_or_default(k);
