@@ -33,6 +33,9 @@ pub struct TokenDiff {
     pub diff: TokenDeltas,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memo: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub referral: Option<AccountId>,
 }
 
