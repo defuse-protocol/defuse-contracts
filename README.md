@@ -1,4 +1,4 @@
-# Set of contracts for the Defuse project
+# Set of contracts for the NEAR Intents project
 
 ### Building and running
 
