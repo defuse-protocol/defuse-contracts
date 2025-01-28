@@ -2,8 +2,8 @@
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
-  name: defuse-public
-  description: Public Defuse Protocol repository
+  name: intents-public
+  description: Public Intents Protocol repository
 spec:
   targets:
     - ./defuse/.catalog-info.yaml
