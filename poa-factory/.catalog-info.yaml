@@ -2,7 +2,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: defuse-poa-factory
+  name: intents-poa-factory
   tags:
     - contract
     - near
@@ -10,9 +10,9 @@ metadata:
   annotations:
     aurora.dev/security-tier: "1"
 spec:
-  owner: defuse-team
+  owner: intents-team
   type: contract
   lifecycle: production
-  system: defuse-protocol
+  system: intents-protocol
   deployedAt:
     - contract:near/mainnet/omft.near
