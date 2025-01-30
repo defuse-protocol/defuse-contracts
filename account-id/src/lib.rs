@@ -60,18 +60,24 @@ impl Implicit for AccountIdRef {
                 // https://ethereum.org/en/developers/docs/accounts/#account-creation
                 return self == format!("0x{}", hex::encode(&env::keccak256_array(pk)[12..32]));
             }
-            (AccountType::NamedAccount, pk) => match pk {
-                PublicKey::P256(pk) => {
-                    if self.is_sub_account_of(P256_TLA)
-                        && self
-                            == format!("{}.{P256_TLA}", hex::encode(&env::sha256_array(pk)[12..32]))
-                    {
-                        return true;
+            (AccountType::NamedAccount, pk) => {
+                #[allow(clippy::single_match)]
+                match pk {
+                    PublicKey::P256(pk) => {
+                        if self.is_sub_account_of(P256_TLA)
+                            && self
+                                == format!(
+                                    "{}.{P256_TLA}",
+                                    hex::encode(&env::sha256_array(pk)[12..32])
+                                )
+                        {
+                            return true;
+                        }
+                        // other account-creation schemes can be introduced later...
                     }
-                    // other account-creation schemes can be introduced later...
+                    _ => {}
                 }
-                _ => {}
-            },
+            }
             (_, _) => {}
         }
         false
@@ -122,6 +128,7 @@ mod tests {
 
         assert!(ACCOUNT_ID.is_implicit());
         assert!(ACCOUNT_ID.is_implicit_for(&PUBLIC_KEY));
+        assert!(!ACCOUNT_ID.is_implicit_for(&PublicKey::Ed25519([0; 32])));
         assert_eq!(ACCOUNT_ID.to_default_public_key(), Some(PUBLIC_KEY));
     }
 
@@ -132,6 +139,7 @@ mod tests {
 
         assert!(ACCOUNT_ID.is_implicit());
         assert!(ACCOUNT_ID.is_implicit_for(&"p256:2V8Np9vGqLiwVZ8qmMmpkxU7CTRqje4WtwFeLimSwuuyF1rddQK5fELiMgxUnYbVjbZHCNnGc6fAe4JeDcVxgj3Q".parse().unwrap()));
+        assert!(!ACCOUNT_ID.is_implicit_for(&PublicKey::P256([0; 64])));
         assert_eq!(ACCOUNT_ID.to_default_public_key(), None);
     }
 
@@ -140,7 +148,7 @@ mod tests {
         const ACCOUNT_ID: &AccountIdRef = AccountIdRef::new_or_panic("test.near");
 
         assert!(!ACCOUNT_ID.is_implicit());
-        assert!(!ACCOUNT_ID.is_implicit_for(&"p256:2V8Np9vGqLiwVZ8qmMmpkxU7CTRqje4WtwFeLimSwuuyF1rddQK5fELiMgxUnYbVjbZHCNnGc6fAe4JeDcVxgj3Q".parse().unwrap()));
+        assert!(!ACCOUNT_ID.is_implicit_for(&PublicKey::Ed25519([0; 32])));
         assert_eq!(ACCOUNT_ID.to_default_public_key(), None);
     }
 
@@ -149,7 +157,7 @@ mod tests {
         const ACCOUNT_ID: &AccountIdRef = AccountIdRef::new_or_panic("near");
 
         assert!(!ACCOUNT_ID.is_implicit());
-        assert!(!ACCOUNT_ID.is_implicit_for(&"p256:2V8Np9vGqLiwVZ8qmMmpkxU7CTRqje4WtwFeLimSwuuyF1rddQK5fELiMgxUnYbVjbZHCNnGc6fAe4JeDcVxgj3Q".parse().unwrap()));
+        assert!(!ACCOUNT_ID.is_implicit_for(&PublicKey::Ed25519([0; 32])));
         assert_eq!(ACCOUNT_ID.to_default_public_key(), None);
     }
 }
