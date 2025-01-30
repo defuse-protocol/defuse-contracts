@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "account-id",
     "admin-utils",
     "bitmap",
     "borsh-utils",
@@ -29,6 +30,7 @@ edition = "2021"
 repository = "https://github.com/defuse-protocol/defuse-contracts"
 
 [workspace.dependencies]
+defuse-account-id.path = "account-id"
 defuse-admin-utils.path = "admin-utils"
 defuse-bitmap.path = "bitmap"
 defuse-borsh-utils.path = "borsh-utils"

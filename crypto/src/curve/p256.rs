@@ -9,8 +9,10 @@ use p256::{
 pub struct P256;
 
 impl Curve for P256 {
+    /// Concatenated `x || y` coordinates with no leading SEC1 tag byte.
     type PublicKey = [u8; 64];
 
+    /// Concatenated `r || s` coordinates
     type Signature = [u8; 64];
 
     // Output of cryptographic hash function
@@ -25,11 +27,11 @@ impl Curve for P256 {
     ) -> Option<Self::PublicKey> {
         // convert verifying key
         let verifying_key = VerifyingKey::from_encoded_point(&EncodedPoint::from_untagged_bytes(
-            &GenericArray::from_slice(public_key),
+            GenericArray::from_slice(public_key),
         ))
         .ok()?;
         // convert signature
-        let signature = Signature::from_bytes(&GenericArray::from_slice(signature)).ok()?;
+        let signature = Signature::from_bytes(GenericArray::from_slice(signature)).ok()?;
 
         // verify signature over prehashed
         verifying_key

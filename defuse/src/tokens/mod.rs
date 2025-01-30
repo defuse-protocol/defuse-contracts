@@ -7,15 +7,14 @@ use core::{
     str::FromStr,
 };
 
+use defuse_account_id::ParseAccountError;
 use defuse_core::payload::multi::MultiPayload;
 use defuse_near_utils::UnwrapOrPanicError;
-use near_account_id::ParseAccountError;
 use near_sdk::{near, serde_json, AccountId};
 use thiserror::Error as ThisError;
 
 #[near(serializers = [json])]
-// TODO: Clone
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DepositMessage {
     pub receiver_id: AccountId,
 

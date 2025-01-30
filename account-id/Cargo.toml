@@ -1,0 +1,17 @@
+[package]
+name = "defuse-account-id"
+version = "0.1.0"
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+defuse-crypto.workspace = true
+
+hex.workspace = true
+near-account-id.workspace = true
+near-sdk.workspace = true
+
+[dev-dependencies]
+hex-literal.workspace = true

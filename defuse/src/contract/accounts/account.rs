@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use defuse_account_id::Implicit;
 use defuse_bitmap::{U248, U256};
 use defuse_core::{
     accounts::{AccountEvent, PublicKeyEvent},
@@ -9,7 +10,6 @@ use defuse_core::{
 };
 use defuse_near_utils::NestPrefix;
 use impl_tools::autoimpl;
-use near_account_id::AccountType;
 use near_sdk::{
     borsh::BorshSerialize,
     near,
@@ -46,8 +46,7 @@ impl Account {
             nonces: Nonces::new(LookupMap::new(
                 prefix.as_slice().nest(AccountPrefix::Nonces),
             )),
-            // TODO: do not remove p256
-            implicit_public_key_removed: matches!(me.get_account_type(), AccountType::NamedAccount),
+            implicit_public_key_removed: !me.is_implicit(),
             public_keys: IterableSet::new(prefix.as_slice().nest(AccountPrefix::PublicKeys)),
             state: AccountState::new(prefix.as_slice().nest(AccountPrefix::State)),
             prefix,
@@ -73,7 +72,7 @@ impl Account {
 
     #[inline]
     fn maybe_add_public_key(&mut self, me: &AccountIdRef, public_key: PublicKey) -> bool {
-        if me == public_key.to_implicit_account_id() {
+        if me.is_implicit_for(&public_key) {
             let was_removed = self.implicit_public_key_removed;
             self.implicit_public_key_removed = false;
             was_removed
@@ -101,7 +100,7 @@ impl Account {
 
     #[inline]
     fn maybe_remove_public_key(&mut self, me: &AccountIdRef, public_key: &PublicKey) -> bool {
-        if me == public_key.to_implicit_account_id() {
+        if me.is_implicit_for(public_key) {
             let was_removed = self.implicit_public_key_removed;
             self.implicit_public_key_removed = true;
             !was_removed
@@ -112,7 +111,7 @@ impl Account {
 
     #[inline]
     pub fn has_public_key(&self, me: &AccountIdRef, public_key: &PublicKey) -> bool {
-        !self.implicit_public_key_removed && me == public_key.to_implicit_account_id()
+        !self.implicit_public_key_removed && me.is_implicit_for(public_key)
             || self.public_keys.contains(public_key)
     }
 
@@ -120,7 +119,7 @@ impl Account {
     pub fn iter_public_keys(&self, me: &AccountIdRef) -> impl Iterator<Item = PublicKey> + '_ {
         self.public_keys.iter().cloned().chain(
             (!self.implicit_public_key_removed)
-                .then(|| PublicKey::from_implicit_account_id(me))
+                .then(|| me.to_default_public_key())
                 .flatten(),
         )
     }

@@ -15,10 +15,13 @@ use serde_with::serde_as;
 #[derive(Debug, Clone)]
 pub struct SignedWebAuthnPayload {
     pub payload: String,
+
+    /// Base64Url-encodded [authenticatorData](https://w3c.github.io/webauthn/#authenticator-data)
     #[serde_as(as = "Base64<UrlSafe, Unpadded>")]
     pub authenticator_data: Vec<u8>,
+    /// Serialized [clientDataJSON](https://w3c.github.io/webauthn/#dom-authenticatorresponse-clientdatajson)
     pub client_data_json: String,
-    // TODO: allow for more algorithms
+
     #[serde_as(as = "AsCurve<P256>")]
     pub public_key: <P256 as Curve>::PublicKey,
     #[serde_as(as = "AsCurve<P256>")]
@@ -26,15 +29,14 @@ pub struct SignedWebAuthnPayload {
 }
 
 impl SignedWebAuthnPayload {
-    const AUTH_DATA_FLAGS_UP: u8 = 0 << 0;
-    const AUTH_DATA_FLAGS_UV: u8 = 0 << 2;
-    const AUTH_DATA_FLAGS_BE: u8 = 0 << 3;
-    const AUTH_DATA_FLAGS_BS: u8 = 0 << 4;
+    #[allow(clippy::identity_op)]
+    const AUTH_DATA_FLAGS_UP: u8 = 1 << 0;
+    const AUTH_DATA_FLAGS_UV: u8 = 1 << 2;
+    const AUTH_DATA_FLAGS_BE: u8 = 1 << 3;
+    const AUTH_DATA_FLAGS_BS: u8 = 1 << 4;
 
     /// https://w3c.github.io/webauthn/#sctn-verifying-assertion
     fn verify_flags(flags: u8, require_user_verification: bool) -> bool {
-        // TODO: veryfy other fields from auth_data?
-
         // 16. Verify that the UP bit of the flags in authData is set.
         if flags & Self::AUTH_DATA_FLAGS_UP != Self::AUTH_DATA_FLAGS_UP {
             return false;
@@ -64,7 +66,6 @@ impl SignedWebAuthnPayload {
 impl Payload for SignedWebAuthnPayload {
     #[inline]
     fn hash(&self) -> CryptoHash {
-        // TODO: ENVELOPE: prefix hash with version?
         env::sha256_array(self.payload.as_bytes())
     }
 }
@@ -73,43 +74,48 @@ impl SignedPayload for SignedWebAuthnPayload {
     type PublicKey = <P256 as Curve>::PublicKey;
 
     /// https://w3c.github.io/webauthn/#sctn-verifying-assertion
+    ///
+    /// Credits to:
+    /// * [ERC-4337 Smart Wallet](https://github.com/passkeys-4337/smart-wallet/blob/f3aa9fd44646fde0316fc810e21cc553a9ed73e0/contracts/src/WebAuthn.sol#L75-L172)
+    /// * [CAP-0051](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0051.md)
     fn verify(&self) -> Option<Self::PublicKey> {
-        // verify authData flags first
+        // verify authData flags
         if self.authenticator_data.len() < 37
             || !Self::verify_flags(self.authenticator_data[32], false)
         {
             return None;
         }
 
-        let collected_client_data: CollectedClientData =
-            serde_json::from_str(&self.client_data_json).ok()?;
-
         // 10. Verify that the value of C.type is the string webauthn.get.
-        if collected_client_data.typ != ClientDataType::Get {
+        let c: CollectedClientData = serde_json::from_str(&self.client_data_json).ok()?;
+        if c.typ != ClientDataType::Get {
             return None;
         }
 
         // 11. Verify that the value of C.challenge equals the base64url
         // encoding of pkOptions.challenge
-        if collected_client_data.challenge != self.hash() {
+        //
+        // In our case, challenge is a hash of the payload
+        if c.challenge != self.hash() {
             return None;
         }
-
-        // // TODO: origin & cross-origin?
 
         // 20. Let hash be the result of computing a hash over the cData using
         // SHA-256
         let hash = env::sha256_array(self.client_data_json.as_bytes());
 
-        // 21. Using credentialRecord.publicKey, verify that sig is a valid signature
-        // over the binary concatenation of authData and hash.
-
-        let prehashed =
-            env::sha256_array(&[self.authenticator_data.as_slice(), hash.as_slice()].concat());
+        // 21. Using credentialRecord.publicKey, verify that sig is a valid
+        // signature over the binary concatenation of authData and hash.
+        let message = [self.authenticator_data.as_slice(), hash.as_slice()].concat();
+        // Only [COSE ES256 (-7) algorithm](https://www.iana.org/assignments/cose/cose.xhtml#algorithms)
+        // is supported by now: P256 (a.k.a secp256r1) over SHA-256.
+        // We use host impl of SHA-256 here to reduce gas consumption.
+        let prehashed = env::sha256_array(&message);
         P256::verify(&self.signature, &prehashed, &self.public_key)
     }
 }
 
+/// https://w3c.github.io/webauthn/#dictdef-collectedclientdata
 #[cfg_attr(
     all(feature = "abi", not(target_arch = "wasm32")),
     serde_as(schemars = true)
@@ -138,4 +144,30 @@ pub enum ClientDataType {
     /// Serializes to the string `"webauthn.get"`
     #[serde(rename = "webauthn.get")]
     Get,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use defuse_crypto::PublicKey;
+    use near_sdk::serde_json;
+
+    #[test]
+    fn test() {
+        let p: SignedWebAuthnPayload = serde_json::from_str(r#"{
+  "payload": "{\"signer_id\":\"b883e61c704ce539ad137daffe6559c3fe42d201.p256\",\"verifying_contract\":\"defuse.test.near\",\"deadline\":\"2025-03-30T00:00:00Z\",\"nonce\":\"A3nsY1GMVjzyXL3mUzOOP3KT+5a0Ruy+QDNWPhchnxM=\",\"intents\":[{\"intent\":\"transfer\",\"receiver_id\": \"user1.test.near\", \"tokens\":{\"nep141:ft1.poa-factory.test.near\":\"1000\"}}]}",
+  "client_data_json": "{\"type\":\"webauthn.get\",\"challenge\":\"ZvPuxeVdVq6d72GcQX4jtSRXYjyZsObqHRoCNzJc7Z0\",\"origin\":\"https://defuse-widget-git-feat-passkeys-defuse-94bbc1b2.vercel.app\"}",
+  "authenticator_data": "933cQogpBzE3RSAYSAkfWoNEcBd3X84PxE8iRrRVxMgdAAAAAA==",
+  "public_key": "p256:2V8Np9vGqLiwVZ8qmMmpkxU7CTRqje4WtwFeLimSwuuyF1rddQK5fELiMgxUnYbVjbZHCNnGc6fAe4JeDcVxgj3Q",
+  "signature": "p256:5PpLy4XGHL2tYija3j4QwCLvhpvo9m8ERdWCPKbb7BYdsEfu8VhCN46R8FDCXV4rsppb1rv1un3ND6zHfKw7Un44"
+}"#).unwrap();
+
+        let public_key = PublicKey::P256(p.verify().expect("invalid signature"));
+        assert_eq!(
+            public_key,
+            "p256:2V8Np9vGqLiwVZ8qmMmpkxU7CTRqje4WtwFeLimSwuuyF1rddQK5fELiMgxUnYbVjbZHCNnGc6fAe4JeDcVxgj3Q"
+                .parse()
+                .unwrap(),
+        );
+    }
 }

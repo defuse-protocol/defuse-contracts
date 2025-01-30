@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use defuse_account_id::Implicit;
 use defuse_core::{
     crypto::PublicKey,
     engine::{State, StateView},
@@ -40,7 +41,7 @@ impl StateView for Contract {
         self.accounts
             .get(account_id)
             .map(|account| account.has_public_key(account_id, public_key))
-            .unwrap_or_else(|| account_id == public_key.to_implicit_account_id())
+            .unwrap_or_else(|| account_id.is_implicit_for(public_key))
     }
 
     fn iter_public_keys(&self, account_id: &AccountIdRef) -> impl Iterator<Item = PublicKey> + '_ {
@@ -50,7 +51,7 @@ impl StateView for Contract {
             .into_iter()
             .flatten()
             .chain(if account.is_none() {
-                PublicKey::from_implicit_account_id(account_id)
+                account_id.to_default_public_key()
             } else {
                 None
             })
