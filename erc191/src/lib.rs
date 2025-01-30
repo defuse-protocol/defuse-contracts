@@ -55,15 +55,8 @@ impl Payload for SignedErc191Payload {
 impl SignedPayload for SignedErc191Payload {
     type PublicKey = <Secp256k1 as Curve>::PublicKey;
 
+    #[inline]
     fn verify(&self) -> Option<Self::PublicKey> {
-        let [signature @ .., v] = &self.signature;
-        env::ecrecover(
-            &self.payload.hash(),
-            signature,
-            *v,
-            // Do not accept malleabile signatures:
-            // https://github.com/near/nearcore/blob/d73041cc1d1a70af4456fceefaceb1bf7f684fde/core/crypto/src/signature.rs#L448-L455
-            true,
-        )
+        Secp256k1::verify(&self.signature, &self.payload.hash(), &())
     }
 }

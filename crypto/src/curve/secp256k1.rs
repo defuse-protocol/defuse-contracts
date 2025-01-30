@@ -1,4 +1,4 @@
-use near_sdk::env;
+use near_sdk::{env, CryptoHash};
 
 use super::{Curve, CurveType, TypedCurve};
 
@@ -18,14 +18,13 @@ impl Curve for Secp256k1 {
     type Signature = [u8; 65];
 
     // Output of cryptographic hash function
-    type Message = [u8; 32];
+    type Message = CryptoHash;
 
     /// ECDSA signatures are recoverable, so you don't need a verifying key
     type VerifyingKey = ();
 
     #[inline]
     fn verify(
-        &self,
         [signature @ .., v]: &Self::Signature,
         hash: &Self::Message,
         _verifying_key: &(),

@@ -1,7 +1,8 @@
 mod ed25519;
+mod p256;
 mod secp256k1;
 
-pub use self::{ed25519::*, secp256k1::*};
+pub use self::{ed25519::*, p256::*, secp256k1::*};
 
 use near_sdk::bs58;
 use strum::{Display, EnumString, IntoStaticStr};
@@ -18,7 +19,6 @@ pub trait Curve {
     type VerifyingKey;
 
     fn verify(
-        &self,
         signature: &Self::Signature,
         message: &Self::Message,
         verifying_key: &Self::VerifyingKey,
@@ -30,6 +30,7 @@ pub trait Curve {
 pub enum CurveType {
     Ed25519,
     Secp256k1,
+    P256,
 }
 
 pub trait TypedCurve: Curve {

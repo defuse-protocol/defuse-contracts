@@ -6,7 +6,7 @@ use core::{
 use near_account_id::{AccountId, AccountIdRef, AccountType};
 use near_sdk::{bs58, env, near};
 
-use crate::{Curve, CurveType, Ed25519, ParseCurveError, Secp256k1};
+use crate::{Curve, CurveType, Ed25519, ParseCurveError, Secp256k1, P256};
 
 #[near(serializers = [borsh])]
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -17,6 +17,7 @@ use crate::{Curve, CurveType, Ed25519, ParseCurveError, Secp256k1};
 pub enum PublicKey {
     Ed25519(<Ed25519 as Curve>::PublicKey),
     Secp256k1(<Secp256k1 as Curve>::PublicKey),
+    P256(<P256 as Curve>::PublicKey),
 }
 
 impl PublicKey {
@@ -25,6 +26,7 @@ impl PublicKey {
         match self {
             Self::Ed25519(_) => CurveType::Ed25519,
             Self::Secp256k1(_) => CurveType::Secp256k1,
+            Self::P256(_) => CurveType::P256,
         }
     }
 
@@ -33,6 +35,7 @@ impl PublicKey {
         match self {
             Self::Ed25519(data) => data,
             Self::Secp256k1(data) => data,
+            Self::P256(data) => data,
         }
     }
 
@@ -43,6 +46,10 @@ impl PublicKey {
             Self::Secp256k1(pk) => {
                 // https://ethereum.org/en/developers/docs/accounts/#account-creation
                 format!("0x{}", hex::encode(&env::keccak256_array(pk)[12..]))
+            }
+            Self::P256(pk) => {
+                // TODO
+                format!("{}.p256", hex::encode(&env::sha256_array(pk)[12..]))
             }
         }
         .try_into()
@@ -99,6 +106,7 @@ impl FromStr for PublicKey {
         match curve {
             CurveType::Ed25519 => decoder.into_array_const().map(Self::Ed25519),
             CurveType::Secp256k1 => decoder.into_array_const().map(Self::Secp256k1),
+            CurveType::P256 => decoder.into_array_const().map(Self::P256),
         }
         .map_err(Into::into)
     }

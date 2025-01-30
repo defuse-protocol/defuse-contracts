@@ -1,12 +1,13 @@
 //! Helper for [`serde_with::base64::Base64`] to implement [`serde_with::schemars_0_8::JsonSchemaAs`] on it.
 
+pub use serde_with::{
+    base64::{Alphabet, Standard, UrlSafe},
+    formats::{Format, Padded, Unpadded},
+};
+
 use derive_more::From;
 use near_sdk::serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_with::{
-    base64::{Alphabet, Standard},
-    formats::{Format, Padded, Unpadded},
-    serde_as, DeserializeAs, SerializeAs,
-};
+use serde_with::{serde_as, DeserializeAs, SerializeAs};
 
 pub struct Base64<ALPHABET: Alphabet = Standard, PADDING: Format = Padded>(
     ::serde_with::base64::Base64<ALPHABET, PADDING>,

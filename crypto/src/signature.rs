@@ -5,7 +5,7 @@ use core::{
 
 use near_sdk::{bs58, near};
 
-use crate::{Curve, CurveType, Ed25519, ParseCurveError, Secp256k1};
+use crate::{Curve, CurveType, Ed25519, ParseCurveError, Secp256k1, P256};
 
 #[near(serializers = [borsh])]
 #[cfg_attr(
@@ -16,6 +16,7 @@ use crate::{Curve, CurveType, Ed25519, ParseCurveError, Secp256k1};
 pub enum Signature {
     Ed25519(<Ed25519 as Curve>::Signature),
     Secp256k1(<Secp256k1 as Curve>::Signature),
+    P256(<P256 as Curve>::Signature),
 }
 
 impl Signature {
@@ -24,6 +25,7 @@ impl Signature {
         match self {
             Self::Ed25519(_) => CurveType::Ed25519,
             Self::Secp256k1(_) => CurveType::Secp256k1,
+            Self::P256(_) => CurveType::P256,
         }
     }
 
@@ -32,6 +34,7 @@ impl Signature {
         match self {
             Self::Ed25519(data) => data,
             Self::Secp256k1(data) => data,
+            Self::P256(data) => data,
         }
     }
 }
@@ -71,6 +74,7 @@ impl FromStr for Signature {
         match curve {
             CurveType::Ed25519 => decoder.into_array_const().map(Self::Ed25519),
             CurveType::Secp256k1 => decoder.into_array_const().map(Self::Secp256k1),
+            CurveType::P256 => decoder.into_array_const().map(Self::P256),
         }
         .map_err(Into::into)
     }

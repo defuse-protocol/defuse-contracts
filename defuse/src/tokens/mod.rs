@@ -14,7 +14,8 @@ use near_sdk::{near, serde_json, AccountId};
 use thiserror::Error as ThisError;
 
 #[near(serializers = [json])]
-#[derive(Debug, Clone)]
+// TODO: Clone
+#[derive(Debug)]
 pub struct DepositMessage {
     pub receiver_id: AccountId,
 

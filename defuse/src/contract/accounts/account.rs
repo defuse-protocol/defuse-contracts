@@ -46,6 +46,7 @@ impl Account {
             nonces: Nonces::new(LookupMap::new(
                 prefix.as_slice().nest(AccountPrefix::Nonces),
             )),
+            // TODO: do not remove p256
             implicit_public_key_removed: matches!(me.get_account_type(), AccountType::NamedAccount),
             public_keys: IterableSet::new(prefix.as_slice().nest(AccountPrefix::PublicKeys)),
             state: AccountState::new(prefix.as_slice().nest(AccountPrefix::State)),
