@@ -14,6 +14,7 @@ pub enum MultiPayload {
     Nep413(SignedNep413Payload),
     Erc191(SignedErc191Payload),
     RawEd25519(SignedRawEd25519Payload),
+    #[serde(rename = "webauthn")]
     WebAuthn(SignedWebAuthnPayload),
 }
 
