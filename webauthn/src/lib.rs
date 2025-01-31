@@ -1,4 +1,4 @@
-use defuse_crypto::{serde::AsCurve, Curve, Payload, SignedPayload, P256};
+use defuse_crypto::{serde::AsCurve, Curve, Ed25519, Payload, PublicKey, SignedPayload, P256};
 use defuse_serde_utils::base64::{Base64, Unpadded, UrlSafe};
 use near_sdk::{env, near, serde_json, CryptoHash};
 use serde_with::serde_as;
@@ -22,10 +22,8 @@ pub struct SignedWebAuthnPayload {
     /// Serialized [clientDataJSON](https://w3c.github.io/webauthn/#dom-authenticatorresponse-clientdatajson)
     pub client_data_json: String,
 
-    #[serde_as(as = "AsCurve<P256>")]
-    pub public_key: <P256 as Curve>::PublicKey,
-    #[serde_as(as = "AsCurve<P256>")]
-    pub signature: <P256 as Curve>::Signature,
+    #[serde(flatten)]
+    pub signature: WebAuthnSignature,
 }
 
 impl SignedWebAuthnPayload {
@@ -71,7 +69,7 @@ impl Payload for SignedWebAuthnPayload {
 }
 
 impl SignedPayload for SignedWebAuthnPayload {
-    type PublicKey = <P256 as Curve>::PublicKey;
+    type PublicKey = PublicKey;
 
     /// https://w3c.github.io/webauthn/#sctn-verifying-assertion
     ///
@@ -106,12 +104,8 @@ impl SignedPayload for SignedWebAuthnPayload {
 
         // 21. Using credentialRecord.publicKey, verify that sig is a valid
         // signature over the binary concatenation of authData and hash.
-        let message = [self.authenticator_data.as_slice(), hash.as_slice()].concat();
-        // Only [COSE ES256 (-7) algorithm](https://www.iana.org/assignments/cose/cose.xhtml#algorithms)
-        // is supported by now: P256 (a.k.a secp256r1) over SHA-256.
-        // We use host impl of SHA-256 here to reduce gas consumption.
-        let prehashed = env::sha256_array(&message);
-        P256::verify(&self.signature, &prehashed, &self.public_key)
+        self.signature
+            .verify(&[self.authenticator_data.as_slice(), hash.as_slice()].concat())
     }
 }
 
@@ -132,6 +126,8 @@ pub struct CollectedClientData {
 
     #[serde_as(as = "Base64<UrlSafe, Unpadded>")]
     pub challenge: Vec<u8>,
+
+    pub origin: String,
 }
 
 #[near(serializers = [json])]
@@ -146,16 +142,68 @@ pub enum ClientDataType {
     Get,
 }
 
+#[cfg_attr(
+    all(feature = "abi", not(target_arch = "wasm32")),
+    serde_as(schemars = true)
+)]
+#[cfg_attr(
+    not(all(feature = "abi", not(target_arch = "wasm32"))),
+    serde_as(schemars = false)
+)]
+#[near(serializers = [borsh, json])]
+#[serde(untagged)]
+#[derive(Debug, Clone)]
+pub enum WebAuthnSignature {
+    /// [COSE EdDSA (-8) algorithm](https://www.iana.org/assignments/cose/cose.xhtml#algorithms):
+    /// ed25519 curve
+    Ed25519 {
+        #[serde_as(as = "AsCurve<Ed25519>")]
+        public_key: <Ed25519 as Curve>::PublicKey,
+        #[serde_as(as = "AsCurve<Ed25519>")]
+        signature: <Ed25519 as Curve>::Signature,
+    },
+    /// [COSE ES256 (-7) algorithm](https://www.iana.org/assignments/cose/cose.xhtml#algorithms): NIST P-256 curve (a.k.a secp256r1) over SHA-256
+    P256 {
+        #[serde_as(as = "AsCurve<P256>")]
+        public_key: <P256 as Curve>::PublicKey,
+        #[serde_as(as = "AsCurve<P256>")]
+        signature: <P256 as Curve>::Signature,
+    },
+}
+
+impl WebAuthnSignature {
+    #[inline]
+    pub fn verify(&self, message: &[u8]) -> Option<PublicKey> {
+        match self {
+            // [COSE EdDSA (-8) algorithm](https://www.iana.org/assignments/cose/cose.xhtml#algorithms):
+            // ed25519 curve
+            WebAuthnSignature::Ed25519 {
+                public_key,
+                signature,
+            } => Ed25519::verify(signature, message, public_key).map(PublicKey::Ed25519),
+            // [COSE ES256 (-7) algorithm](https://www.iana.org/assignments/cose/cose.xhtml#algorithms):
+            // P256 (a.k.a secp256r1) over SHA-256
+            WebAuthnSignature::P256 {
+                public_key,
+                signature,
+            } => {
+                // Use host impl of SHA-256 here to reduce gas consumption
+                let prehashed = env::sha256_array(message);
+                P256::verify(signature, &prehashed, public_key).map(PublicKey::P256)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use defuse_crypto::PublicKey;
     use near_sdk::{serde_json, AccountIdRef};
 
     #[test]
-    fn test() {
+    fn test_p256() {
         let p: SignedWebAuthnPayload = serde_json::from_str(r#"{
-  "standard": "web_authn",
+  "standard": "webauthn",
   "payload": "{\"signer_id\":\"0x3602b546589a8fcafdce7fad64a46f91db0e4d50\",\"verifying_contract\":\"defuse.test.near\",\"deadline\":\"2025-03-30T00:00:00Z\",\"nonce\":\"A3nsY1GMVjzyXL3mUzOOP3KT+5a0Ruy+QDNWPhchnxM=\",\"intents\":[{\"intent\":\"transfer\",\"receiver_id\":\"user1.test.near\",\"tokens\":{\"nep141:ft1.poa-factory.test.near\":\"1000\"}}]}",
   "public_key": "p256:2V8Np9vGqLiwVZ8qmMmpkxU7CTRqje4WtwFeLimSwuuyF1rddQK5fELiMgxUnYbVjbZHCNnGc6fAe4JeDcVxgj3Q",
   "signature": "p256:3KBMZ72BHUiVfE1ey5dpi3KgbXvSEf9kuxgBEax7qLBQtidZExxxjjQk1hTTGFRrPvUoEStfrjoFNVVW4Abar94W",
@@ -163,7 +211,7 @@ mod tests {
   "authenticator_data": "933cQogpBzE3RSAYSAkfWoNEcBd3X84PxE8iRrRVxMgdAAAAAA=="
 }"#).unwrap();
 
-        let public_key = PublicKey::P256(p.verify().expect("invalid signature"));
+        let public_key = p.verify().expect("invalid signature");
         assert_eq!(
             public_key,
             "p256:2V8Np9vGqLiwVZ8qmMmpkxU7CTRqje4WtwFeLimSwuuyF1rddQK5fELiMgxUnYbVjbZHCNnGc6fAe4JeDcVxgj3Q"
@@ -173,6 +221,32 @@ mod tests {
         assert_eq!(
             public_key.to_implicit_account_id(),
             AccountIdRef::new_or_panic("0x3602b546589a8fcafdce7fad64a46f91db0e4d50")
+        );
+    }
+
+    #[test]
+    fn test_ed25519() {
+        let p: SignedWebAuthnPayload = serde_json::from_str(r#" {
+  "standard": "webauthn",
+  "payload": "{\"signer_id\":\"19a8cd22b37802c3cbc0031f55c70f3858ac48dbfb7697c435da637fea0e0e47\",\"verifying_contract\":\"intents.near\",\"deadline\":{\"timestamp\":1732035219},\"nonce\":\"XVoKfmScb3G+XqH9ke/fSlJ/3xO59sNhCxhpG821BH8=\",\"intents\":[{\"intent\":\"token_diff\",\"diff\":{\"nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near\":\"-1000\",\"nep141:eth-0xdac17f958d2ee523a2206206994597c13d831ec7.omft.near\":\"998\"}}]}",
+  "public_key": "ed25519:2jAUugnvWPvMaftKj5TDkyfsfxBwYjkMSf5MRtqDUMHY",
+  "signature": "ed25519:2yBp5oExa9BBZQf8habpjLUaSiprvT7srHrK38Bxt9zL1yrkQSeeXMLmkihKCd9frmTdk24YctUdzNN5nGqHWHgb",
+  "client_data_json": "{\"type\":\"webauthn.get\",\"challenge\":\"PfRFOFrLxCfyomuDryxhv6v2OzJIWqyMXaMikUYHSmY\",\"origin\":\"http://localhost:3000\"}",
+  "authenticator_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFZ50DuA"
+}"#).unwrap();
+
+        let public_key = p.verify().expect("invalid signature");
+        assert_eq!(
+            public_key,
+            "ed25519:2jAUugnvWPvMaftKj5TDkyfsfxBwYjkMSf5MRtqDUMHY"
+                .parse()
+                .unwrap(),
+        );
+        assert_eq!(
+            public_key.to_implicit_account_id(),
+            AccountIdRef::new_or_panic(
+                "19a8cd22b37802c3cbc0031f55c70f3858ac48dbfb7697c435da637fea0e0e47"
+            )
         );
     }
 }

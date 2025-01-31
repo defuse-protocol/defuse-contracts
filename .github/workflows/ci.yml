@@ -111,4 +111,4 @@ jobs:
           name: res
           path: ./res
       - name: Run Tests
-        run: cargo make run-tests
+        run: cargo make run-tests -- --show-output

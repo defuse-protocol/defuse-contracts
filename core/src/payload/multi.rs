@@ -39,7 +39,7 @@ impl SignedPayload for MultiPayload {
             Self::Nep413(payload) => payload.verify().map(PublicKey::Ed25519),
             Self::Erc191(payload) => payload.verify().map(PublicKey::Secp256k1),
             Self::RawEd25519(payload) => payload.verify().map(PublicKey::Ed25519),
-            Self::WebAuthn(payload) => payload.verify().map(PublicKey::P256),
+            Self::WebAuthn(payload) => payload.verify(),
         }
     }
 }
