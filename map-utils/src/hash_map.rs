@@ -15,11 +15,13 @@ where
 
     type V = V;
 
-    type VacantEntry<'a> = hash_map::VacantEntry<'a, K, V>
+    type VacantEntry<'a>
+        = hash_map::VacantEntry<'a, K, V>
     where
         Self: 'a;
 
-    type OccupiedEntry<'a> = hash_map::OccupiedEntry<'a, K, V>
+    type OccupiedEntry<'a>
+        = hash_map::OccupiedEntry<'a, K, V>
     where
         Self: 'a;
 
@@ -118,29 +120,35 @@ impl<K, V> IterableMap for HashMap<K, V>
 where
     K: Eq + Hash,
 {
-    type Keys<'a> = hash_map::Keys<'a, K, V>
+    type Keys<'a>
+        = hash_map::Keys<'a, K, V>
     where
         Self: 'a;
 
-    type Values<'a> = hash_map::Values<'a, K, V>
+    type Values<'a>
+        = hash_map::Values<'a, K, V>
     where
         Self: 'a;
 
-    type ValuesMut<'a> = hash_map::ValuesMut<'a, K, V>
+    type ValuesMut<'a>
+        = hash_map::ValuesMut<'a, K, V>
     where
         Self: 'a;
 
-    type Iter<'a> = hash_map::Iter<'a, K, V>
+    type Iter<'a>
+        = hash_map::Iter<'a, K, V>
     where
         Self: 'a;
 
-    type IterMut<'a> = hash_map::IterMut<'a, K, V>
+    type IterMut<'a>
+        = hash_map::IterMut<'a, K, V>
     where
         Self: 'a;
 
-    type Drain<'a> = hash_map::Drain<'a, K, V>
-        where
-            Self: 'a;
+    type Drain<'a>
+        = hash_map::Drain<'a, K, V>
+    where
+        Self: 'a;
 
     #[inline]
     fn len(&self) -> usize {
