@@ -707,7 +707,6 @@ name = "defuse"
 version = "0.1.0"
 dependencies = [
  "bnum",
- "defuse-account-id",
  "defuse-admin-utils",
  "defuse-bitmap",
  "defuse-controller",
@@ -718,23 +717,13 @@ dependencies = [
  "defuse-serde-utils",
  "defuse-wnear",
  "impl-tools",
+ "near-account-id",
  "near-contract-standards",
  "near-plugins",
  "near-sdk",
  "serde_with",
  "strum 0.26.3",
  "thiserror",
-]
-
-[[package]]
-name = "defuse-account-id"
-version = "0.1.0"
-dependencies = [
- "defuse-crypto",
- "hex",
- "hex-literal",
- "near-account-id",
- "near-sdk",
 ]
 
 [[package]]
@@ -798,6 +787,7 @@ dependencies = [
 name = "defuse-crypto"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "near-sdk",
  "p256",
  "serde_with",

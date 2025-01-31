@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use defuse_account_id::Implicit;
 use defuse_bitmap::{U248, U256};
 use defuse_core::{
     accounts::{AccountEvent, PublicKeyEvent},
@@ -46,7 +45,7 @@ impl Account {
             nonces: Nonces::new(LookupMap::new(
                 prefix.as_slice().nest(AccountPrefix::Nonces),
             )),
-            implicit_public_key_removed: !me.is_implicit(),
+            implicit_public_key_removed: !me.get_account_type().is_implicit(),
             public_keys: IterableSet::new(prefix.as_slice().nest(AccountPrefix::PublicKeys)),
             state: AccountState::new(prefix.as_slice().nest(AccountPrefix::State)),
             prefix,
@@ -72,7 +71,7 @@ impl Account {
 
     #[inline]
     fn maybe_add_public_key(&mut self, me: &AccountIdRef, public_key: PublicKey) -> bool {
-        if me.is_implicit_for(&public_key) {
+        if me == public_key.to_implicit_account_id() {
             let was_removed = self.implicit_public_key_removed;
             self.implicit_public_key_removed = false;
             was_removed
@@ -100,7 +99,7 @@ impl Account {
 
     #[inline]
     fn maybe_remove_public_key(&mut self, me: &AccountIdRef, public_key: &PublicKey) -> bool {
-        if me.is_implicit_for(public_key) {
+        if me == public_key.to_implicit_account_id() {
             let was_removed = self.implicit_public_key_removed;
             self.implicit_public_key_removed = true;
             !was_removed
@@ -111,7 +110,7 @@ impl Account {
 
     #[inline]
     pub fn has_public_key(&self, me: &AccountIdRef, public_key: &PublicKey) -> bool {
-        !self.implicit_public_key_removed && me.is_implicit_for(public_key)
+        !self.implicit_public_key_removed && me == public_key.to_implicit_account_id()
             || self.public_keys.contains(public_key)
     }
 
@@ -119,7 +118,7 @@ impl Account {
     pub fn iter_public_keys(&self, me: &AccountIdRef) -> impl Iterator<Item = PublicKey> + '_ {
         self.public_keys.iter().cloned().chain(
             (!self.implicit_public_key_removed)
-                .then(|| me.to_default_public_key())
+                .then(|| PublicKey::from_implicit_account_id(me))
                 .flatten(),
         )
     }

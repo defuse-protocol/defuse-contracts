@@ -5,7 +5,6 @@ pub use self::{account::*, state::*};
 
 use std::collections::HashSet;
 
-use defuse_account_id::Implicit;
 use defuse_core::{crypto::PublicKey, DefuseError, Nonce};
 use defuse_near_utils::{NestPrefix, PREDECESSOR_ACCOUNT_ID};
 use defuse_serde_utils::base64::AsBase64;
@@ -25,14 +24,18 @@ impl AccountManager for Contract {
         self.accounts
             .get(account_id)
             .map(|account| account.has_public_key(account_id, public_key))
-            .unwrap_or_else(|| account_id.is_implicit_for(public_key))
+            .unwrap_or_else(|| account_id == &public_key.to_implicit_account_id())
     }
 
     fn public_keys_of(&self, account_id: &AccountId) -> HashSet<PublicKey> {
         self.accounts
             .get(account_id)
             .map(|account| account.iter_public_keys(account_id).collect())
-            .unwrap_or_else(|| account_id.to_default_public_key().into_iter().collect())
+            .unwrap_or_else(|| {
+                PublicKey::from_implicit_account_id(account_id)
+                    .into_iter()
+                    .collect()
+            })
     }
 
     #[payable]

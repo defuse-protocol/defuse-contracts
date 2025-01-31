@@ -150,16 +150,17 @@ pub enum ClientDataType {
 mod tests {
     use super::*;
     use defuse_crypto::PublicKey;
-    use near_sdk::serde_json;
+    use near_sdk::{serde_json, AccountIdRef};
 
     #[test]
     fn test() {
         let p: SignedWebAuthnPayload = serde_json::from_str(r#"{
-  "payload": "{\"signer_id\":\"b883e61c704ce539ad137daffe6559c3fe42d201.p256\",\"verifying_contract\":\"defuse.test.near\",\"deadline\":\"2025-03-30T00:00:00Z\",\"nonce\":\"A3nsY1GMVjzyXL3mUzOOP3KT+5a0Ruy+QDNWPhchnxM=\",\"intents\":[{\"intent\":\"transfer\",\"receiver_id\": \"user1.test.near\", \"tokens\":{\"nep141:ft1.poa-factory.test.near\":\"1000\"}}]}",
-  "client_data_json": "{\"type\":\"webauthn.get\",\"challenge\":\"ZvPuxeVdVq6d72GcQX4jtSRXYjyZsObqHRoCNzJc7Z0\",\"origin\":\"https://defuse-widget-git-feat-passkeys-defuse-94bbc1b2.vercel.app\"}",
-  "authenticator_data": "933cQogpBzE3RSAYSAkfWoNEcBd3X84PxE8iRrRVxMgdAAAAAA==",
+  "standard": "web_authn",
+  "payload": "{\"signer_id\":\"0x3602b546589a8fcafdce7fad64a46f91db0e4d50\",\"verifying_contract\":\"defuse.test.near\",\"deadline\":\"2025-03-30T00:00:00Z\",\"nonce\":\"A3nsY1GMVjzyXL3mUzOOP3KT+5a0Ruy+QDNWPhchnxM=\",\"intents\":[{\"intent\":\"transfer\",\"receiver_id\":\"user1.test.near\",\"tokens\":{\"nep141:ft1.poa-factory.test.near\":\"1000\"}}]}",
   "public_key": "p256:2V8Np9vGqLiwVZ8qmMmpkxU7CTRqje4WtwFeLimSwuuyF1rddQK5fELiMgxUnYbVjbZHCNnGc6fAe4JeDcVxgj3Q",
-  "signature": "p256:5PpLy4XGHL2tYija3j4QwCLvhpvo9m8ERdWCPKbb7BYdsEfu8VhCN46R8FDCXV4rsppb1rv1un3ND6zHfKw7Un44"
+  "signature": "p256:3KBMZ72BHUiVfE1ey5dpi3KgbXvSEf9kuxgBEax7qLBQtidZExxxjjQk1hTTGFRrPvUoEStfrjoFNVVW4Abar94W",
+  "client_data_json": "{\"type\":\"webauthn.get\",\"challenge\":\"4cveZsIe6p-WaEcL-Lhtzt3SZuXbYsjDdlFhLNrSjjk\",\"origin\":\"https://defuse-widget-git-feat-passkeys-defuse-94bbc1b2.vercel.app\"}",
+  "authenticator_data": "933cQogpBzE3RSAYSAkfWoNEcBd3X84PxE8iRrRVxMgdAAAAAA=="
 }"#).unwrap();
 
         let public_key = PublicKey::P256(p.verify().expect("invalid signature"));
@@ -168,6 +169,10 @@ mod tests {
             "p256:2V8Np9vGqLiwVZ8qmMmpkxU7CTRqje4WtwFeLimSwuuyF1rddQK5fELiMgxUnYbVjbZHCNnGc6fAe4JeDcVxgj3Q"
                 .parse()
                 .unwrap(),
+        );
+        assert_eq!(
+            public_key.to_implicit_account_id(),
+            AccountIdRef::new_or_panic("0x3602b546589a8fcafdce7fad64a46f91db0e4d50")
         );
     }
 }

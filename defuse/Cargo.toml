@@ -10,7 +10,6 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
-defuse-account-id.workspace = true
 defuse-admin-utils.workspace = true
 defuse-bitmap = { workspace = true, optional = true }
 defuse-controller.workspace = true
@@ -23,6 +22,7 @@ defuse-wnear = { workspace = true, optional = true }
 
 bnum.workspace = true
 impl-tools.workspace = true
+near-account-id.workspace = true
 near-contract-standards.workspace = true
 near-plugins.workspace = true
 near-sdk.workspace = true
