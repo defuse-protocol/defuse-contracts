@@ -10,7 +10,7 @@ pub trait AccountExt {
 impl AccountExt for Account {
     async fn deploy_contract(&self, account_id: &str, wasm: &[u8]) -> anyhow::Result<Contract> {
         self.create_subaccount(account_id)
-            .initial_balance(NearToken::from_near(10))
+            .initial_balance(NearToken::from_near(15))
             .transact()
             .await?
             .into_result()?

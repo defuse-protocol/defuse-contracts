@@ -78,7 +78,7 @@ missing_panics_doc = { level = "allow", priority = -1 }
 
 [profile.release]
 codegen-units = 1
-opt-level = "z"
+opt-level = 3
 lto = true
 debug = false
 strip = "symbols"

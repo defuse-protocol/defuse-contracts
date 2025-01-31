@@ -13,7 +13,7 @@ pub struct AccountEvent<'a, T> {
     pub event: T,
 }
 
-impl<'a, T> AccountEvent<'a, T> {
+impl<T> AccountEvent<'_, T> {
     pub fn into_owned(self) -> AccountEvent<'static, T> {
         AccountEvent {
             account_id: Cow::Owned(self.account_id.into_owned()),

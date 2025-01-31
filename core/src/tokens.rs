@@ -280,7 +280,7 @@ where
     }
 }
 
-impl<'a, T> From<TokenAmounts<T>> for Cow<'a, TokenAmounts<T>>
+impl<T> From<TokenAmounts<T>> for Cow<'_, TokenAmounts<T>>
 where
     T: Clone,
 {
