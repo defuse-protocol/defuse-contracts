@@ -1,11 +1,13 @@
 use defuse_crypto::{Payload, PublicKey, SignedPayload};
 use defuse_erc191::SignedErc191Payload;
 use defuse_nep413::SignedNep413Payload;
-use defuse_webauthn::SignedWebAuthnPayload;
 use derive_more::derive::From;
 use near_sdk::{near, serde::de::DeserializeOwned, serde_json, CryptoHash};
 
-use super::{raw::SignedRawEd25519Payload, DefusePayload, ExtractDefusePayload};
+use super::{
+    raw::SignedRawEd25519Payload, webauthn::SignedWebAuthnPayload, DefusePayload,
+    ExtractDefusePayload,
+};
 
 #[near(serializers = [borsh, json])]
 #[serde(tag = "standard", rename_all = "snake_case")]
