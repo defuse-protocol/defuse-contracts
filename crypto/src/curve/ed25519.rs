@@ -13,7 +13,6 @@ impl Curve for Ed25519 {
 
     #[inline]
     fn verify(
-        &self,
         signature: &Self::Signature,
         message: &Self::Message,
         public_key: &Self::VerifyingKey,

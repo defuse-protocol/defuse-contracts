@@ -19,11 +19,13 @@ where
 
     type V = V;
 
-    type VacantEntry<'a> = lookup_map::VacantEntry<'a, K, V>
+    type VacantEntry<'a>
+        = lookup_map::VacantEntry<'a, K, V>
     where
         Self: 'a;
 
-    type OccupiedEntry<'a> = lookup_map::OccupiedEntry<'a, K, V>
+    type OccupiedEntry<'a>
+        = lookup_map::OccupiedEntry<'a, K, V>
     where
         Self: 'a;
 
@@ -128,11 +130,13 @@ where
 
     type V = V;
 
-    type VacantEntry<'a> = iterable_map::VacantEntry<'a, K, V, H>
+    type VacantEntry<'a>
+        = iterable_map::VacantEntry<'a, K, V, H>
     where
         Self: 'a;
 
-    type OccupiedEntry<'a> = iterable_map::OccupiedEntry<'a, K, V, H>
+    type OccupiedEntry<'a>
+        = iterable_map::OccupiedEntry<'a, K, V, H>
     where
         Self: 'a;
 
@@ -243,27 +247,33 @@ where
     V: BorshSerialize + BorshDeserialize,
     H: ToKey,
 {
-    type Keys<'a> = iterable_map::Keys<'a, K>
+    type Keys<'a>
+        = iterable_map::Keys<'a, K>
     where
         Self: 'a;
 
-    type Values<'a> = iterable_map::Values<'a, K, V, H>
+    type Values<'a>
+        = iterable_map::Values<'a, K, V, H>
     where
         Self: 'a;
 
-    type ValuesMut<'a> = iterable_map::ValuesMut<'a, K, V, H>
+    type ValuesMut<'a>
+        = iterable_map::ValuesMut<'a, K, V, H>
     where
         Self: 'a;
 
-    type Iter<'a> = iterable_map::Iter<'a, K, V, H>
+    type Iter<'a>
+        = iterable_map::Iter<'a, K, V, H>
     where
         Self: 'a;
 
-    type IterMut<'a> = iterable_map::IterMut<'a, K, V, H>
+    type IterMut<'a>
+        = iterable_map::IterMut<'a, K, V, H>
     where
         Self: 'a;
 
-    type Drain<'a> = iterable_map::Drain<'a, K, V, H>
+    type Drain<'a>
+        = iterable_map::Drain<'a, K, V, H>
     where
         Self: 'a;
 

@@ -9,7 +9,6 @@ use defuse_core::{
 };
 use defuse_near_utils::NestPrefix;
 use impl_tools::autoimpl;
-use near_account_id::AccountType;
 use near_sdk::{
     borsh::BorshSerialize,
     near,
@@ -46,7 +45,7 @@ impl Account {
             nonces: Nonces::new(LookupMap::new(
                 prefix.as_slice().nest(AccountPrefix::Nonces),
             )),
-            implicit_public_key_removed: matches!(me.get_account_type(), AccountType::NamedAccount),
+            implicit_public_key_removed: !me.get_account_type().is_implicit(),
             public_keys: IterableSet::new(prefix.as_slice().nest(AccountPrefix::PublicKeys)),
             state: AccountState::new(prefix.as_slice().nest(AccountPrefix::State)),
             prefix,

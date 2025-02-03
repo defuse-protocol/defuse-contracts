@@ -4,7 +4,10 @@ use defuse_nep413::SignedNep413Payload;
 use derive_more::derive::From;
 use near_sdk::{near, serde::de::DeserializeOwned, serde_json, CryptoHash};
 
-use super::{raw::SignedRawEd25519Payload, DefusePayload, ExtractDefusePayload};
+use super::{
+    raw::SignedRawEd25519Payload, webauthn::SignedWebAuthnPayload, DefusePayload,
+    ExtractDefusePayload,
+};
 
 #[near(serializers = [borsh, json])]
 #[serde(tag = "standard", rename_all = "snake_case")]
@@ -13,6 +16,8 @@ pub enum MultiPayload {
     Nep413(SignedNep413Payload),
     Erc191(SignedErc191Payload),
     RawEd25519(SignedRawEd25519Payload),
+    #[serde(rename = "webauthn")]
+    WebAuthn(SignedWebAuthnPayload),
 }
 
 impl Payload for MultiPayload {
@@ -22,6 +27,7 @@ impl Payload for MultiPayload {
             Self::Nep413(payload) => payload.hash(),
             Self::Erc191(payload) => payload.hash(),
             Self::RawEd25519(payload) => payload.hash(),
+            Self::WebAuthn(payload) => payload.hash(),
         }
     }
 }
@@ -35,6 +41,7 @@ impl SignedPayload for MultiPayload {
             Self::Nep413(payload) => payload.verify().map(PublicKey::Ed25519),
             Self::Erc191(payload) => payload.verify().map(PublicKey::Secp256k1),
             Self::RawEd25519(payload) => payload.verify().map(PublicKey::Ed25519),
+            Self::WebAuthn(payload) => payload.verify(),
         }
     }
 }
@@ -51,6 +58,7 @@ where
             Self::Nep413(payload) => payload.extract_defuse_payload(),
             Self::Erc191(payload) => payload.extract_defuse_payload(),
             Self::RawEd25519(payload) => payload.extract_defuse_payload(),
+            Self::WebAuthn(payload) => payload.extract_defuse_payload(),
         }
     }
 }

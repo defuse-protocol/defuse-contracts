@@ -113,8 +113,6 @@ impl SignedPayload for SignedNep413Payload {
 
     #[inline]
     fn verify(&self) -> Option<Self::PublicKey> {
-        env::ed25519_verify(&self.signature, &self.hash(), &self.public_key)
-            .then_some(&self.public_key)
-            .cloned()
+        Ed25519::verify(&self.signature, &self.hash(), &self.public_key)
     }
 }

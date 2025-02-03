@@ -15,11 +15,13 @@ where
 
     type V = V;
 
-    type VacantEntry<'a> = btree_map::VacantEntry<'a, K, V>
+    type VacantEntry<'a>
+        = btree_map::VacantEntry<'a, K, V>
     where
         Self: 'a;
 
-    type OccupiedEntry<'a> = btree_map::OccupiedEntry<'a, K, V>
+    type OccupiedEntry<'a>
+        = btree_map::OccupiedEntry<'a, K, V>
     where
         Self: 'a;
 
@@ -124,27 +126,33 @@ impl<K, V> IterableMap for BTreeMap<K, V>
 where
     K: Eq + Ord,
 {
-    type Keys<'a> = btree_map::Keys<'a, K, V>
+    type Keys<'a>
+        = btree_map::Keys<'a, K, V>
     where
         Self: 'a;
 
-    type Values<'a> = btree_map::Values<'a, K, V>
+    type Values<'a>
+        = btree_map::Values<'a, K, V>
     where
         Self: 'a;
 
-    type ValuesMut<'a> = btree_map::ValuesMut<'a, K, V>
+    type ValuesMut<'a>
+        = btree_map::ValuesMut<'a, K, V>
     where
         Self: 'a;
 
-    type Iter<'a> = btree_map::Iter<'a, K, V>
+    type Iter<'a>
+        = btree_map::Iter<'a, K, V>
     where
         Self: 'a;
 
-    type IterMut<'a> = btree_map::IterMut<'a, K, V>
+    type IterMut<'a>
+        = btree_map::IterMut<'a, K, V>
     where
         Self: 'a;
 
-    type Drain<'a> = btree_map::IntoIter<K, V>
+    type Drain<'a>
+        = btree_map::IntoIter<K, V>
     where
         Self: 'a;
 
