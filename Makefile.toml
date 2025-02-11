@@ -12,7 +12,7 @@ alias = "build"
 [tasks.clippy]
 dependencies = ["build-poa-token"]
 command = "cargo"
-args = ["clippy", "--workspace", "--all-targets"]
+args = ["clippy", "--workspace", "--all-targets", "--no-deps"]
 
 [tasks.build]
 dependencies = ["build-defuse", "build-poa-factory", "contract-stats"]

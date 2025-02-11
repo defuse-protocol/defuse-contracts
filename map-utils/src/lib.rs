@@ -74,6 +74,7 @@ where
         }
     }
 
+    #[must_use]
     #[inline]
     pub fn and_modify(mut self, f: impl FnOnce(&mut V::V)) -> Self {
         if let Self::Occupied(ref mut entry) = self {

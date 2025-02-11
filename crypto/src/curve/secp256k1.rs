@@ -13,8 +13,8 @@ impl Curve for Secp256k1 {
     /// logic might depend on chain id, so clients must rollback
     /// these changes to v ∈ {0, 1}.
     /// References:
-    /// * https://github.com/ethereumjs/ethereumjs-monorepo/blob/dc7169c16df6d36adeb6e234fcc66eb6cfc5ea3f/packages/util/src/signature.ts#L31-L62
-    /// * https://github.com/ethereum/go-ethereum/issues/19751#issuecomment-504900739
+    /// * <https://github.com/ethereumjs/ethereumjs-monorepo/blob/dc7169c16df6d36adeb6e234fcc66eb6cfc5ea3f/packages/util/src/signature.ts#L31-L62>
+    /// * <https://github.com/ethereum/go-ethereum/issues/19751#issuecomment-504900739>
     type Signature = [u8; 65];
 
     // Output of cryptographic hash function

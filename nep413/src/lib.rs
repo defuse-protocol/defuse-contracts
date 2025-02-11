@@ -42,17 +42,19 @@ impl Nep413Payload {
         Self {
             message,
             nonce: Default::default(),
-            recipient: Default::default(),
-            callback_url: Default::default(),
+            recipient: String::new(),
+            callback_url: None,
         }
     }
 
+    #[must_use]
     #[inline]
     pub fn with_nonce(mut self, nonce: [u8; 32]) -> Self {
         self.nonce = nonce;
         self
     }
 
+    #[must_use]
     #[inline]
     pub fn with_recipient<S>(mut self, recipient: S) -> Self
     where
@@ -62,6 +64,7 @@ impl Nep413Payload {
         self
     }
 
+    #[must_use]
     #[inline]
     pub fn with_callback_url(mut self, callback_url: String) -> Self {
         self.callback_url = Some(callback_url);

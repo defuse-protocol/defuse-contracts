@@ -36,8 +36,9 @@ impl Curve for P256 {
         // verify signature over prehashed
         verifying_key
             .verify_prehash(prehashed, &signature)
-            .ok()
-            .map(|_| *public_key)
+            .is_ok()
+            .then_some(public_key)
+            .copied()
     }
 }
 

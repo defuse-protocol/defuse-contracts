@@ -87,6 +87,7 @@ impl Pips {
         Some(Self(pips))
     }
 
+    #[must_use]
     #[inline]
     pub const fn invert(self) -> Self {
         Self(Self::MAX.as_pips() - self.as_pips())

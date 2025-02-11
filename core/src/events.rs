@@ -38,7 +38,7 @@ pub enum DefuseEvent<'a> {
 pub trait DefuseIntentEmit<'a>: Into<DefuseEvent<'a>> {
     #[inline]
     fn emit(self) {
-        DefuseEvent::emit(&self.into())
+        DefuseEvent::emit(&self.into());
     }
 }
 impl<'a, T> DefuseIntentEmit<'a> for T where T: Into<DefuseEvent<'a>> {}

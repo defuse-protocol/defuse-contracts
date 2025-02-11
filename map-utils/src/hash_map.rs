@@ -1,15 +1,16 @@
 use std::{
     collections::hash_map::{self, HashMap},
-    hash::Hash,
+    hash::{BuildHasher, Hash},
 };
 
 use crate::iter::IterableMap;
 
 use super::{Entry, Map, OccupiedEntry, VacantEntry};
 
-impl<K, V> Map for HashMap<K, V>
+impl<K, V, S> Map for HashMap<K, V, S>
 where
     K: Eq + Hash,
+    S: BuildHasher,
 {
     type K = K;
 
@@ -116,9 +117,10 @@ impl<'a, K, V> OccupiedEntry<'a> for hash_map::OccupiedEntry<'a, K, V> {
     }
 }
 
-impl<K, V> IterableMap for HashMap<K, V>
+impl<K, V, S> IterableMap for HashMap<K, V, S>
 where
     K: Eq + Hash,
+    S: BuildHasher,
 {
     type Keys<'a>
         = hash_map::Keys<'a, K, V>
@@ -192,6 +194,6 @@ where
 
     #[inline]
     fn clear(&mut self) {
-        self.clear()
+        self.clear();
     }
 }
