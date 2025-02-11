@@ -61,6 +61,6 @@ impl Add<Duration> for Deadline {
 impl AddAssign<Duration> for Deadline {
     #[inline]
     fn add_assign(&mut self, rhs: Duration) {
-        self.0 += rhs
+        self.0 += rhs;
     }
 }

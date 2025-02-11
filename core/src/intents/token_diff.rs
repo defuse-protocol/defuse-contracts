@@ -55,7 +55,7 @@ impl ExecutableIntent for TokenDiff {
         }
 
         let protocol_fee = engine.state.fee();
-        let mut fees_collected: TokenAmounts = Default::default();
+        let mut fees_collected: TokenAmounts = TokenAmounts::default();
 
         for (token_id, delta) in self.diff.clone() {
             if delta == 0 {
@@ -255,7 +255,7 @@ mod tests {
     fn closure_deltas_empty() {
         assert!(TokenDiff::closure_deltas(None, Pips::ONE_BIP)
             .unwrap()
-            .is_empty())
+            .is_empty());
     }
 
     #[rstest]
@@ -300,7 +300,7 @@ mod tests {
                     ])
                     .unwrap(),
                 "d1: {d1}, d2: {d2}, d3: {d3}"
-            )
+            );
         }
     }
 
@@ -327,6 +327,6 @@ mod tests {
         )
         .unwrap();
         assert!(!closure.is_empty());
-        assert!(closure.into_inner().into_values().all(i128::is_negative))
+        assert!(closure.into_inner().into_values().all(i128::is_negative));
     }
 }

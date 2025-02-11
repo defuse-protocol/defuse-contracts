@@ -25,7 +25,7 @@ pub struct PayloadSignature {
 }
 
 impl PayloadSignature {
-    /// https://w3c.github.io/webauthn/#sctn-verifying-assertion
+    /// <https://w3c.github.io/webauthn/#sctn-verifying-assertion>
     ///
     /// Credits to:
     /// * [ERC-4337 Smart Wallet](https://github.com/passkeys-4337/smart-wallet/blob/f3aa9fd44646fde0316fc810e21cc553a9ed73e0/contracts/src/WebAuthn.sol#L75-L172)
@@ -72,7 +72,7 @@ impl PayloadSignature {
     const AUTH_DATA_FLAGS_BE: u8 = 1 << 3;
     const AUTH_DATA_FLAGS_BS: u8 = 1 << 4;
 
-    /// https://w3c.github.io/webauthn/#sctn-verifying-assertion
+    /// <https://w3c.github.io/webauthn/#sctn-verifying-assertion>
     fn verify_flags(flags: u8, require_user_verification: bool) -> bool {
         // 16. Verify that the UP bit of the flags in authData is set.
         if flags & Self::AUTH_DATA_FLAGS_UP != Self::AUTH_DATA_FLAGS_UP {

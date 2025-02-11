@@ -88,9 +88,9 @@ mod tests {
 
     #[test]
     fn test() {
-        let mut m = BitMap256::<HashMap<U248, U256>>::default();
-
         type N = BUintD8<32>;
+
+        let mut m = BitMap256::<HashMap<U248, U256>>::default();
 
         for n in [N::ZERO, N::ONE, N::MAX - N::ONE, N::MAX].map(Into::into) {
             assert!(!m.get_bit(n));

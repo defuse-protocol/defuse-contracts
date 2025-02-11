@@ -58,7 +58,7 @@ pub struct MtTransferEvent<'a> {
 pub trait MtEventEmit<'a>: Into<MtEvent<'a>> {
     #[inline]
     fn emit(self) {
-        MtEvent::emit(&self.into())
+        MtEvent::emit(&self.into());
     }
 }
 impl<'a, T> MtEventEmit<'a> for T where T: Into<MtEvent<'a>> {}

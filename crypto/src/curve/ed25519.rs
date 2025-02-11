@@ -19,7 +19,7 @@ impl Curve for Ed25519 {
     ) -> Option<Self::PublicKey> {
         env::ed25519_verify(signature, message, public_key)
             .then_some(public_key)
-            .cloned()
+            .copied()
     }
 }
 

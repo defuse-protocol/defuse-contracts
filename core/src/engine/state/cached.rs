@@ -29,7 +29,7 @@ where
     pub fn new(view: W) -> Self {
         Self {
             view,
-            accounts: Default::default(),
+            accounts: CachedAccounts::new(),
         }
     }
 }
@@ -87,8 +87,7 @@ where
     fn is_nonce_used(&self, account_id: &AccountIdRef, nonce: Nonce) -> bool {
         self.accounts
             .get(account_id)
-            .map(|account| account.is_nonce_used(nonce))
-            .unwrap_or_default()
+            .is_some_and(|account| account.is_nonce_used(nonce))
             || self.view.is_nonce_used(account_id, nonce)
     }
 
@@ -188,6 +187,12 @@ where
 pub struct CachedAccounts(HashMap<AccountId, CachedAccount>);
 
 impl CachedAccounts {
+    #[must_use]
+    #[inline]
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
     #[inline]
     pub fn get(&self, account_id: &AccountIdRef) -> Option<&CachedAccount> {
         self.0.get(account_id)

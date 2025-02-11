@@ -237,6 +237,16 @@ where
     }
 }
 
+#[allow(clippy::iter_without_into_iter)]
+impl<T> TokenAmounts<T>
+where
+    T: IterableMap,
+{
+    pub fn iter(&self) -> T::Iter<'_> {
+        self.0.iter()
+    }
+}
+
 impl<T> IntoIterator for TokenAmounts<T>
 where
     T: IntoIterator,

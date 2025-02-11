@@ -31,6 +31,7 @@ impl PublicKey {
 
     #[inline]
     const fn data(&self) -> &[u8] {
+        #[allow(clippy::match_same_arms)]
         match self {
             Self::Ed25519(data) => data,
             Self::Secp256k1(data) => data,

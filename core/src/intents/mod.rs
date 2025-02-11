@@ -127,6 +127,6 @@ pub struct IntentEvent<T> {
 impl<T> IntentEvent<T> {
     #[inline]
     pub const fn new(event: T, intent_hash: CryptoHash) -> Self {
-        Self { event, intent_hash }
+        Self { intent_hash, event }
     }
 }

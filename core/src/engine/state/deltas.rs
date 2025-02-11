@@ -33,7 +33,7 @@ impl<S> Deltas<S> {
     pub fn new(state: S) -> Self {
         Self {
             state,
-            deltas: Default::default(),
+            deltas: TransferMatcher::new(),
         }
     }
 
@@ -168,6 +168,11 @@ pub struct TransferMatcher(HashMap<TokenId, TokenTransferMatcher>);
 
 impl TransferMatcher {
     #[inline]
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    #[inline]
     pub fn deposit(&mut self, owner_id: AccountId, token_id: TokenId, amount: u128) -> bool {
         self.0.entry_or_default(token_id).deposit(owner_id, amount)
     }
@@ -188,8 +193,7 @@ impl TransferMatcher {
         let mut transfers = Transfers::default();
         let mut deltas = TokenDeltas::default();
         for (token_id, transfer_matcher) in self.0 {
-            if let Err(unmatched) = transfer_matcher.finalize_into(token_id.clone(), &mut transfers)
-            {
+            if let Err(unmatched) = transfer_matcher.finalize_into(&token_id, &mut transfers) {
                 if unmatched == 0 || deltas.add_delta(token_id, unmatched).is_none() {
                     return Err(InvariantViolated::Overflow);
                 }
@@ -255,7 +259,7 @@ impl TokenTransferMatcher {
 
     // Finalizes transfer of this token, or returns unmatched delta.
     // If returned delta is zero, then overflow happened
-    pub fn finalize_into(self, token_id: TokenId, transfers: &mut Transfers) -> Result<(), i128> {
+    pub fn finalize_into(self, token_id: &TokenId, transfers: &mut Transfers) -> Result<(), i128> {
         // sort deposits and withdrawals in descending order
         let [mut deposits, mut withdrawals] = [self.deposits, self.withdrawals].map(|amounts| {
             let mut amounts: Vec<_> = amounts.into_iter().collect();
@@ -316,7 +320,7 @@ impl TokenTransferMatcher {
 #[must_use]
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Transfers(
-    /// sender_id -> receiver_id -> token_id -> amount
+    /// `sender_id` -> `receiver_id` -> `token_id` -> `amount`
     HashMap<AccountId, HashMap<AccountId, TokenAmounts<HashMap<TokenId, u128>>>>,
 );
 
@@ -415,6 +419,7 @@ impl InvariantViolated {
 }
 
 #[cfg(test)]
+#[allow(clippy::many_single_char_names)]
 mod tests {
     use super::*;
 
@@ -458,7 +463,7 @@ mod tests {
         }
 
         let transfers = transfers.finalize().unwrap();
-        let mut new_deltas: HashMap<AccountId, TokenDeltas> = Default::default();
+        let mut new_deltas: HashMap<AccountId, TokenDeltas> = HashMap::new();
 
         for (sender_id, transfers) in transfers.0 {
             for (receiver_id, amounts) in transfers {
