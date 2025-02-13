@@ -53,6 +53,7 @@ anyhow = "1"
 bnum = { version = "0.12", features = ["borsh"] }
 chrono = { version = "0.4", default-features = false }
 derive_more = "1.0"
+ed25519-dalek = { version = "2.1.1", default-features = false }
 hex = "0.4"
 hex-literal = "0.4"
 impl-tools = "0.10"
