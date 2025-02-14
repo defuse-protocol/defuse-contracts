@@ -71,10 +71,12 @@ thiserror = "1"
 tokio = { version = "1.38", default-features = false }
 
 [workspace.lints.clippy]
-all = "deny"
-module_name_repetitions = { level = "allow", priority = -1 }
-missing_errors_doc = { level = "allow", priority = -1 }
-missing_panics_doc = { level = "allow", priority = -1 }
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
 
 [profile.release]
 codegen-units = 1

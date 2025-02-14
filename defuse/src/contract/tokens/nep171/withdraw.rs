@@ -111,6 +111,7 @@ impl Contract {
         // only with storage_deposit
         .saturating_add(STORAGE_DEPOSIT_GAS);
 
+    #[must_use]
     #[private]
     pub fn do_nft_withdraw(withdraw: NftWithdraw) -> Promise {
         let p = if let Some(storage_deposit) = withdraw.storage_deposit {

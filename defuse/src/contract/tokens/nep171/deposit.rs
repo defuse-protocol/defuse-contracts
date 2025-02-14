@@ -26,11 +26,12 @@ impl NonFungibleTokenReceiver for Contract {
         token_id: near_contract_standards::non_fungible_token::TokenId,
         msg: String,
     ) -> PromiseOrValue<bool> {
+        #[allow(clippy::no_effect_underscore_binding)]
         let _previous_owner_id = previous_owner_id;
-        let msg = if !msg.is_empty() {
-            msg.parse().unwrap_or_panic_display()
-        } else {
+        let msg = if msg.is_empty() {
             DepositMessage::new(sender_id)
+        } else {
+            msg.parse().unwrap_or_panic_display()
         };
 
         self.deposit(

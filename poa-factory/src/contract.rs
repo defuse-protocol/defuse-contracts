@@ -4,9 +4,7 @@ use std::collections::{HashMap, HashSet};
 use defuse_admin_utils::full_access_keys::FullAccessKeys;
 use defuse_near_utils::{gas_left, UnwrapOrPanicError, CURRENT_ACCOUNT_ID};
 use defuse_poa_token::ext_poa_fungible_token;
-use near_contract_standards::fungible_token::{
-    core::ext_ft_core, metadata::FungibleTokenMetadata, Balance,
-};
+use near_contract_standards::fungible_token::{core::ext_ft_core, metadata::FungibleTokenMetadata};
 use near_plugins::{
     access_control, access_control_any, pause, AccessControlRole, AccessControllable, Pausable,
 };
@@ -23,14 +21,13 @@ use near_sdk::{
 
 use crate::PoaFactory;
 
-const POA_TOKEN_WASM: &[u8] = if !cfg!(clippy) {
-    include_bytes!(std::env!(
-        "POA_TOKEN_WASM",
-        "Set ${POA_TOKEN_WASM} to be the path of the PoA token binary",
-    ))
-} else {
-    b""
-};
+#[cfg(not(clippy))]
+const POA_TOKEN_WASM: &[u8] = include_bytes!(std::env!(
+    "POA_TOKEN_WASM",
+    "Set ${POA_TOKEN_WASM} to be the path of the PoA token binary",
+));
+#[cfg(clippy)]
+const POA_TOKEN_WASM: &[u8] = b"";
 
 const POA_TOKEN_INIT_BALANCE: NearToken = NearToken::from_near(3);
 const POA_TOKEN_NEW_GAS: Gas = Gas::from_tgas(10);
@@ -58,6 +55,7 @@ pub struct Contract {
 
 #[near]
 impl Contract {
+    #[must_use]
     #[init]
     pub fn new(
         super_admins: HashSet<AccountId>,
@@ -68,7 +66,8 @@ impl Contract {
             tokens: IterableSet::new(Prefix::Tokens),
             bridge_token_storage_deposit_required: env::storage_byte_cost().saturating_mul(
                 near_contract_standards::fungible_token::FungibleToken::new(b"t")
-                    .account_storage_usage as Balance,
+                    .account_storage_usage
+                    .into(),
             ),
         };
 
@@ -98,17 +97,17 @@ impl PoaFactory for Contract {
     #[payable]
     fn deploy_token(&mut self, token: String, metadata: Option<FungibleTokenMetadata>) -> Promise {
         if let Some(metadata) = metadata.as_ref() {
-            metadata.assert_valid()
+            metadata.assert_valid();
         }
 
-        let initial_storage = env::storage_usage() as u128;
+        let initial_storage = env::storage_usage();
         require!(self.tokens.insert(token.clone()), "token exists");
-        let current_storage = env::storage_usage() as u128;
+        let current_storage = env::storage_usage();
         require!(
             env::attached_deposit()
                 >= POA_TOKEN_INIT_BALANCE.saturating_add(
                     env::storage_byte_cost()
-                        .saturating_mul(current_storage.saturating_sub(initial_storage))
+                        .saturating_mul(current_storage.saturating_sub(initial_storage).into())
                 ),
             "not enough deposit attached to deploy PoA token"
         );

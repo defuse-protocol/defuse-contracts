@@ -185,10 +185,10 @@ async fn test_simulate_is_view_method() {
 
 #[tokio::test]
 async fn test_webauthn() {
-    let env = Env::new().await;
-
     const SIGNER_ID: &AccountIdRef =
         AccountIdRef::new_or_panic("0x3602b546589a8fcafdce7fad64a46f91db0e4d50");
+
+    let env = Env::new().await;
 
     let ft1 = TokenId::Nep141(env.ft1.clone());
 
