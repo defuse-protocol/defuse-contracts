@@ -27,10 +27,10 @@ impl FungibleTokenReceiver for Contract {
     ) -> PromiseOrValue<U128> {
         require!(amount.0 > 0, "zero amount");
 
-        let msg = if !msg.is_empty() {
-            msg.parse().unwrap_or_panic_display()
-        } else {
+        let msg = if msg.is_empty() {
             DepositMessage::new(sender_id)
+        } else {
+            msg.parse().unwrap_or_panic_display()
         };
 
         self.deposit(

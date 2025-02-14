@@ -71,14 +71,7 @@ async fn test_poa_deposit() {
         env.poa_ft1_name(),
         env.user1.id(),
         1000,
-        Some(
-            DepositMessage {
-                receiver_id: env.user1.id().clone(),
-                execute_intents: Default::default(),
-                refund_if_fails: Default::default(),
-            }
-            .to_string(),
-        ),
+        Some(DepositMessage::new(env.user1.id().clone()).to_string()),
         None,
     )
     .await

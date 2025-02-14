@@ -124,6 +124,7 @@ impl Contract {
         // only with storage_deposit
         .saturating_add(STORAGE_DEPOSIT_GAS);
 
+    #[must_use]
     #[private]
     pub fn do_mt_withdraw(withdraw: MtWithdraw) -> Promise {
         let p = if let Some(storage_deposit) = withdraw.storage_deposit {
@@ -203,8 +204,11 @@ impl MultiTokenWithdrawResolver for Contract {
 
         self.deposit(
             sender_id,
-            token_ids.into_iter().zip(amounts).zip(&mut used).flat_map(
-                |((token_id, amount), used)| {
+            token_ids
+                .into_iter()
+                .zip(amounts)
+                .zip(&mut used)
+                .filter_map(|((token_id, amount), used)| {
                     // update min during iteration
                     used.0 = used.0.min(amount.0);
                     let refund = amount.0.saturating_sub(used.0);
@@ -213,8 +217,7 @@ impl MultiTokenWithdrawResolver for Contract {
                     } else {
                         None
                     }
-                },
-            ),
+                }),
             Some("refund"),
         )
         .unwrap_or_panic();

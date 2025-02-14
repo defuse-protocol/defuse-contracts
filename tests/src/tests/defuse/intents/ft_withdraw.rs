@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use defuse::{
-    contract::config::DefuseConfig,
+    contract::config::{DefuseConfig, RolesConfig},
     core::{
         fees::{FeesConfig, Pips},
         intents::{tokens::FtWithdraw, DefuseIntents},
@@ -20,6 +20,9 @@ use crate::{
 
 #[tokio::test]
 async fn test_ft_withdraw_intent() {
+    // intentionally large deposit
+    const STORAGE_DEPOSIT: NearToken = NearToken::from_near(1000);
+
     let env = Env::new().await;
 
     env.defuse_ft_mint(&env.ft1, 1000, env.user1.id())
@@ -62,9 +65,6 @@ async fn test_ft_withdraw_intent() {
             .unwrap(),
         0
     );
-
-    // intentionally large deposit
-    const STORAGE_DEPOSIT: NearToken = NearToken::from_near(1000);
 
     env.defuse
         .execute_intents([env.user1.sign_defuse_message(
@@ -190,7 +190,7 @@ async fn test_ft_withdraw_intent_msg() {
                     fee: Pips::ZERO,
                     fee_collector: env.id().clone(),
                 },
-                roles: Default::default(),
+                roles: RolesConfig::default(),
             },
         )
         .await
