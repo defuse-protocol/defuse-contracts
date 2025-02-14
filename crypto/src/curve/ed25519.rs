@@ -18,7 +18,6 @@ impl Curve for Ed25519 {
         message: &Self::Message,
         public_key: &Self::VerifyingKey,
     ) -> Option<Self::PublicKey> {
-        // TODO: check all already created accounts
         if VerifyingKey::from_bytes(public_key).ok()?.is_weak() {
             // prevent using weak (i.e. low order) public keys
             return None;
