@@ -6,6 +6,10 @@ use defuse_nep245::{MtBurnEvent, MtEvent};
 pub struct PostponedMtBurnEvents(Vec<MtBurnEvent<'static>>);
 
 impl PostponedMtBurnEvents {
+    pub const fn new() -> Self {
+        Self(Vec::new())
+    }
+
     pub fn mt_burn(&mut self, event: MtBurnEvent<'static>) {
         self.0.push(event);
     }

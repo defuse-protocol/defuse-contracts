@@ -37,10 +37,10 @@ impl StateView for Contract {
 
     #[inline]
     fn has_public_key(&self, account_id: &AccountIdRef, public_key: &PublicKey) -> bool {
-        self.accounts
-            .get(account_id)
-            .map(|account| account.has_public_key(account_id, public_key))
-            .unwrap_or_else(|| account_id == public_key.to_implicit_account_id())
+        self.accounts.get(account_id).map_or_else(
+            || account_id == public_key.to_implicit_account_id(),
+            |account| account.has_public_key(account_id, public_key),
+        )
     }
 
     fn iter_public_keys(&self, account_id: &AccountIdRef) -> impl Iterator<Item = PublicKey> + '_ {
@@ -60,8 +60,7 @@ impl StateView for Contract {
     fn is_nonce_used(&self, account_id: &AccountIdRef, nonce: Nonce) -> bool {
         self.accounts
             .get(account_id)
-            .map(|account| account.is_nonce_used(nonce))
-            .unwrap_or_default()
+            .is_some_and(|account| account.is_nonce_used(nonce))
     }
 
     #[inline]

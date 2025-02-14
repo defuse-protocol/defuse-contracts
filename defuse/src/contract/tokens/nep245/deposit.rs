@@ -32,10 +32,10 @@ impl MultiTokenReceiver for Contract {
             "invalid args"
         );
         let _previous_owner_ids = previous_owner_ids;
-        let msg = if !msg.is_empty() {
-            msg.parse().unwrap_or_panic_display()
-        } else {
+        let msg = if msg.is_empty() {
             DepositMessage::new(sender_id)
+        } else {
+            msg.parse().unwrap_or_panic_display()
         };
 
         let n = amounts.len();

@@ -333,13 +333,16 @@ async fn test_invariant_violated() {
 async fn test_solver_user_closure(
     #[values(Pips::ZERO, Pips::ONE_BIP, Pips::ONE_PERCENT)] fee: Pips,
 ) {
+    const USER_BALANCE: u128 = 1100;
+    const SOLVER_BALANCE: u128 = 2100;
+
+    // RFQ: 1000 token_in -> ??? token_out
+    const USER_DELTA_IN: i128 = -1000;
+
     let env = Env::builder().fee(fee).build().await;
 
     let user = &env.user1;
     let solver = &env.user2;
-
-    const USER_BALANCE: u128 = 1100;
-    const SOLVER_BALANCE: u128 = 2100;
 
     // deposit
     env.defuse_ft_mint(&env.ft1, USER_BALANCE, user.id())
@@ -352,8 +355,6 @@ async fn test_solver_user_closure(
     let token_in = TokenId::Nep141(env.ft1.clone());
     let token_out = TokenId::Nep141(env.ft2.clone());
 
-    // RFQ: 1000 token_in -> ??? token_out
-    const USER_DELTA_IN: i128 = -1000;
     dbg!(USER_DELTA_IN);
     // propagate RFQ to solver with adjusted amount_in
     let solver_delta_in = TokenDiff::closure_delta(&token_in, USER_DELTA_IN, fee).unwrap();

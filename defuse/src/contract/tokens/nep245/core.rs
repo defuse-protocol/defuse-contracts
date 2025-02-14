@@ -227,7 +227,7 @@ impl Contract {
 
         Ok(ext_mt_receiver::ext(receiver_id.clone())
             .mt_on_transfer(
-                sender_id.clone(),
+                sender_id,
                 previous_owner_ids.clone(),
                 token_ids.clone(),
                 amounts.clone(),

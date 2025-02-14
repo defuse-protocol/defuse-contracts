@@ -21,21 +21,21 @@ use crate::{
 #[near]
 impl AccountManager for Contract {
     fn has_public_key(&self, account_id: &AccountId, public_key: &PublicKey) -> bool {
-        self.accounts
-            .get(account_id)
-            .map(|account| account.has_public_key(account_id, public_key))
-            .unwrap_or_else(|| account_id == &public_key.to_implicit_account_id())
+        self.accounts.get(account_id).map_or_else(
+            || account_id == &public_key.to_implicit_account_id(),
+            |account| account.has_public_key(account_id, public_key),
+        )
     }
 
     fn public_keys_of(&self, account_id: &AccountId) -> HashSet<PublicKey> {
-        self.accounts
-            .get(account_id)
-            .map(|account| account.iter_public_keys(account_id).collect())
-            .unwrap_or_else(|| {
+        self.accounts.get(account_id).map_or_else(
+            || {
                 PublicKey::from_implicit_account_id(account_id)
                     .into_iter()
                     .collect()
-            })
+            },
+            |account| account.iter_public_keys(account_id).collect(),
+        )
     }
 
     #[payable]
@@ -66,8 +66,7 @@ impl AccountManager for Contract {
     fn is_nonce_used(&self, account_id: &AccountId, nonce: AsBase64<Nonce>) -> bool {
         self.accounts
             .get(account_id)
-            .map(move |account| account.is_nonce_used(nonce.into_inner()))
-            .unwrap_or_default()
+            .is_some_and(move |account| account.is_nonce_used(nonce.into_inner()))
     }
 
     #[payable]
