@@ -22,9 +22,9 @@ impl Contract {
         let owner = self.accounts.get_or_create(owner_id.clone());
 
         let mut mint_event = MtMintEvent {
-            owner_id: Cow::Borrowed(owner_id.as_ref()),
-            token_ids: Default::default(),
-            amounts: Default::default(),
+            owner_id: owner_id.into(),
+            token_ids: Vec::new().into(),
+            amounts: Vec::new().into(),
             memo: memo.map(Into::into),
         };
 
@@ -65,8 +65,8 @@ impl Contract {
         let mut burn_event = MtBurnEvent {
             owner_id: Cow::Owned(owner_id.to_owned()),
             authorized_id: None,
-            token_ids: Default::default(),
-            amounts: Default::default(),
+            token_ids: Vec::new().into(),
+            amounts: Vec::new().into(),
             memo: memo.map(Into::into).map(Into::into),
         };
 

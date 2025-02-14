@@ -15,7 +15,7 @@ pub struct SimulateInspector {
 impl Default for SimulateInspector {
     fn default() -> Self {
         Self {
-            intents_executed: Default::default(),
+            intents_executed: Vec::new(),
             min_deadline: Deadline::MAX,
         }
     }
