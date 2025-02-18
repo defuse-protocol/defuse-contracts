@@ -27,11 +27,16 @@ impl MultiTokenReceiver for Contract {
         amounts: Vec<U128>,
         msg: String,
     ) -> PromiseOrValue<Vec<U128>> {
+        let _previous_owner_ids = previous_owner_ids;
+        let token = &*PREDECESSOR_ACCOUNT_ID;
         require!(
             token_ids.len() == amounts.len() && !amounts.is_empty(),
             "invalid args"
         );
-        let _previous_owner_ids = previous_owner_ids;
+        require!(
+            token != &*CURRENT_ACCOUNT_ID,
+            "self-wrapping is not allowed"
+        );
         let msg = if msg.is_empty() {
             DepositMessage::new(sender_id)
         } else {
@@ -43,7 +48,7 @@ impl MultiTokenReceiver for Contract {
             msg.receiver_id,
             token_ids
                 .into_iter()
-                .map(|token_id| TokenId::Nep245(PREDECESSOR_ACCOUNT_ID.clone(), token_id))
+                .map(|token_id| TokenId::Nep245(token.clone(), token_id))
                 .zip(amounts.into_iter().map(|a| a.0)),
             Some("deposit"),
         )

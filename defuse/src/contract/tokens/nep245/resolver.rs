@@ -51,28 +51,23 @@ impl MultiTokenResolver for Contract {
             );
 
             refund.0 = refund.0.min(amount.0);
+            let Some(receiver) = self.accounts.get_mut(&receiver_id) else {
+                // receiver doesn't have an account, so nowhere to refund from
+                return amounts;
+            };
+            let receiver_balance = receiver.token_balances.balance_of(&token_id);
+            // refund maximum what we can
+            refund.0 = refund.0.min(receiver_balance);
             if refund.0 == 0 {
-                // no need to refund anything
+                // noting to refund
                 continue;
             }
 
-            let Some(receiver) = self.accounts.get_mut(&receiver_id) else {
-                // receiver doesn't have an account anymore
-                break;
-            };
-            let receiver_balance = receiver.token_balances.balance_of(&token_id);
-            if receiver_balance == 0 {
-                // receiver doesn't have any balance anymore
-                continue;
-            }
-            // refund maximum what we can
-            refund.0 = refund.0.min(receiver_balance);
             // withdraw refund
             receiver
                 .token_balances
                 .withdraw(token_id.clone(), refund.0)
                 .unwrap_or_panic();
-
             // deposit refund
             let previous_owner = self.accounts.get_or_create(previous_owner_id);
             previous_owner
@@ -84,18 +79,27 @@ impl MultiTokenResolver for Contract {
             amount.0 -= refund.0;
         }
 
-        Cow::Borrowed(
-            [MtTransferEvent {
-                authorized_id: None,
-                old_owner_id: receiver_id.into(),
-                new_owner_id: sender_id.into(),
-                token_ids: token_ids.into(),
-                amounts: refunds.into(),
-                memo: Some("refund".into()),
-            }]
-            .as_slice(),
-        )
-        .emit();
+        let (refunded_token_ids, refunded_amounts): (Vec<_>, Vec<_>) = token_ids
+            .into_iter()
+            .zip(refunds)
+            .filter(|(_token_id, refund)| refund.0 > 0)
+            .unzip();
+
+        if !refunded_amounts.is_empty() {
+            // deposit refunds
+            Cow::Borrowed(
+                [MtTransferEvent {
+                    authorized_id: None,
+                    old_owner_id: receiver_id.into(),
+                    new_owner_id: sender_id.into(),
+                    token_ids: refunded_token_ids.into(),
+                    amounts: refunded_amounts.into(),
+                    memo: Some("refund".into()),
+                }]
+                .as_slice(),
+            )
+            .emit();
+        }
 
         amounts
     }
