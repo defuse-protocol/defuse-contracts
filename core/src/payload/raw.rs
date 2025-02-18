@@ -35,9 +35,7 @@ impl SignedPayload for SignedRawEd25519Payload {
 
     #[inline]
     fn verify(&self) -> Option<Self::PublicKey> {
-        env::ed25519_verify(&self.signature, self.payload.as_bytes(), &self.public_key)
-            .then_some(&self.public_key)
-            .copied()
+        Ed25519::verify(&self.signature, self.payload.as_bytes(), &self.public_key)
     }
 }
 
